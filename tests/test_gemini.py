@@ -264,8 +264,9 @@ class TestGeminiExtractor:
         )
         assert len(transport.calls) == 2
 
-        transport = FakeTransport(_HttpStatus(429, "{}"), _HttpStatus(429, "{}"))
-        with pytest.raises(ExtractionError, match="rate limit"):
+        limited = _HttpStatus(429, "{}")
+        transport = FakeTransport(limited, limited, limited, limited)
+        with pytest.raises(ExtractionError, match="after 3 retries.*rate limit"):
             GeminiExtractor(api_key="k", model="gemini-3.8-flash", transport=transport).extract(
                 b"x", "image/png"
             )
