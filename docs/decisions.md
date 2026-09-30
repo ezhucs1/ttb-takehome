@@ -42,6 +42,11 @@ tiers suggest the fixed cost is the image payload and output length rather than 
 model, which is why the preprocessing size is configurable
 (``LABELVERIFY_IMAGE_MAX_EDGE``) for further measurement.
 
+Measured: Opus 5.5 at 1200 px read the same sample correctly in 5.2 s versus 6.0 s at
+1500 px, but its confidence in the health warning fell from 0.85 to 0.75 and it flagged
+the small print as blurred. The small print is exactly where rejections happen, so 1500 px
+stays the default and 1200 px is an opt-in for speed on clean artwork.
+
 Gemini's free tier also produced 503 "high demand" errors and a timeout during the same
 session, and it reports full confidence on every field, which would disable the workflow's
 low-confidence review gate. It stays as the zero-cost evaluation path, not the default.
