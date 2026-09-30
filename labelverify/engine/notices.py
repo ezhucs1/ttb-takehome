@@ -145,7 +145,7 @@ def _ai_rewrite(template: str, provider: str) -> str:
 
     client = anthropic.Anthropic(max_retries=1, timeout=20.0)
     response = client.messages.create(
-        model=os.environ.get(NOTICE_MODEL_ENV, DEFAULT_NOTICE_MODEL),
+        model=os.environ.get(NOTICE_MODEL_ENV) or DEFAULT_NOTICE_MODEL,
         max_tokens=1500,
         output_config={"effort": "low"},
         system=REWRITE_SYSTEM,

@@ -116,7 +116,7 @@ def _fuzzy_field(
         if application_value.strip() == (extracted.value or "").strip():
             reason = "Matches the application."
         else:
-            reason = "Matches the application (differences are only capitalization, punctuation, or spacing)."
+            reason = "Matches the application after normalization (capitalization, punctuation, spacing, or standard abbreviations such as CA for California)."
     elif score >= review_at:
         verdict = Verdict.NEEDS_REVIEW
         reason = f"Similar but not identical to the application ({score:.0f}% similar). Confirm visually."
