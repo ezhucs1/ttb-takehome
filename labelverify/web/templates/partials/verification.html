@@ -1,0 +1,103 @@
+{% import "macros.html" as m %}
+{# Context: app, run, result (may be None), comments (dict field -> list), can_comment, applicant_view #}
+{% if run and run.error %}
+<div class="banner banner-neutral">
+  <div class="banner-main">
+    <strong>The label could not be read.</strong>
+    <span>{{ run.error }}</span>
+  </div>
+</div>
+{% elif result %}
+{% set rec = result.recommendation.value %}
+<div class="banner banner-{{ RECOMMENDATION_TONES[rec] }}">
+  <div class="banner-main">
+    <strong>
+      {% if rec == 'approve' %}Every required field matches the application.
+      {% elif rec == 'needs_review' %}A few fields need a specialist's judgment.
+      {% else %}The label needs corrections before it can be approved.
+      {% endif %}
+    </strong>
+    <span>
+      {% if applicant_view and rec != 'approve' %}
+        Fixing these before you submit avoids a correction request later.
+      {% else %}
+        The engine recommends; the specialist decides.
+      {% endif %}
+    </span>
+  </div>
+  <div class="banner-meta">
+    <span title="Extractor">{{ result.extractor }}</span>
+    <span title="Extraction time">{{ result.extraction_ms }} ms read · {{ result.total_ms }} ms total</span>
+  </div>
+</div>
+
+{% if result.summary and rec != 'approve' %}
+<ul class="findings">
+  {% for line in result.summary %}<li>{{ line }}</li>{% endfor %}
+</ul>
+{% endif %}
+
+<div class="table-wrap">
+<table class="table table-verify">
+  <thead>
+    <tr>
+      <th style="width:19%">Field</th>
+      <th style="width:26%">Application</th>
+      <th style="width:30%">On the label</th>
+      <th>Result</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for f in result.fields %}
+    {% set thread = comments.get(f.field, []) %}
+    {% set open_count = thread | rejectattr('resolved') | list | length %}
+    <tr class="row-{{ f.verdict.value }}" id="field-{{ f.field }}">
+      <th scope="row">
+        <div class="field-name">{{ f.label }}</div>
+        {% if f.verdict.value != 'not_applicable' and f.confidence %}
+        <div class="confidence" title="How confident the reader was in the transcription">
+          <span class="confidence-bar"><span style="width:{{ (f.confidence * 100) | round | int }}%"></span></span>
+          {{ (f.confidence * 100) | round | int }}%
+        </div>
+        {% endif %}
+      </th>
+      <td>
+        {% if f.field == 'health_warning' %}<span class="muted">Statutory text (27 CFR 16.21)</span>
+        {% else %}{{ f.application_value or '—' }}{% endif %}
+      </td>
+      <td>
+        {% if f.field == 'health_warning' and f.diff %}
+          <div class="diff">{% for d in f.diff %}<span class="d-{{ d.op }}">{{ d.display or d.text }}</span> {% endfor %}</div>
+          {% if f.label_value %}<details class="as-printed"><summary>As printed</summary><p>{{ f.label_value }}</p></details>{% endif %}
+        {% elif f.label_value %}{{ f.label_value }}
+        {% else %}<span class="muted">not found</span>{% endif %}
+      </td>
+      <td>
+        <div class="verdict">
+          {{ m.verdict_badge(f.verdict.value) }}
+          {% if can_comment or thread %}
+          <button type="button" class="thread-toggle {% if open_count %}has-open{% endif %}" data-toggle="#thread-{{ f.field }}" title="Comments on this field">
+            <svg class="icon"><use href="#i-comment"></use></svg>{{ thread | length if thread else '' }}
+          </button>
+          {% endif %}
+        </div>
+        <div class="reason">{{ f.reason }}</div>
+        {% for n in f.notes %}<div class="note">{{ n }}</div>{% endfor %}
+      </td>
+    </tr>
+    {% if can_comment or thread %}
+    <tr class="thread-row" id="thread-{{ f.field }}" {% if not open_count %}hidden{% endif %}>
+      <td colspan="4">
+        <div class="thread-host" id="thread-host-{{ f.field }}">
+          {% with field=f.field, comments=thread %}{% include "partials/thread.html" %}{% endwith %}
+        </div>
+      </td>
+    </tr>
+    {% endif %}
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+{{ m.empty('No AI check yet', 'Run a pre-check to compare the label against the application.') }}
+{% endif %}

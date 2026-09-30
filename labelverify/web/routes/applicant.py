@@ -1,0 +1,323 @@
+"""Applicant portal: dashboard, new application, detail and resubmission, batch upload."""
+
+from __future__ import annotations
+
+import time
+
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+)
+from fastapi.responses import JSONResponse, PlainTextResponse
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from ...engine.extractors import ExtractionError
+from ...engine.models import ApplicationData
+from ...engine.preprocess import UnreadableImageError
+from .. import services
+from ..auth import require_applicant
+from ..db import get_db
+from ..models import ApplicationStatus, Batch, User
+from .common import application_from_form, load_application, read_upload, renderer, sample_image
+
+router = APIRouter(prefix="/applicant", dependencies=[Depends(require_applicant)])
+
+
+@router.get("")
+def dashboard(
+    request: Request, db: Session = Depends(get_db), user: User = Depends(require_applicant)
+):
+    apps = services.applicant_applications(db, user)
+    counts = {status.value: 0 for status in ApplicationStatus}
+    for app in apps:
+        counts[app.status] += 1
+    needs_action = [a for a in apps if a.status == ApplicationStatus.CORRECTION_REQUESTED]
+    return renderer(request).page(
+        request, "applicant/dashboard.html", apps=apps, counts=counts, needs_action=needs_action
+    )
+
+
+# --------------------------------------------------------------------------- new application
+
+
+@router.get("/applications/new")
+def new_application(request: Request, user: User = Depends(require_applicant)):
+    return renderer(request).page(request, "applicant/new.html", samples=request.app.state.samples)
+
+
+@router.post("/applications")
+async def create_application(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_applicant),
+    image: UploadFile | None = File(default=None),
+    sample_id: str = Form(""),
+    beverage_type: str = Form("distilled_spirits"),
+):
+    """Step 1: store the label, run extraction, and return pre-filled form values."""
+    try:
+        upload = await read_upload(image)
+        if upload is None and sample_id:
+            upload = sample_image(request, sample_id)
+        if upload is None:
+            raise HTTPException(400, "Choose a label image or a sample label first.")
+        data, filename = upload
+        app = services.create_draft(
+            db,
+            user,
+            ApplicationData(beverage_type=beverage_type, brand_name="", class_type=""),
+            data,
+            filename,
+        )
+    except UnreadableImageError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    db.commit()
+
+    extractor = request.app.state.get_extractor()
+    started = time.perf_counter()
+    prefill: dict[str, str] = {}
+    warning = None
+    try:
+        extraction = services.extract_for_prefill(extractor, app.current_image)
+        prefill = services.prefill_fields(extraction)
+        if not extraction.image_quality.readable:
+            warning = "The label is hard to read: " + "; ".join(extraction.image_quality.issues)
+    except ExtractionError as exc:
+        warning = f"Could not read the label automatically ({exc}). Fill in the form by hand."
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
+
+    image_url = f"/applications/{app.id}/images/{app.current_image.id}"
+    return JSONResponse(
+        {
+            "id": app.id,
+            "serial": app.serial,
+            "image_url": image_url,
+            "prefill": prefill,
+            "warning": warning,
+            "extractor": extractor.name,
+            "ms": elapsed_ms,
+        }
+    )
+
+
+@router.post("/applications/{app_id}/precheck")
+async def precheck(
+    request: Request,
+    app_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_applicant),
+):
+    """Step 2: save the form and run the comparison; returns the result partial."""
+    app = load_application(db, app_id, user)
+    if app.status != ApplicationStatus.DRAFT:
+        raise HTTPException(409, "This application has already been submitted.")
+    form = await request.form()
+    services.update_fields(app, application_from_form(dict(form)))
+    run = services.record_run(db, app, request.app.state.get_extractor(), "precheck")
+    db.commit()
+    return renderer(request).partial(
+        request,
+        "partials/verification.html",
+        app=app,
+        run=run,
+        result=services.result_of(run),
+        comments={},
+        can_comment=False,
+        applicant_view=True,
+    )
+
+
+@router.post("/applications/{app_id}/submit")
+async def submit(
+    request: Request,
+    app_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_applicant),
+):
+    """Step 3: final save and submit to the specialist queue."""
+    app = load_application(db, app_id, user)
+    if app.status != ApplicationStatus.DRAFT:
+        raise HTTPException(409, "This application has already been submitted.")
+    form = await request.form()
+    data = application_from_form(dict(form))
+    if not data.brand_name or not data.class_type:
+        raise HTTPException(422, "Brand name and class/type are required before submitting.")
+    services.update_fields(app, data)
+    if app.latest_run is None or app.latest_run.trigger != "precheck":
+        services.record_run(db, app, request.app.state.get_extractor(), "submit")
+    services.submit(db, app, user)
+    db.commit()
+    return renderer(request).redirect(
+        request,
+        f"/applicant/applications/{app.id}",
+        flash=(
+            "success",
+            f"Application {app.serial} submitted. A specialist will review it shortly.",
+        ),
+    )
+
+
+# --------------------------------------------------------------------------- detail
+
+
+@router.get("/applications/{app_id}")
+def detail(
+    request: Request,
+    app_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_applicant),
+):
+    app = load_application(db, app_id, user)
+    run = app.latest_run
+    return renderer(request).page(
+        request,
+        "applicant/detail.html",
+        app=app,
+        run=run,
+        result=services.result_of(run),
+        comments=services.comments_by_field(app),
+        can_comment=not app.is_decided,
+        latest_notice=app.notices[-1] if app.notices else None,
+    )
+
+
+@router.post("/applications/{app_id}/resubmit")
+async def resubmit(
+    request: Request,
+    app_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_applicant),
+    image: UploadFile | None = File(default=None),
+    message: str = Form(""),
+):
+    app = load_application(db, app_id, user)
+    form = await request.form()
+    data = application_from_form(dict(form))
+    try:
+        upload = await read_upload(image)
+        services.resubmit(
+            db,
+            app,
+            user,
+            data,
+            request.app.state.get_extractor(),
+            image_bytes=upload[0] if upload else None,
+            filename=upload[1] if upload else "",
+            message=message,
+        )
+    except (services.WorkflowError, UnreadableImageError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+    db.commit()
+    return renderer(request).redirect(
+        request,
+        f"/applicant/applications/{app.id}",
+        flash=("success", "Resubmitted. It is back in the review queue."),
+    )
+
+
+# --------------------------------------------------------------------------- batch
+
+
+@router.get("/batches")
+def batches(
+    request: Request, db: Session = Depends(get_db), user: User = Depends(require_applicant)
+):
+    rows = list(
+        db.scalars(
+            select(Batch).where(Batch.applicant_id == user.id).order_by(Batch.created_at.desc())
+        )
+    )
+    return renderer(request).page(
+        request, "applicant/batches.html", batches=rows, errors=[], columns=services.BATCH_COLUMNS
+    )
+
+
+@router.get("/batches/template.csv")
+def batch_template():
+    return PlainTextResponse(
+        services.batch_template_csv(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="labelverify-batch-template.csv"'},
+    )
+
+
+@router.post("/batches")
+async def create_batch(
+    request: Request,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_applicant),
+    csv_file: UploadFile = File(...),
+    zip_file: UploadFile = File(...),
+):
+    parsed = services.parse_batch(await csv_file.read(), await zip_file.read())
+    if parsed.errors:
+        rows = list(
+            db.scalars(
+                select(Batch).where(Batch.applicant_id == user.id).order_by(Batch.created_at.desc())
+            )
+        )
+        return renderer(request).page(
+            request,
+            "applicant/batches.html",
+            status_code=422,
+            batches=rows,
+            errors=parsed.errors,
+            columns=services.BATCH_COLUMNS,
+        )
+    batch = services.create_batch(db, user, csv_file.filename or "batch.csv", parsed)
+    db.commit()
+    background.add_task(
+        services.process_batch,
+        request.app.state.session_factory,
+        batch.id,
+        parsed,
+        request.app.state.get_extractor(),
+    )
+    return renderer(request).redirect(
+        request,
+        f"/applicant/batches/{batch.id}",
+        flash=("info", f"Checking {batch.total} labels in the background."),
+    )
+
+
+def _load_batch(db: Session, batch_id: str, user: User) -> Batch:
+    batch = db.get(Batch, batch_id)
+    if batch is None or batch.applicant_id != user.id:
+        raise HTTPException(404, "Batch not found.")
+    return batch
+
+
+@router.get("/batches/{batch_id}")
+def batch_detail(
+    request: Request,
+    batch_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_applicant),
+):
+    batch = _load_batch(db, batch_id, user)
+    return renderer(request).page(
+        request, "applicant/batch_detail.html", batch=batch, summary=services.batch_summary(batch)
+    )
+
+
+@router.get("/batches/{batch_id}/rows")
+def batch_rows(
+    request: Request,
+    batch_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_applicant),
+):
+    batch = _load_batch(db, batch_id, user)
+    response = renderer(request).partial(
+        request, "partials/batch_rows.html", batch=batch, summary=services.batch_summary(batch)
+    )
+    response.headers["X-Batch-Status"] = batch.status
+    return response

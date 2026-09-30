@@ -1,0 +1,64 @@
+{% import "macros.html" as m %}
+{# Shared application view. Context: app, run, result, comments, can_comment, latest_notice, applicant_view #}
+<div class="case">
+  <section class="case-image">
+    <div class="viewer" data-viewer>
+      {% if app.current_image %}
+      <img src="/applications/{{ app.id }}/images/{{ app.current_image.id }}" alt="Label for {{ app.brand_name }}" data-viewer-img>
+      <button type="button" class="viewer-zoom" data-viewer-toggle title="Toggle zoom"><svg class="icon"><use href="#i-zoom"></use></svg></button>
+      {% else %}
+      {{ m.empty('No label image') }}
+      {% endif %}
+    </div>
+    {% if app.images | length > 1 %}
+    <div class="viewer-versions">
+      {% for img in app.images %}
+      <button type="button" class="viewer-thumb {% if loop.last %}active{% endif %}" data-viewer-src="/applications/{{ app.id }}/images/{{ img.id }}" title="{{ img.filename }} · {{ img.created_at | dt }}">
+        <img src="/applications/{{ app.id }}/images/{{ img.id }}" alt=""><span>v{{ loop.index }}</span>
+      </button>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="card card-compact">
+      <div class="card-title">Application data</div>
+      {{ m.application_fields(app) }}
+    </div>
+  </section>
+
+  <section class="case-main">
+    {% if latest_notice and app.status in ('correction_requested', 'resubmitted', 'rejected') %}
+    <div class="card notice-card">
+      <div class="card-title">
+        {{ 'Correction request' if app.status != 'rejected' else 'Rejection notice' }}
+        <span class="muted">from {{ latest_notice.sent_by.name }} · {{ latest_notice.created_at | dt }}</span>
+      </div>
+      <pre class="notice-body">{{ latest_notice.body }}</pre>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-title">
+        AI comparison
+        {% if run %}<span class="muted">{{ run.trigger }} · {{ run.created_at | dt }}</span>{% endif %}
+      </div>
+      <div id="verification">
+        {% include "partials/verification.html" %}
+      </div>
+    </div>
+
+    {% if actions_template %}{% include actions_template %}{% endif %}
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">General discussion</div>
+        <div class="thread-host" id="thread-host-general">
+          {% with field='general', comments=comments.get('general', []) %}{% include "partials/thread.html" %}{% endwith %}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">History</div>
+        {% include "partials/timeline.html" %}
+      </div>
+    </div>
+  </section>
+</div>

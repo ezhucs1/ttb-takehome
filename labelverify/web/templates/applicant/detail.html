@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+{% import "macros.html" as m %}
+{% block title %}{{ app.serial }}{% endblock %}
+{% block content %}
+{% set applicant_view = True %}
+{% set actions_template = "applicant/_resubmit.html" if app.status == 'correction_requested' else None %}
+<div class="page-header">
+  <div>
+    <div class="crumbs"><a href="/applicant">My applications</a> / {{ app.serial }}</div>
+    <h1>{{ app.brand_name }} <span class="muted h-sub">{{ app.class_type }}</span></h1>
+    <div class="header-pills">
+      {{ m.status_pill(app.status) }}
+      {{ m.rec_pill(app.recommendation) }}
+      {% if app.submitted_at %}<span class="muted">Submitted {{ app.submitted_at | dt }}</span>{% endif %}
+      {% if app.specialist %}<span class="muted">· Specialist {{ app.specialist.name }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="page-actions">
+    {% if app.status == 'correction_requested' %}
+    <a class="btn btn-primary" href="#resubmit">Fix and resubmit</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if app.status == 'approved' %}
+<div class="banner banner-success"><div class="banner-main"><strong>Approved.</strong><span>Decided {{ app.decided_at | dt }} by {{ app.specialist.name if app.specialist else 'TTB' }}.</span></div></div>
+{% elif app.status == 'rejected' %}
+<div class="banner banner-danger"><div class="banner-main"><strong>Rejected.</strong><span>Decided {{ app.decided_at | dt }}. See the notice below for the reasons.</span></div></div>
+{% elif app.status in ('submitted', 'resubmitted', 'under_review') %}
+<div class="banner banner-info"><div class="banner-main"><strong>In the review queue.</strong><span>A labeling specialist will confirm the AI comparison and decide. You can answer questions in the threads below.</span></div></div>
+{% endif %}
+
+{% include "partials/case.html" %}
+{% endblock %}

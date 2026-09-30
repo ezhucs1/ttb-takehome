@@ -1,0 +1,12 @@
+{# Context: app, draft (NoticeDraft) #}
+<div class="notice-editor">
+  <div class="notice-editor-head">
+    <span class="pill pill-{{ 'info' if draft.source == 'ai' else 'neutral' }}">
+      <svg class="icon"><use href="#i-sparkle"></use></svg>
+      {{ 'Drafted by the model from the findings' if draft.source == 'ai' else 'Drafted from the findings' }}
+    </span>
+    <span class="muted">Edit freely. Nothing is sent until you choose Request correction.</span>
+  </div>
+  <input type="hidden" name="notice_source" value="{{ draft.source }}">
+  <textarea name="notice_body" rows="16" required>{{ draft.body }}</textarea>
+</div>

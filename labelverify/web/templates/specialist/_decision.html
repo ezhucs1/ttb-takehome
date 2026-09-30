@@ -1,0 +1,49 @@
+{% import "macros.html" as m %}
+{% if app.is_decided %}
+<div class="card">
+  <div class="card-title">Decision</div>
+  <p>{{ STATUS_LABELS[app.status] }} on {{ app.decided_at | dt }} by {{ app.specialist.name if app.specialist else 'TTB' }}.</p>
+</div>
+{% else %}
+<div class="card decision" id="decision">
+  <div class="card-title">Your decision</div>
+  <div class="decision-grid">
+    <form method="post" action="/specialist/applications/{{ app.id }}/decision" class="decision-approve">
+      <input type="hidden" name="action" value="approve">
+      <button class="btn btn-success btn-lg btn-block" type="submit" {% if app.recommendation != 'approve' %}data-confirm="The AI check flagged items on this label. Approve anyway?"{% endif %}>
+        <svg class="icon"><use href="#i-check"></use></svg> Approve label
+      </button>
+      <p class="muted small">{% if app.recommendation == 'approve' %}All fields matched the application.{% else %}Use when you have confirmed the flagged items yourself.{% endif %}</p>
+    </form>
+
+    <div class="decision-correct">
+      <form method="post" action="/specialist/applications/{{ app.id }}/decision" id="correction-form">
+        <input type="hidden" name="action" value="request_correction">
+        <div class="decision-correct-head">
+          <strong>Request corrections</strong>
+          <button type="button" class="btn btn-secondary btn-sm" data-fetch="/specialist/applications/{{ app.id }}/notice" data-target="#notice-host" data-busy="Drafting…">
+            <svg class="icon"><use href="#i-sparkle"></use></svg> Draft the notice
+          </button>
+        </div>
+        <div id="notice-host">
+          {% if flagged %}
+          <p class="muted small">Drafts a plain-language notice from the {{ flagged | length }} flagged field{{ 's' if flagged | length != 1 }}. You edit it before it goes out, and each flagged field gets a comment thread the applicant can reply on.</p>
+          {% else %}
+          <p class="muted small">Nothing is flagged, but you can still draft a notice and edit it.</p>
+          {% endif %}
+        </div>
+        <div class="decision-correct-actions">
+          <button class="btn btn-warning" type="submit" id="send-correction" disabled>Send correction request</button>
+          <button class="link-btn" type="button" data-toggle="#reject-panel">Reject instead…</button>
+        </div>
+      </form>
+      <form method="post" action="/specialist/applications/{{ app.id }}/decision" id="reject-panel" hidden class="reject-panel">
+        <input type="hidden" name="action" value="reject">
+        <label for="reject-note">Reason for rejection (sent to the applicant)</label>
+        <textarea name="notice_body" id="reject-note" rows="3" required></textarea>
+        <button class="btn btn-danger" type="submit" data-confirm="Reject this application? The applicant will need to file a new one.">Reject application</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}

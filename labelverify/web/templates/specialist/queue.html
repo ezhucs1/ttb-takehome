@@ -1,0 +1,70 @@
+{% extends "layout.html" %}
+{% import "macros.html" as m %}
+{% block title %}Review queue{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Review queue</h1>
+    <p class="subtitle">Sorted so the clean ones come first. Every recommendation is yours to confirm.</p>
+  </div>
+</div>
+
+<div class="stat-grid stat-grid-5">
+  {{ m.stat('Open', stats.open, 'info', '/specialist?tab=open') }}
+  {{ m.stat('Ready to approve', stats.ready, 'success', '/specialist?tab=ready') }}
+  {{ m.stat('Needs a look', stats.review, 'warning', '/specialist?tab=review') }}
+  {{ m.stat('Awaiting applicant', stats.corrections, 'neutral', '/specialist?tab=corrections') }}
+  {{ m.stat('Approved today', stats.approved_today, 'success') }}
+</div>
+
+<div class="card card-flush">
+  <div class="tabs">
+    {% for key, label in tabs.items() %}
+    <a class="tab {% if key == tab %}active{% endif %}" href="/specialist?tab={{ key }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  {% if apps %}
+  <form method="post" action="/specialist/bulk-approve" id="bulk-form">
+  <div class="table-wrap">
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        {% if tab == 'ready' %}<th class="check-col"><input type="checkbox" data-check-all aria-label="Select all"></th>{% endif %}
+        <th>Application</th><th>Brand</th><th>Applicant</th><th>Type</th><th>Status</th><th>AI check</th><th>{{ 'Decided' if tab == 'decided' else 'Waiting' }}</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for app in apps %}
+      <tr data-href="/specialist/applications/{{ app.id }}">
+        {% if tab == 'ready' %}<td class="check-col"><input type="checkbox" name="ids" value="{{ app.id }}" aria-label="Select {{ app.serial }}"></td>{% endif %}
+        <td class="mono">{{ app.serial }}</td>
+        <td><strong>{{ app.brand_name }}</strong><div class="muted small">{{ app.class_type }}</div></td>
+        <td>{{ app.organization }}</td>
+        <td>{{ BEVERAGE_LABELS.get(app.beverage_type) }}</td>
+        <td>{{ m.status_pill(app.status) }}</td>
+        <td>
+          {{ m.rec_pill(app.recommendation) }}
+          {% if app.risk_score %}<span class="muted small" title="Risk score">· risk {{ app.risk_score }}</span>{% endif %}
+        </td>
+        <td class="muted">{{ (app.decided_at if tab == 'decided' else app.submitted_at) | ago }}{% if app.specialist and tab != 'decided' %}<div class="small">{{ app.specialist.name }}</div>{% endif %}</td>
+        <td class="right"><a class="btn btn-ghost btn-sm" href="/specialist/applications/{{ app.id }}">{{ 'View' if tab == 'decided' else 'Review' }}</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if tab == 'ready' %}
+  <div class="bulk-bar">
+    <span class="muted"><span data-check-count>0</span> selected</span>
+    <button class="btn btn-primary" type="submit" data-confirm="Approve every selected application? Each one had all fields match." disabled data-needs-selection>
+      <svg class="icon"><use href="#i-check"></use></svg> Approve selected
+    </button>
+  </div>
+  {% endif %}
+  </form>
+  {% else %}
+  {{ m.empty('Nothing here', 'This tab is empty right now.') }}
+  {% endif %}
+</div>
+{% endblock %}

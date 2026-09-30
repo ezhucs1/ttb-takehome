@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+{% import "macros.html" as m %}
+{% block title %}Batch {{ batch.filename }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="crumbs"><a href="/applicant/batches">Batch upload</a> / {{ batch.filename }}</div>
+    <h1>Batch of {{ batch.total }} labels</h1>
+    <p class="subtitle">Started {{ batch.created_at | dt }}{% if batch.finished_at %} · finished {{ batch.finished_at | dt }}{% endif %}</p>
+  </div>
+</div>
+<div class="card card-flush" id="batch-rows" {% if batch.status != 'done' %}data-poll="/applicant/batches/{{ batch.id }}/rows" data-poll-interval="1500" data-poll-until="X-Batch-Status: done"{% endif %}>
+  {% include "partials/batch_rows.html" %}
+</div>
+{% endblock %}

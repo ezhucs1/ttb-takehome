@@ -1,16 +1,21 @@
-"""Web layer tests using FastAPI's TestClient with an injected extractor."""
+"""HTTP-level tests for the applicant and specialist workflows."""
 
 from __future__ import annotations
 
+import io
 import json
+import re
+import zipfile
 
 import pytest
 from fastapi.testclient import TestClient
 
 from labelverify.engine.extractors import DemoExtractor, FixtureExtractor
-from labelverify.engine.extractors.base import ExtractionError
-from labelverify.engine.extractors.demo import load_manifest
+from labelverify.engine.extractors.demo import SAMPLES_DIR, load_manifest
 from labelverify.web.app import create_app
+
+SPECIALIST = {"email": "sarah.chen@ttb.gov", "password": "labelverify"}
+APPLICANT = {"email": "labels@oldtomdistillery.com", "password": "labelverify"}
 
 FORM = {
     "beverage_type": "distilled_spirits",
@@ -19,123 +24,454 @@ FORM = {
     "alcohol_content": "45% Alc./Vol. (90 Proof)",
     "net_contents": "750 mL",
     "producer_name": "Old Tom Distillery",
-    "producer_address": "123 Barrel Lane, Bardstown, Kentucky 40004",
+    "producer_address": "Bardstown, KY 40004",
 }
 
 
-class BrokenExtractor:
-    name = "broken"
+def sample(sample_id: str) -> dict:
+    return next(s for s in load_manifest() if s["id"] == sample_id)
 
-    def extract(self, image, media_type):
-        raise ExtractionError("model unreachable")
+
+def sample_bytes(sample_id: str) -> bytes:
+    return (SAMPLES_DIR / sample(sample_id)["file"]).read_bytes()
 
 
 @pytest.fixture
-def client(extraction):
-    return TestClient(create_app(extractor=FixtureExtractor(extraction)))
-
-
-def test_index_renders_form_and_samples(client):
-    resp = client.get("/")
-    assert resp.status_code == 200
-    assert 'id="verify-form"' in resp.text
-    assert "Test fixture" in resp.text
-    assert "old-tom-bourbon" in resp.text
-
-
-def test_healthz(client):
-    assert client.get("/healthz").json() == {"status": "ok", "extractor": "Test fixture"}
-
-
-def test_sample_image_is_served(client):
-    resp = client.get("/samples/old-tom-bourbon/image")
-    assert resp.status_code == 200
-    assert resp.headers["content-type"] == "image/png"
-    assert client.get("/samples/nope/image").status_code == 404
-
-
-def test_verify_with_upload_returns_result_partial(client, label_png):
-    resp = client.post("/verify", data=FORM, files={"image": ("label.png", label_png, "image/png")})
-    assert resp.status_code == 200
-    assert "Recommend approval" in resp.text
-    assert "Government Health Warning" in resp.text
-    assert 'class="badge badge-match"' in resp.text
-
-
-def test_verify_with_sample_id_uses_bundled_image(client):
-    resp = client.post("/verify", data={**FORM, "sample_id": "old-tom-bourbon"})
-    assert resp.status_code == 200
-    assert "Recommend approval" in resp.text
-
-
-def test_verify_without_image_is_a_clear_error(client):
-    resp = client.post("/verify", data=FORM)
-    assert resp.status_code == 400
-    assert "upload a label image" in resp.text
-
-
-def test_verify_with_garbage_upload(client):
-    resp = client.post("/verify", data=FORM, files={"image": ("x.png", b"nope", "image/png")})
-    assert resp.status_code == 400
-    assert "not a readable image" in resp.text
-
-
-def test_verify_with_invalid_beverage_type(client, label_png):
-    resp = client.post(
-        "/verify",
-        data={**FORM, "beverage_type": "mead"},
-        files={"image": ("label.png", label_png, "image/png")},
+def app(tmp_path):
+    return create_app(
+        extractor=DemoExtractor(), database_url=f"sqlite:///{tmp_path}/web.db", secret="test-secret"
     )
-    assert resp.status_code == 422
-    assert "invalid" in resp.text
 
 
-def test_extraction_failure_is_reported_not_crashed(label_png):
-    client = TestClient(create_app(extractor=BrokenExtractor()))
-    resp = client.post("/verify", data=FORM, files={"image": ("label.png", label_png, "image/png")})
-    assert resp.status_code == 502
-    assert "model unreachable" in resp.text
+@pytest.fixture
+def anon(app):
+    return TestClient(app)
 
 
-def test_json_api(client, label_png):
-    resp = client.post(
-        "/api/verify",
-        data={"application": json.dumps(FORM)},
-        files={"image": ("label.png", label_png, "image/png")},
-    )
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["recommendation"] == "approve"
-    assert len(body["fields"]) == 8
-    assert body["source"] == "upload:label.png"
+def login(app, creds) -> TestClient:
+    client = TestClient(app)
+    resp = client.post("/login", data=creds, follow_redirects=False)
+    assert resp.status_code == 303, resp.text
+    return client
 
 
-def test_json_api_rejects_bad_application(client, label_png):
-    resp = client.post(
-        "/api/verify",
-        data={"application": "{}"},
-        files={"image": ("label.png", label_png, "image/png")},
-    )
-    assert resp.status_code == 422
+@pytest.fixture
+def specialist(app):
+    return login(app, SPECIALIST)
 
 
-class TestDemoMode:
-    """Every bundled sample must produce the recommendation its manifest promises."""
+@pytest.fixture
+def applicant(app):
+    return login(app, APPLICANT)
 
-    @pytest.mark.parametrize("sample", load_manifest(), ids=lambda s: s["id"])
-    def test_sample_gives_expected_recommendation(self, sample):
-        client = TestClient(create_app(extractor=DemoExtractor()))
-        resp = client.post(
+
+def ids_in(html: str, prefix: str) -> list[str]:
+    return list(dict.fromkeys(re.findall(rf"{prefix}/([0-9a-f]{{32}})", html)))
+
+
+class TestAuth:
+    def test_anonymous_is_redirected_to_login(self, anon):
+        resp = anon.get("/specialist", follow_redirects=False)
+        assert resp.status_code == 303 and resp.headers["location"].startswith("/login")
+        assert anon.get("/").headers.get("content-type", "").startswith("text/html")
+
+    def test_bad_password(self, anon):
+        resp = anon.post("/login", data={"email": SPECIALIST["email"], "password": "nope"})
+        assert resp.status_code == 401 and "do not match" in resp.text
+
+    def test_roles_are_enforced(self, specialist, applicant):
+        assert specialist.get("/applicant").status_code == 403
+        assert applicant.get("/specialist").status_code == 403
+
+    def test_home_routes_by_role(self, specialist, applicant):
+        assert specialist.get("/", follow_redirects=False).headers["location"] == "/specialist"
+        assert applicant.get("/", follow_redirects=False).headers["location"] == "/applicant"
+
+    def test_logout(self, specialist):
+        specialist.post("/logout", follow_redirects=False)
+        assert specialist.get("/specialist", follow_redirects=False).status_code == 303
+
+    def test_healthz(self, anon):
+        assert anon.get("/healthz").json()["extractor"] == "Demo mode"
+
+
+class TestSpecialistWorkflow:
+    def test_queue_renders_seeded_applications_and_stats(self, specialist):
+        resp = specialist.get("/specialist")
+        assert resp.status_code == 200
+        assert "Ready to approve" in resp.text and "COLA-" in resp.text
+        for tab in ("ready", "review", "corrections", "decided", "bogus"):
+            assert specialist.get(f"/specialist?tab={tab}").status_code == 200
+
+    def test_opening_a_submitted_application_claims_it(self, specialist):
+        app_id = ids_in(specialist.get("/specialist?tab=ready").text, "/specialist/applications")[0]
+        resp = specialist.get(f"/specialist/applications/{app_id}")
+        assert resp.status_code == 200
+        assert "Under review" in resp.text and "Review started by Sarah Chen" in resp.text
+        assert "Approve label" in resp.text
+
+    def test_draft_notice_then_request_correction(self, specialist, applicant):
+        app_id = ids_in(specialist.get("/specialist?tab=review").text, "/specialist/applications")[
+            0
+        ]
+        draft = specialist.post(
+            f"/specialist/applications/{app_id}/notice", headers={"X-Partial": "1"}
+        )
+        assert (
+            draft.status_code == 200
+            and "<textarea" in draft.text
+            and "Re: COLA application" in draft.text
+        )
+        body = re.search(r"<textarea[^>]*>(.*?)</textarea>", draft.text, re.S).group(1)
+        resp = specialist.post(
+            f"/specialist/applications/{app_id}/decision",
+            data={"action": "request_correction", "notice_body": body, "notice_source": "template"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        page = specialist.get(f"/specialist/applications/{app_id}")
+        assert "Correction requested" in page.text and "Correction request" in page.text
+        # The applicant now sees it as needing action, with the notice and field comments.
+        dash = applicant.get("/applicant")
+        assert "Corrections requested" in dash.text or "Correction requested" in dash.text
+
+    def test_correction_without_notice_is_rejected(self, specialist):
+        app_id = ids_in(specialist.get("/specialist?tab=review").text, "/specialist/applications")[
+            0
+        ]
+        resp = specialist.post(
+            f"/specialist/applications/{app_id}/decision",
+            data={"action": "request_correction"},
+            headers={"X-Partial": "1"},
+        )
+        assert resp.status_code == 422 and "needs a notice" in resp.text
+
+    def test_approve_and_reject(self, specialist):
+        ready = ids_in(specialist.get("/specialist?tab=ready").text, "/specialist/applications")
+        assert len(ready) >= 2
+        assert (
+            specialist.post(
+                f"/specialist/applications/{ready[0]}/decision",
+                data={"action": "approve"},
+                follow_redirects=False,
+            ).status_code
+            == 303
+        )
+        assert (
+            specialist.post(
+                f"/specialist/applications/{ready[1]}/decision",
+                data={"action": "reject", "notice_body": "Not eligible."},
+                follow_redirects=False,
+            ).status_code
+            == 303
+        )
+        decided = specialist.get("/specialist?tab=decided").text
+        assert ready[0] in decided and ready[1] in decided
+        assert (
+            specialist.post(
+                f"/specialist/applications/{ready[0]}/rerun", follow_redirects=False
+            ).status_code
+            == 409
+        )
+
+    def test_bulk_approve(self, specialist):
+        ready = ids_in(specialist.get("/specialist?tab=ready").text, "/specialist/applications")
+        resp = specialist.post(
+            "/specialist/bulk-approve", data={"ids": ready}, follow_redirects=False
+        )
+        assert resp.status_code == 303
+        assert (
+            ids_in(specialist.get("/specialist?tab=ready").text, "/specialist/applications") == []
+        )
+
+    def test_rerun_records_a_new_run(self, specialist):
+        app_id = ids_in(specialist.get("/specialist?tab=review").text, "/specialist/applications")[
+            0
+        ]
+        assert (
+            specialist.post(
+                f"/specialist/applications/{app_id}/rerun", follow_redirects=False
+            ).status_code
+            == 303
+        )
+        assert "rerun" in specialist.get(f"/specialist/applications/{app_id}").text
+
+
+class TestComments:
+    def test_field_thread_round_trip(self, specialist, applicant):
+        app_id = ids_in(specialist.get("/specialist?tab=review").text, "/specialist/applications")[
+            0
+        ]
+        resp = specialist.post(
+            f"/applications/{app_id}/comments",
+            data={"field": "brand_name", "body": "Please confirm the spelling."},
+            headers={"X-Partial": "1"},
+        )
+        assert resp.status_code == 200 and "Please confirm the spelling." in resp.text
+        reply = applicant.post(
+            f"/applications/{app_id}/comments",
+            data={"field": "brand_name", "body": "Confirmed."},
+            headers={"X-Partial": "1"},
+        )
+        assert reply.status_code == 200 and "Confirmed." in reply.text
+        # Applicants never see resolve controls; the specialist's page carries them.
+        review = specialist.get(f"/specialist/applications/{app_id}").text
+        comment_id = re.search(r"/comments/([0-9a-f]{32})/resolve", review).group(1)
+        assert (
+            applicant.post(
+                f"/applications/{app_id}/comments/{comment_id}/resolve", headers={"X-Partial": "1"}
+            ).status_code
+            == 403
+        )
+        resolved = specialist.post(
+            f"/applications/{app_id}/comments/{comment_id}/resolve", headers={"X-Partial": "1"}
+        )
+        assert resolved.status_code == 200 and "Resolved" in resolved.text
+
+    def test_empty_comment_and_unknown_field(self, specialist):
+        app_id = ids_in(specialist.get("/specialist").text, "/specialist/applications")[0]
+        assert (
+            specialist.post(
+                f"/applications/{app_id}/comments",
+                data={"field": "brand_name", "body": "  "},
+                headers={"X-Partial": "1"},
+            ).status_code
+            == 422
+        )
+        assert (
+            specialist.post(
+                f"/applications/{app_id}/comments",
+                data={"field": "nope", "body": "x"},
+                headers={"X-Partial": "1"},
+            ).status_code
+            == 422
+        )
+
+    def test_applicant_cannot_see_other_applicants_application(self, app, applicant):
+        other = login(app, {"email": "compliance@stonesthrow.wine", "password": "labelverify"})
+        mine = ids_in(applicant.get("/applicant").text, "/applicant/applications")[0]
+        assert other.get(f"/applicant/applications/{mine}").status_code == 404
+        assert (
+            other.post(
+                f"/applications/{mine}/comments",
+                data={"field": "general", "body": "hi"},
+                headers={"X-Partial": "1"},
+            ).status_code
+            == 404
+        )
+
+
+class TestApplicantWorkflow:
+    def test_dashboard(self, applicant):
+        resp = applicant.get("/applicant")
+        assert resp.status_code == 200 and "My applications" in resp.text
+
+    def test_new_application_end_to_end(self, applicant, specialist):
+        page = applicant.get("/applicant/applications/new")
+        assert page.status_code == 200 and 'data-sample-id="old-tom-bourbon"' in page.text
+
+        created = applicant.post(
+            "/applicant/applications",
+            data={"sample_id": "old-tom-title-case-warning", "beverage_type": "distilled_spirits"},
+            headers={"Accept": "application/json"},
+        )
+        assert created.status_code == 200
+        payload = created.json()
+        assert payload["prefill"]["brand_name"] == "OLD TOM DISTILLERY"
+        assert payload["prefill"]["net_contents"] == "750 mL"
+        app_id = payload["id"]
+
+        check = applicant.post(
+            f"/applicant/applications/{app_id}/precheck", data=FORM, headers={"X-Partial": "1"}
+        )
+        assert check.status_code == 200
+        assert "needs corrections" in check.text and "capital letters" in check.text
+
+        submitted = applicant.post(
+            f"/applicant/applications/{app_id}/submit", data=FORM, follow_redirects=False
+        )
+        assert submitted.status_code == 303
+        detail = applicant.get(f"/applicant/applications/{app_id}")
+        assert detail.status_code == 200 and "In the review queue" in detail.text
+        assert (
+            applicant.post(
+                f"/applicant/applications/{app_id}/precheck", data=FORM, headers={"X-Partial": "1"}
+            ).status_code
+            == 409
+        )
+        assert app_id in specialist.get("/specialist?tab=review").text
+
+    def test_submit_requires_brand_and_class(self, applicant):
+        app_id = applicant.post(
+            "/applicant/applications",
+            data={"sample_id": "old-tom-bourbon"},
+            headers={"Accept": "application/json"},
+        ).json()["id"]
+        resp = applicant.post(
+            f"/applicant/applications/{app_id}/submit",
+            data={"beverage_type": "wine"},
+            headers={"X-Partial": "1"},
+        )
+        assert resp.status_code == 422
+
+    def test_upload_of_own_image_in_demo_mode_still_creates_a_draft(self, applicant, label_png):
+        created = applicant.post(
+            "/applicant/applications",
+            files={"image": ("mine.png", label_png, "image/png")},
+            data={"beverage_type": "wine"},
+            headers={"Accept": "application/json"},
+        )
+        assert created.status_code == 200
+        payload = created.json()
+        assert payload["prefill"] == {} and "ANTHROPIC_API_KEY" in payload["warning"]
+
+    def test_garbage_upload_is_rejected(self, applicant):
+        resp = applicant.post(
+            "/applicant/applications",
+            files={"image": ("x.png", b"nope", "image/png")},
+            headers={"Accept": "application/json"},
+        )
+        assert resp.status_code == 400 and "readable image" in resp.json()["detail"]
+
+    def test_resubmit_after_correction(self, applicant, specialist):
+        # Seeded data includes one application awaiting correction for Old Tom.
+        dash = applicant.get("/applicant").text
+        fix_id = re.search(
+            r'class="attention-list".*?/applicant/applications/([0-9a-f]{32})', dash, re.S
+        ).group(1)
+        detail = applicant.get(f"/applicant/applications/{fix_id}")
+        assert "Fix and resubmit" in detail.text and "Correction request" in detail.text
+        resp = applicant.post(
+            f"/applicant/applications/{fix_id}/resubmit",
+            data={**FORM, "message": "Uploaded corrected artwork."},
+            files={"image": ("fixed.png", sample_bytes("old-tom-bourbon"), "image/png")},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        after = applicant.get(f"/applicant/applications/{fix_id}").text
+        assert "Resubmitted" in after and "Uploaded corrected artwork." in after and "v2" in after
+        assert fix_id in specialist.get("/specialist?tab=ready").text
+
+    def test_label_image_is_served_to_owner_and_specialist(self, applicant, specialist):
+        detail = applicant.get("/applicant").text
+        app_id = ids_in(detail, "/applicant/applications")[0]
+        page = applicant.get(f"/applicant/applications/{app_id}").text
+        image_url = re.search(rf"/applications/{app_id}/images/[0-9a-f]{{32}}", page).group(0)
+        assert applicant.get(image_url).headers["content-type"] == "image/jpeg"
+        assert specialist.get(image_url).status_code == 200
+
+
+class TestBatch:
+    def _zip(self, names):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            for n in names:
+                zf.writestr(n, sample_bytes(n.rsplit(".", 1)[0]))
+        return buf.getvalue()
+
+    def test_batch_page_and_template(self, applicant):
+        assert applicant.get("/applicant/batches").status_code == 200
+        csv = applicant.get("/applicant/batches/template.csv")
+        assert csv.status_code == 200 and csv.text.startswith("image,beverage_type")
+
+    def test_batch_upload_processes_rows(self, applicant, specialist):
+        rows = [
+            "image,beverage_type,brand_name,class_type,alcohol_content,net_contents,producer_name,producer_address,is_import,country_of_origin"
+        ]
+        for sid in ("old-tom-bourbon", "old-tom-abv-mismatch"):
+            a = sample(sid)["application"]
+            fname = sample(sid)["file"]
+            rows.append(
+                f'{fname},{a["beverage_type"]},{a["brand_name"]},{a["class_type"]},{a["alcohol_content"]},{a["net_contents"]},{a["producer_name"]},"{a["producer_address"]}",false,'
+            )
+        rows.append("ghost.png,wine,Ghost,Red,,,,,false,")
+        csv = "\n".join(rows).encode()
+        files = [sample(s)["file"] for s in ("old-tom-bourbon", "old-tom-abv-mismatch")]
+        resp = applicant.post(
+            "/applicant/batches",
+            files={
+                "csv_file": ("peak.csv", csv, "text/csv"),
+                "zip_file": ("labels.zip", self._zip(files), "application/zip"),
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        batch_url = resp.headers["location"]
+        rows_resp = applicant.get(batch_url + "/rows")
+        assert rows_resp.headers["X-Batch-Status"] == "done"
+        assert (
+            "1 match" in rows_resp.text
+            and "1 need fixes" in rows_resp.text
+            and "1 failed" in rows_resp.text
+        )
+        assert applicant.get(batch_url).status_code == 200
+        assert "peak.csv" in applicant.get("/applicant/batches").text
+        assert "Old Tom" in specialist.get("/specialist").text
+
+    def test_batch_validation_errors_render(self, applicant):
+        resp = applicant.post(
+            "/applicant/batches",
+            files={
+                "csv_file": ("bad.csv", b"brand_name\nX", "text/csv"),
+                "zip_file": ("z.zip", b"nope", "application/zip"),
+            },
+        )
+        assert resp.status_code == 422 and "missing required column" in resp.text
+
+
+class TestApi:
+    def test_verify_with_sample(self, anon):
+        resp = anon.post(
             "/api/verify",
-            data={"application": json.dumps(sample["application"]), "sample_id": sample["id"]},
+            data={
+                "sample_id": "old-tom-bourbon",
+                "application": json.dumps(sample("old-tom-bourbon")["application"]),
+            },
+        )
+        assert resp.status_code == 200 and resp.json()["recommendation"] == "approve"
+
+    @pytest.mark.parametrize("entry", load_manifest(), ids=lambda s: s["id"])
+    def test_every_sample_gives_its_promised_recommendation(self, anon, entry):
+        resp = anon.post(
+            "/api/verify",
+            data={"sample_id": entry["id"], "application": json.dumps(entry["application"])},
         )
         assert resp.status_code == 200, resp.text
-        assert resp.json()["recommendation"] == sample["expected"]
+        assert resp.json()["recommendation"] == entry["expected"]
 
-    def test_unknown_image_is_refused_with_guidance(self, label_png):
-        client = TestClient(create_app(extractor=DemoExtractor()))
-        resp = client.post(
-            "/verify", data=FORM, files={"image": ("label.png", label_png, "image/png")}
+    def test_verify_with_fixture_extractor_and_upload(self, tmp_path, extraction, label_png):
+        app = create_app(
+            extractor=FixtureExtractor(extraction),
+            database_url=f"sqlite:///{tmp_path}/f.db",
+            seed_data=False,
         )
-        assert resp.status_code == 502
-        assert "ANTHROPIC_API_KEY" in resp.text
+        client = TestClient(app)
+        resp = client.post(
+            "/api/verify",
+            data={"application": json.dumps(FORM)},
+            files={"image": ("l.png", label_png, "image/png")},
+        )
+        assert resp.status_code == 200 and resp.json()["source"] == "upload:l.png"
+
+    def test_api_errors(self, anon, label_png):
+        assert anon.post("/api/verify", data={"application": "{}"}).status_code == 400
+        assert (
+            anon.post(
+                "/api/verify", data={"sample_id": "old-tom-bourbon", "application": "{}"}
+            ).status_code
+            == 422
+        )
+        assert (
+            anon.post(
+                "/api/verify",
+                data={"application": json.dumps(FORM)},
+                files={"image": ("l.png", label_png, "image/png")},
+            ).status_code
+            == 502
+        )
+        assert anon.get("/api/samples").status_code == 200
+        assert (
+            anon.get("/api/samples/old-tom-bourbon/image")
+            .headers["content-type"]
+            .startswith("image/")
+        )

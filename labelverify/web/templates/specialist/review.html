@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+{% import "macros.html" as m %}
+{% block title %}{{ app.serial }}{% endblock %}
+{% block content %}
+{% set applicant_view = False %}
+{% set actions_template = "specialist/_decision.html" %}
+<div class="page-header">
+  <div>
+    <div class="crumbs"><a href="/specialist">Review queue</a> / {{ app.serial }}</div>
+    <h1>{{ app.brand_name }} <span class="muted h-sub">{{ app.class_type }}</span></h1>
+    <div class="header-pills">
+      {{ m.status_pill(app.status) }}
+      {{ m.rec_pill(app.recommendation) }}
+      <span class="muted">{{ app.organization }} · {{ app.applicant.name }}</span>
+      {% if app.submitted_at %}<span class="muted">· submitted {{ app.submitted_at | ago }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="page-actions">
+    {% if not app.is_decided %}
+    <form method="post" action="/specialist/applications/{{ app.id }}/rerun"><button class="btn btn-secondary" type="submit">Re-check label</button></form>
+    {% endif %}
+  </div>
+</div>
+
+{% include "partials/case.html" %}
+{% endblock %}

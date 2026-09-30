@@ -1,0 +1,305 @@
+"""Workflow tests against a throwaway SQLite database, no HTTP involved."""
+
+from __future__ import annotations
+
+import io
+import zipfile
+
+import pytest
+
+from labelverify.engine.extractors import DemoExtractor
+from labelverify.engine.extractors.demo import SAMPLES_DIR, load_manifest
+from labelverify.engine.models import ApplicationData
+from labelverify.web import services
+from labelverify.web.auth import verify_password
+from labelverify.web.db import init_db, make_engine, make_session_factory
+from labelverify.web.models import ApplicationStatus, Role
+from labelverify.web.seed import DEMO_PASSWORD, seed, seed_users
+
+
+@pytest.fixture
+def session_factory(tmp_path):
+    engine = make_engine(f"sqlite:///{tmp_path}/test.db")
+    init_db(engine)
+    return make_session_factory(engine)
+
+
+@pytest.fixture
+def db(session_factory):
+    with session_factory() as session:
+        yield session
+
+
+@pytest.fixture
+def users(db):
+    users = seed_users(db)
+    db.commit()
+    return users
+
+
+def sample(sample_id: str) -> dict:
+    return next(s for s in load_manifest() if s["id"] == sample_id)
+
+
+def sample_bytes(sample_id: str) -> bytes:
+    return (SAMPLES_DIR / sample(sample_id)["file"]).read_bytes()
+
+
+def make_app(db, users, sample_id="old-tom-bourbon", extractor=None):
+    applicant = users["labels@oldtomdistillery.com"]
+    data = ApplicationData.model_validate(sample(sample_id)["application"])
+    app = services.create_draft(db, applicant, data, sample_bytes(sample_id), "label.png")
+    services.record_run(db, app, extractor or DemoExtractor(), "precheck")
+    db.commit()
+    return app, applicant
+
+
+class TestUsersAndSerials:
+    def test_seed_users_have_roles_and_passwords(self, users):
+        assert users["sarah.chen@ttb.gov"].role == Role.SPECIALIST
+        assert users["labels@oldtomdistillery.com"].role == Role.APPLICANT
+        assert verify_password(DEMO_PASSWORD, users["sarah.chen@ttb.gov"].password_hash)
+        assert not verify_password("wrong", users["sarah.chen@ttb.gov"].password_hash)
+
+    def test_serials_are_unique_and_readable(self, db, users):
+        import re
+
+        app1, _ = make_app(db, users)
+        app2, _ = make_app(db, users)
+        assert re.fullmatch(r"COLA-\d{4}-[A-Z2-9]{6}", app1.serial)
+        assert app1.serial != app2.serial
+
+
+class TestDraftAndPrecheck:
+    def test_draft_has_prepared_image_and_run(self, db, users):
+        app, _ = make_app(db, users)
+        assert app.status == ApplicationStatus.DRAFT
+        assert app.current_image.media_type == "image/jpeg"
+        assert app.latest_run.trigger == "precheck"
+        assert app.recommendation == "approve"
+        assert app.risk_score == 0
+
+    def test_mismatch_sample_scores_risk(self, db, users):
+        app, _ = make_app(db, users, "old-tom-abv-mismatch")
+        assert app.recommendation == "request_correction"
+        assert app.risk_score >= 10
+
+    def test_extraction_failure_is_recorded_not_raised(self, db, users):
+        applicant = users["labels@oldtomdistillery.com"]
+        data = ApplicationData.model_validate(sample("old-tom-bourbon")["application"])
+        app = (
+            services.create_draft(db, applicant, data, b"\x89PNG" + b"\x00" * 10, "x.png")
+            if False
+            else None
+        )
+        # A valid image that the demo extractor does not recognize:
+        from PIL import Image
+
+        buf = io.BytesIO()
+        Image.new("RGB", (400, 400), "white").save(buf, format="PNG")
+        app = services.create_draft(db, applicant, data, buf.getvalue(), "blank.png")
+        run = services.record_run(db, app, DemoExtractor(), "precheck")
+        assert run.recommendation == "error"
+        assert "ANTHROPIC_API_KEY" in run.error
+        assert app.latest_run_id is None
+
+    def test_prefill_fields_come_from_extraction(self):
+        extraction = DemoExtractor().extract(sample_bytes("old-tom-bourbon"), "image/png")
+        fields = services.prefill_fields(extraction)
+        assert fields["brand_name"] == "OLD TOM DISTILLERY"
+        assert fields["net_contents"] == "750 mL"
+
+
+class TestLifecycle:
+    def test_submit_review_approve(self, db, users):
+        app, applicant = make_app(db, users)
+        sarah = users["sarah.chen@ttb.gov"]
+        services.submit(db, app, applicant)
+        assert app.status == ApplicationStatus.SUBMITTED and app.submitted_at is not None
+        assert services.claim_for_review(db, app, sarah) is True
+        assert app.status == ApplicationStatus.UNDER_REVIEW and app.specialist_id == sarah.id
+        services.decide(db, app, sarah, "approve")
+        assert app.status == ApplicationStatus.APPROVED and app.decided_at is not None
+        assert [e.to_status for e in app.events] == [
+            "draft",
+            "submitted",
+            "under_review",
+            "approved",
+        ]
+
+    def test_request_correction_creates_notice_and_field_comments(self, db, users):
+        app, applicant = make_app(db, users, "old-tom-title-case-warning")
+        sarah = users["sarah.chen@ttb.gov"]
+        services.submit(db, app, applicant)
+        draft = services.draft_correction(app, use_ai=False)
+        assert draft.source == "template"
+        assert "GOVERNMENT WARNING" in draft.body and app.serial in draft.body
+        services.decide(
+            db, app, sarah, "request_correction", notice_body=draft.body, notice_source=draft.source
+        )
+        assert app.status == ApplicationStatus.CORRECTION_REQUESTED
+        assert len(app.notices) == 1
+        grouped = services.comments_by_field(app)
+        assert "health_warning" in grouped and grouped["health_warning"][0].author_id == sarah.id
+
+    def test_correction_requires_notice(self, db, users):
+        app, applicant = make_app(db, users, "old-tom-title-case-warning")
+        services.submit(db, app, applicant)
+        with pytest.raises(services.WorkflowError, match="notice"):
+            services.decide(
+                db, app, users["sarah.chen@ttb.gov"], "request_correction", notice_body=""
+            )
+
+    def test_resubmit_reruns_and_returns_to_queue(self, db, users):
+        app, applicant = make_app(db, users, "old-tom-abv-mismatch")
+        sarah = users["sarah.chen@ttb.gov"]
+        services.submit(db, app, applicant)
+        draft = services.draft_correction(app, use_ai=False)
+        services.decide(db, app, sarah, "request_correction", notice_body=draft.body)
+        # Applicant fixes the application value and uploads the corrected label.
+        fixed = ApplicationData.model_validate(sample("old-tom-bourbon")["application"])
+        run = services.resubmit(
+            db,
+            app,
+            applicant,
+            fixed,
+            DemoExtractor(),
+            image_bytes=sample_bytes("old-tom-bourbon"),
+            filename="fixed.png",
+            message="Corrected the proof.",
+        )
+        assert run.trigger == "resubmit" and run.recommendation == "approve"
+        assert app.status == ApplicationStatus.RESUBMITTED
+        assert len(app.images) == 2 and app.current_image.filename == "fixed.png"
+        assert app.recommendation == "approve"
+        assert any(c.field == "general" and "Corrected" in c.body for c in app.comments)
+
+    def test_illegal_transition_is_rejected(self, db, users):
+        app, applicant = make_app(db, users)
+        with pytest.raises(services.WorkflowError):
+            services.decide(db, app, users["sarah.chen@ttb.gov"], "approve")  # still a draft
+        with pytest.raises(services.WorkflowError):
+            services.resubmit(
+                db,
+                app,
+                applicant,
+                ApplicationData.model_validate(sample("old-tom-bourbon")["application"]),
+                DemoExtractor(),
+            )
+
+    def test_comments_and_resolution(self, db, users):
+        app, applicant = make_app(db, users)
+        sarah = users["sarah.chen@ttb.gov"]
+        c = services.add_comment(db, app, sarah, "brand_name", "Please confirm the apostrophe.")
+        services.add_comment(db, app, applicant, "brand_name", "Confirmed, it is printed as shown.")
+        services.resolve_comment(db, c)
+        assert c.resolved is True
+        with pytest.raises(services.WorkflowError):
+            services.add_comment(db, app, sarah, "nope", "x")
+
+
+class TestQueue:
+    def test_queue_tabs_and_stats(self, db, users):
+        sarah = users["sarah.chen@ttb.gov"]
+        clean, applicant = make_app(db, users, "old-tom-bourbon")
+        bad, _ = make_app(db, users, "old-tom-abv-mismatch")
+        fixed, _ = make_app(db, users, "old-tom-title-case-warning")
+        for app in (clean, bad, fixed):
+            services.submit(db, app, applicant)
+        services.decide(db, bad, sarah, "request_correction", notice_body="please fix")
+        db.commit()
+
+        assert [a.id for a in services.queue(db, "ready")] == [clean.id]
+        assert [a.id for a in services.queue(db, "review")] == [fixed.id]
+        assert [a.id for a in services.queue(db, "corrections")] == [bad.id]
+        assert {a.id for a in services.queue(db, "open")} == {clean.id, fixed.id}
+        stats = services.queue_stats(db)
+        assert (stats.open, stats.ready, stats.review, stats.corrections) == (2, 1, 1, 1)
+
+    def test_bulk_approve_only_takes_clean_open_applications(self, db, users):
+        sarah = users["sarah.chen@ttb.gov"]
+        clean, applicant = make_app(db, users, "old-tom-bourbon")
+        bad, _ = make_app(db, users, "old-tom-abv-mismatch")
+        services.submit(db, clean, applicant)
+        services.submit(db, bad, applicant)
+        assert services.bulk_approve(db, sarah, [clean.id, bad.id, "missing"]) == 1
+        assert (
+            clean.status == ApplicationStatus.APPROVED and bad.status == ApplicationStatus.SUBMITTED
+        )
+
+
+class TestBatch:
+    def _zip(self, names: list[str]) -> bytes:
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            for name in names:
+                zf.writestr(name, sample_bytes(name.rsplit(".", 1)[0]))
+        return buf.getvalue()
+
+    def _csv(self, rows: list[dict]) -> bytes:
+        header = ",".join(services.BATCH_COLUMNS)
+        lines = [header]
+        for r in rows:
+            lines.append(",".join(f'"{r.get(c, "")}"' for c in services.BATCH_COLUMNS))
+        return "\n".join(lines).encode()
+
+    def test_parse_and_process(self, session_factory, users, db):
+        rows = []
+        for sid in ("old-tom-bourbon", "old-tom-abv-mismatch"):
+            row = dict(sample(sid)["application"])
+            row["image"] = f"{sid}.png"
+            row["is_import"] = "true" if row["is_import"] else "false"
+            rows.append(row)
+        rows.append(
+            {
+                "image": "missing.png",
+                "beverage_type": "wine",
+                "brand_name": "Ghost",
+                "class_type": "Red",
+            }
+        )
+        parsed = services.parse_batch(
+            self._csv(rows), self._zip(["old-tom-bourbon.png", "old-tom-abv-mismatch.png"])
+        )
+        assert parsed.errors == [] and len(parsed.rows) == 3 and len(parsed.images) == 2
+
+        batch = services.create_batch(db, users["labels@oldtomdistillery.com"], "peak.csv", parsed)
+        db.commit()
+        services.process_batch(session_factory, batch.id, parsed, DemoExtractor())
+
+        with session_factory() as fresh:
+            from labelverify.web.models import Batch
+
+            done = fresh.get(Batch, batch.id)
+            assert done.status == "done" and (done.completed, done.failed) == (2, 1)
+            statuses = {i.row_number: i.status for i in done.items}
+            assert statuses == {1: "done", 2: "done", 3: "error"}
+            assert "not found in the zip" in done.items[2].error
+            summary = services.batch_summary(done)
+            assert (
+                summary["approve"] == 1
+                and summary["request_correction"] == 1
+                and summary["error"] == 1
+            )
+            assert all(
+                i.application.status == ApplicationStatus.SUBMITTED
+                for i in done.items
+                if i.application
+            )
+
+    def test_parse_errors(self):
+        parsed = services.parse_batch(b"brand_name\nX", b"not a zip")
+        assert any("missing required column" in e for e in parsed.errors)
+        parsed = services.parse_batch(self._csv([]), b"not a zip")
+        assert any("no data rows" in e for e in parsed.errors)
+        assert any("not a valid .zip" in e for e in parsed.errors)
+
+
+def test_seed_populates_a_realistic_queue(db):
+    seed(db)
+    stats = services.queue_stats(db)
+    assert stats.open >= 3
+    assert stats.corrections >= 1
+    assert len(services.queue(db, "decided")) >= 1
+    seed(db)  # idempotent
+    assert services.queue_stats(db) == stats

@@ -1,0 +1,84 @@
+{% extends "layout.html" %}
+{% import "macros.html" as m %}
+{% block title %}New application{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>New application</h1>
+    <p class="subtitle">Upload the label first. The form fills itself from what is printed, and you can check everything before submitting.</p>
+  </div>
+</div>
+
+<div class="wizard" id="wizard">
+  <!-- Step 1 -->
+  <section class="card step" id="step-1">
+    <div class="step-head"><span class="step-num">1</span><h2>Label image</h2></div>
+    <div class="step-body">
+      <form id="upload-form" method="post" action="/applicant/applications" enctype="multipart/form-data">
+        <div class="upload-grid">
+          <div>
+            <div class="field">
+              <label for="beverage_type_1">Type of product</label>
+              <select name="beverage_type" id="beverage_type_1">
+                <option value="distilled_spirits">Distilled spirits</option>
+                <option value="wine">Wine</option>
+                <option value="malt_beverage">Malt beverage</option>
+              </select>
+            </div>
+            <div class="dropzone" id="dropzone">
+              <input type="file" name="image" id="image" accept="image/jpeg,image/png,image/webp">
+              <svg class="icon icon-lg"><use href="#i-upload"></use></svg>
+              <p><strong>Drop the label photo or artwork here</strong><br><span class="muted">JPEG, PNG, or WebP up to 10 MB. Angled or imperfect photos are fine.</span></p>
+            </div>
+            <input type="hidden" name="sample_id" id="sample_id" value="">
+            <img id="upload-preview" class="upload-preview" alt="" hidden>
+            <div class="step-actions">
+              <button type="submit" class="btn btn-primary" id="upload-btn">Read the label</button>
+              <span class="muted" id="upload-status"></span>
+            </div>
+          </div>
+          <div class="samples">
+            <div class="samples-title">
+              {% if demo_mode %}Demo mode reads these sample labels{% else %}Or try a sample label{% endif %}
+            </div>
+            <div class="sample-list">
+              {% for s in samples %}
+              <button type="button" class="sample" data-sample-id="{{ s.id }}" data-application='{{ s.application | tojson }}' title="{{ s.description }}">
+                <img src="/api/samples/{{ s.id }}/image" alt="" loading="lazy">
+                <span>{{ s.title }}</span>
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Step 2 -->
+  <section class="card step step-locked" id="step-2">
+    <div class="step-head"><span class="step-num">2</span><h2>Application details</h2><span class="step-hint" id="prefill-hint"></span></div>
+    <div class="step-body">
+      <form id="details-form" method="post" action="" data-async data-target="#precheck-result" data-busy="Checking the label…">
+        {{ m.form_fields({}, [('distilled_spirits','Distilled spirits'),('wine','Wine'),('malt_beverage','Malt beverage')]) }}
+        <div class="step-actions">
+          <button type="submit" class="btn btn-primary" id="precheck-btn"><svg class="icon"><use href="#i-sparkle"></use></svg> Check before submitting</button>
+          <span class="muted" id="precheck-status"></span>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Step 3 -->
+  <section class="card step step-locked" id="step-3">
+    <div class="step-head"><span class="step-num">3</span><h2>Pre-check and submit</h2></div>
+    <div class="step-body">
+      <div id="precheck-result">{{ m.empty('Run the check above', 'You will see a field-by-field comparison here.') }}</div>
+      <form id="submit-form" method="post" action="" class="step-actions">
+        <button type="submit" class="btn btn-primary btn-lg" id="submit-btn" disabled>Submit application</button>
+        <span class="muted">You can submit even with open items; the specialist will see them.</span>
+      </form>
+    </div>
+  </section>
+</div>
+{% endblock %}

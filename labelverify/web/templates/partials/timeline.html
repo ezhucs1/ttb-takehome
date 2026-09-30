@@ -1,0 +1,13 @@
+{# Context: app #}
+<ol class="timeline">
+  {% for e in app.events | reverse %}
+  <li class="tl-item tl-{{ STATUS_TONES[e.to_status] }}">
+    <span class="tl-dot"></span>
+    <div class="tl-body">
+      <div class="tl-title">{{ STATUS_LABELS[e.to_status] }}</div>
+      <div class="tl-meta">{{ e.note }}{% if e.actor %} · {{ e.actor.name }}{% endif %}</div>
+      <time class="tl-time" datetime="{{ e.created_at.isoformat() }}">{{ e.created_at | dt }}</time>
+    </div>
+  </li>
+  {% endfor %}
+</ol>

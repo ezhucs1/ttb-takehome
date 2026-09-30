@@ -1,0 +1,36 @@
+{% import "macros.html" as m %}
+{# Context: batch, summary #}
+<div class="batch-progress">
+  <div class="progress"><span style="width:{{ ((batch.completed + batch.failed) / batch.total * 100) | round | int if batch.total else 0 }}%"></span></div>
+  <div class="batch-progress-text">
+    {{ batch.completed + batch.failed }} of {{ batch.total }} checked
+    {% if batch.status == 'done' %}· done{% else %}· working…{% endif %}
+  </div>
+  <div class="batch-summary">
+    <span class="pill pill-success">{{ summary.approve }} match</span>
+    <span class="pill pill-warning">{{ summary.needs_review }} need a look</span>
+    <span class="pill pill-danger">{{ summary.request_correction }} need fixes</span>
+    {% if summary.error %}<span class="pill pill-neutral">{{ summary.error }} failed</span>{% endif %}
+  </div>
+</div>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>#</th><th>Image</th><th>Brand</th><th>Application</th><th>AI result</th><th></th></tr></thead>
+  <tbody>
+  {% for item in batch.items %}
+    <tr>
+      <td class="muted">{{ item.row_number }}</td>
+      <td class="mono">{{ item.image_name }}</td>
+      <td>{{ item.brand_name }}</td>
+      <td>{% if item.application %}<a href="/applicant/applications/{{ item.application.id }}">{{ item.application.serial }}</a>{% else %}—{% endif %}</td>
+      <td>
+        {% if item.status == 'error' %}<span class="pill pill-neutral">Failed</span> <span class="muted">{{ item.error }}</span>
+        {% elif item.status == 'done' %}{{ m.rec_pill(item.application.recommendation) }}
+        {% else %}<span class="pill pill-neutral">Pending</span>{% endif %}
+      </td>
+      <td class="right">{% if item.application %}<a class="btn btn-ghost btn-sm" href="/applicant/applications/{{ item.application.id }}">Open</a>{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>

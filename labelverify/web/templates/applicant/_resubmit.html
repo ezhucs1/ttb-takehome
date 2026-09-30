@@ -1,0 +1,17 @@
+{% import "macros.html" as m %}
+<div class="card card-attention" id="resubmit">
+  <div class="card-title"><svg class="icon"><use href="#i-alert"></use></svg> Fix and resubmit</div>
+  <p class="muted">Correct the application values below, upload a revised label if the artwork changed, and resubmit. The label is checked again automatically and goes back to the same specialist.</p>
+  <form method="post" action="/applicant/applications/{{ app.id }}/resubmit" enctype="multipart/form-data" class="stack">
+    {{ m.form_fields(app, [('distilled_spirits','Distilled spirits'),('wine','Wine'),('malt_beverage','Malt beverage')]) }}
+    <div class="field">
+      <label for="image">Revised label image <span class="muted">(optional)</span></label>
+      <input type="file" name="image" id="image" accept="image/jpeg,image/png,image/webp">
+    </div>
+    <div class="field">
+      <label for="message">Message to the specialist <span class="muted">(optional)</span></label>
+      <textarea name="message" id="message" rows="2" placeholder="What changed and why"></textarea>
+    </div>
+    <div><button class="btn btn-primary" type="submit"><svg class="icon"><use href="#i-arrow"></use></svg> Resubmit for review</button></div>
+  </form>
+</div>

@@ -1,0 +1,60 @@
+# From prototype to production
+
+What this prototype leaves out on purpose, and what a production deployment for TTB would
+need. Ordered roughly by how soon each would matter.
+
+## Security and identity
+
+- **Authentication.** Seeded accounts with a shared demo password and a signed cookie.
+  Production would use the agency's identity provider (PIV/CAC through SAML or OIDC) for
+  specialists and Login.gov for applicants, with MFA.
+- **Session secret.** `SECRET_KEY` falls back to a per-process random key, so sessions
+  reset on restart. Set it explicitly in any shared deployment.
+- **Rate limiting and upload scanning.** None. Add a reverse-proxy limit on the upload
+  endpoints and antivirus scanning of uploaded files.
+- **Audit trail.** Status events record who did what and when, but comments and notices
+  are editable only by insertion, not deletion; a production system needs a formal,
+  immutable audit log and records-retention policy.
+
+## Network and hosting
+
+- **Model endpoint.** The prototype calls the Anthropic API directly. Inside TTB's
+  network, Marcus's firewall would block that. Options, in order of least change: Claude
+  through Microsoft Foundry on the agency's Azure tenant (endpoint inside the tenant,
+  allow-listable); a FedRAMP-authorized gateway; or the bundled Tesseract fallback at
+  lower accuracy.
+- **FedRAMP.** Any hosted model or storage service used for real applications needs an
+  authorization to operate. The extractor interface exists so the model behind it can be
+  swapped without touching the workflow.
+- **Storage.** Images live in SQLite. Production would use object storage with
+  server-side encryption and signed URLs, and Postgres for the relational data.
+
+## Accuracy and operations
+
+- **Evaluation set.** The ten bundled labels are synthetic. Before rollout, collect a few
+  hundred real, de-identified label images with specialist decisions and measure
+  per-field precision and recall, plus the false-approve rate specifically.
+- **Latency budget.** The UI shows extraction time on every check. Track p50 and p95
+  against the five-second target and switch to a faster model tier if needed
+  (`LABELVERIFY_MODEL`).
+- **Model drift.** Pin the model ID, keep the ground-truth set, and rerun it when the model
+  changes.
+- **Monitoring.** No metrics or alerting. Add request logging with application IDs,
+  extractor error rates, and batch completion times.
+- **Background jobs.** Batches run in a thread pool inside the web process; a restart
+  mid-batch leaves rows pending. Production would use a durable queue with retries.
+
+## Product gaps
+
+- **Beverage-specific rules.** Only the seven common fields are checked. TTB rules differ
+  by class (wine appellation and varietal percentages, malt beverage exemptions, spirits
+  age statements). The comparison module is organized per field so these slot in.
+- **Multiple label panels.** One image per submission. Real applications often include
+  front, back, and neck labels; the extractor would take several images and the
+  comparison would merge them.
+- **COLA integration.** Out of scope per the brief. The `Application` record mirrors the
+  Form 5100.31 fields so an import from COLAs Online would be a mapping exercise.
+- **Notifications.** Applicants see correction requests on their dashboard but receive no
+  email. Add email on status changes.
+- **Accessibility.** Semantic markup and keyboard-operable controls, but no formal
+  Section 508 audit yet.

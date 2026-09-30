@@ -1,0 +1,92 @@
+{% macro status_pill(status) -%}
+<span class="pill pill-{{ STATUS_TONES[status] }}">{{ STATUS_LABELS[status] }}</span>
+{%- endmacro %}
+
+{% macro rec_pill(recommendation, risk=None) -%}
+<span class="pill pill-{{ RECOMMENDATION_TONES.get(recommendation, 'neutral') }}">
+  {{ RECOMMENDATION_LABELS.get(recommendation, 'Not checked') }}
+</span>
+{%- endmacro %}
+
+{% macro verdict_badge(verdict) -%}
+<span class="badge badge-{{ verdict }}">{{ VERDICT_LABELS.get(verdict, verdict) }}</span>
+{%- endmacro %}
+
+{% macro avatar(user, size='') -%}
+<span class="avatar {{ size }}" title="{{ user.name }}">{{ user.initials }}</span>
+{%- endmacro %}
+
+{% macro icon(name, cls='') -%}
+<svg class="icon {{ cls }}" aria-hidden="true"><use href="#i-{{ name }}"></use></svg>
+{%- endmacro %}
+
+{% macro empty(title, body='') -%}
+<div class="empty">
+  <div class="empty-title">{{ title }}</div>
+  {% if body %}<div class="empty-body">{{ body }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro stat(label, value, tone='neutral', href=None) -%}
+<{{ 'a' if href else 'div' }} class="stat stat-{{ tone }}" {% if href %}href="{{ href }}"{% endif %}>
+  <div class="stat-value">{{ value }}</div>
+  <div class="stat-label">{{ label }}</div>
+</{{ 'a' if href else 'div' }}>
+{%- endmacro %}
+
+{% macro application_fields(app) -%}
+<dl class="kv">
+  <div><dt>Type of product</dt><dd>{{ BEVERAGE_LABELS.get(app.beverage_type, app.beverage_type) }}</dd></div>
+  <div><dt>Brand name</dt><dd>{{ app.brand_name or '—' }}</dd></div>
+  <div><dt>Class / type</dt><dd>{{ app.class_type or '—' }}</dd></div>
+  <div><dt>Alcohol content</dt><dd>{{ app.alcohol_content or '—' }}</dd></div>
+  <div><dt>Net contents</dt><dd>{{ app.net_contents or '—' }}</dd></div>
+  <div><dt>Producer / bottler</dt><dd>{{ app.producer_name or '—' }}</dd></div>
+  <div><dt>Address</dt><dd>{{ app.producer_address or '—' }}</dd></div>
+  <div><dt>Import</dt><dd>{{ 'Yes, from ' ~ (app.country_of_origin or 'unspecified country') if app.is_import else 'No' }}</dd></div>
+</dl>
+{%- endmacro %}
+
+{% macro form_fields(values, beverage_types, required=True) -%}
+<div class="form-grid">
+  <div class="field">
+    <label for="beverage_type">Type of product</label>
+    <select name="beverage_type" id="beverage_type" required>
+      {% for value, label in beverage_types %}
+      <option value="{{ value }}" {% if values.beverage_type == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field span-2">
+    <label for="brand_name">Brand name</label>
+    <input name="brand_name" id="brand_name" value="{{ values.brand_name or '' }}" {% if required %}required{% endif %} autocomplete="off">
+  </div>
+  <div class="field span-2">
+    <label for="class_type">Class / type designation</label>
+    <input name="class_type" id="class_type" value="{{ values.class_type or '' }}" {% if required %}required{% endif %} autocomplete="off">
+  </div>
+  <div class="field">
+    <label for="alcohol_content">Alcohol content</label>
+    <input name="alcohol_content" id="alcohol_content" value="{{ values.alcohol_content or '' }}" placeholder="45% Alc./Vol." autocomplete="off">
+  </div>
+  <div class="field">
+    <label for="net_contents">Net contents</label>
+    <input name="net_contents" id="net_contents" value="{{ values.net_contents or '' }}" placeholder="750 mL" autocomplete="off">
+  </div>
+  <div class="field span-2">
+    <label for="producer_name">Producer / bottler name</label>
+    <input name="producer_name" id="producer_name" value="{{ values.producer_name or '' }}" autocomplete="off">
+  </div>
+  <div class="field span-2">
+    <label for="producer_address">Producer / bottler address</label>
+    <input name="producer_address" id="producer_address" value="{{ values.producer_address or '' }}" autocomplete="off">
+  </div>
+  <div class="field">
+    <label class="check"><input type="checkbox" name="is_import" id="is_import" value="true" {% if values.is_import %}checked{% endif %}> Imported product</label>
+  </div>
+  <div class="field">
+    <label for="country_of_origin">Country of origin</label>
+    <input name="country_of_origin" id="country_of_origin" value="{{ values.country_of_origin or '' }}" placeholder="Required for imports" autocomplete="off">
+  </div>
+</div>
+{%- endmacro %}

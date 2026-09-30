@@ -1,0 +1,63 @@
+{% extends "layout.html" %}
+{% import "macros.html" as m %}
+{% block title %}My applications{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>My applications</h1>
+    <p class="subtitle">{{ user.organization }}</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-secondary" href="/applicant/batches"><svg class="icon"><use href="#i-upload"></use></svg> Batch upload</a>
+    <a class="btn btn-primary" href="/applicant/applications/new"><svg class="icon"><use href="#i-plus"></use></svg> New application</a>
+  </div>
+</div>
+
+<div class="stat-grid">
+  {{ m.stat('Needs your action', counts.correction_requested, 'warning' if counts.correction_requested else 'neutral') }}
+  {{ m.stat('In review', counts.submitted + counts.under_review + counts.resubmitted, 'info') }}
+  {{ m.stat('Approved', counts.approved, 'success') }}
+  {{ m.stat('Drafts', counts.draft) }}
+</div>
+
+{% if needs_action %}
+<div class="card card-attention">
+  <div class="card-title"><svg class="icon"><use href="#i-alert"></use></svg> Corrections requested</div>
+  <ul class="attention-list">
+    {% for app in needs_action %}
+    <li>
+      <div><strong>{{ app.brand_name }}</strong> <span class="muted">{{ app.serial }}</span></div>
+      <a class="btn btn-primary btn-sm" href="/applicant/applications/{{ app.id }}">Fix and resubmit</a>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="card card-flush">
+  {% if apps %}
+  <div class="table-wrap">
+  <table class="table table-hover">
+    <thead>
+      <tr><th>Application</th><th>Brand</th><th>Type</th><th>Status</th><th>AI check</th><th>Updated</th><th></th></tr>
+    </thead>
+    <tbody>
+    {% for app in apps %}
+      <tr data-href="/applicant/applications/{{ app.id }}">
+        <td class="mono">{{ app.serial }}</td>
+        <td><strong>{{ app.brand_name or '(untitled draft)' }}</strong><div class="muted small">{{ app.class_type }}</div></td>
+        <td>{{ BEVERAGE_LABELS.get(app.beverage_type) }}</td>
+        <td>{{ m.status_pill(app.status) }}</td>
+        <td>{{ m.rec_pill(app.recommendation) }}</td>
+        <td class="muted">{{ app.updated_at | ago }}</td>
+        <td class="right"><a class="btn btn-ghost btn-sm" href="/applicant/applications/{{ app.id }}">Open</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  {{ m.empty('No applications yet', 'Start a new application to check a label before you submit it.') }}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,267 @@
+"""ORM models for the applicant / specialist workflow."""
+
+from __future__ import annotations
+
+import enum
+import uuid
+from datetime import UTC, datetime
+
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    String,
+    Text,
+    UniqueConstraint,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .db import Base
+
+
+def new_id() -> str:
+    return uuid.uuid4().hex
+
+
+def utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+class Role(enum.StrEnum):
+    APPLICANT = "applicant"
+    SPECIALIST = "specialist"
+
+
+class ApplicationStatus(enum.StrEnum):
+    DRAFT = "draft"
+    SUBMITTED = "submitted"
+    UNDER_REVIEW = "under_review"
+    CORRECTION_REQUESTED = "correction_requested"
+    RESUBMITTED = "resubmitted"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+OPEN_STATUSES = (
+    ApplicationStatus.SUBMITTED,
+    ApplicationStatus.UNDER_REVIEW,
+    ApplicationStatus.RESUBMITTED,
+)
+DECIDED_STATUSES = (ApplicationStatus.APPROVED, ApplicationStatus.REJECTED)
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    email: Mapped[str] = mapped_column(String(200), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    role: Mapped[str] = mapped_column(String(20))
+    organization: Mapped[str] = mapped_column(String(200), default="")
+    password_hash: Mapped[str] = mapped_column(String(300))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    @property
+    def is_specialist(self) -> bool:
+        return self.role == Role.SPECIALIST
+
+    @property
+    def initials(self) -> str:
+        return "".join(part[0] for part in self.name.split()[:2]).upper()
+
+
+class Application(Base):
+    __tablename__ = "applications"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    serial: Mapped[str] = mapped_column(String(30), unique=True, index=True)
+    applicant_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    organization: Mapped[str] = mapped_column(String(200), default="")
+    status: Mapped[str] = mapped_column(String(30), default=ApplicationStatus.DRAFT, index=True)
+
+    beverage_type: Mapped[str] = mapped_column(String(30))
+    brand_name: Mapped[str] = mapped_column(String(200), default="")
+    class_type: Mapped[str] = mapped_column(String(200), default="")
+    alcohol_content: Mapped[str] = mapped_column(String(100), default="")
+    net_contents: Mapped[str] = mapped_column(String(100), default="")
+    producer_name: Mapped[str] = mapped_column(String(200), default="")
+    producer_address: Mapped[str] = mapped_column(String(300), default="")
+    is_import: Mapped[bool] = mapped_column(Boolean, default=False)
+    country_of_origin: Mapped[str] = mapped_column(String(100), default="")
+
+    latest_run_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    recommendation: Mapped[str | None] = mapped_column(String(30), nullable=True, index=True)
+    risk_score: Mapped[int] = mapped_column(Integer, default=0)
+    specialist_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    batch_id: Mapped[str | None] = mapped_column(ForeignKey("batches.id"), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    applicant: Mapped[User] = relationship(foreign_keys=[applicant_id], lazy="joined")
+    specialist: Mapped[User | None] = relationship(foreign_keys=[specialist_id], lazy="joined")
+    images: Mapped[list[LabelImage]] = relationship(
+        back_populates="application", cascade="all, delete-orphan", order_by="LabelImage.created_at"
+    )
+    runs: Mapped[list[VerificationRun]] = relationship(
+        back_populates="application",
+        cascade="all, delete-orphan",
+        order_by="VerificationRun.created_at",
+    )
+    comments: Mapped[list[Comment]] = relationship(
+        back_populates="application", cascade="all, delete-orphan", order_by="Comment.created_at"
+    )
+    events: Mapped[list[StatusEvent]] = relationship(
+        back_populates="application",
+        cascade="all, delete-orphan",
+        order_by="StatusEvent.created_at",
+    )
+    notices: Mapped[list[Notice]] = relationship(
+        back_populates="application", cascade="all, delete-orphan", order_by="Notice.created_at"
+    )
+
+    @property
+    def current_image(self) -> LabelImage | None:
+        return self.images[-1] if self.images else None
+
+    @property
+    def latest_run(self) -> VerificationRun | None:
+        return self.runs[-1] if self.runs else None
+
+    @property
+    def is_open(self) -> bool:
+        return self.status in OPEN_STATUSES
+
+    @property
+    def is_decided(self) -> bool:
+        return self.status in DECIDED_STATUSES
+
+    def application_fields(self) -> dict:
+        return {
+            "beverage_type": self.beverage_type,
+            "brand_name": self.brand_name,
+            "class_type": self.class_type,
+            "alcohol_content": self.alcohol_content,
+            "net_contents": self.net_contents,
+            "producer_name": self.producer_name,
+            "producer_address": self.producer_address,
+            "is_import": self.is_import,
+            "country_of_origin": self.country_of_origin,
+        }
+
+
+class LabelImage(Base):
+    __tablename__ = "label_images"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    application_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
+    filename: Mapped[str] = mapped_column(String(300))
+    media_type: Mapped[str] = mapped_column(String(60))
+    data: Mapped[bytes] = mapped_column(LargeBinary)
+    width: Mapped[int] = mapped_column(Integer, default=0)
+    height: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    application: Mapped[Application] = relationship(back_populates="images")
+
+
+class VerificationRun(Base):
+    __tablename__ = "verification_runs"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    application_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
+    image_id: Mapped[str] = mapped_column(ForeignKey("label_images.id"))
+    trigger: Mapped[str] = mapped_column(String(20))  # precheck, submit, resubmit, batch, rerun
+    extractor: Mapped[str] = mapped_column(String(80))
+    recommendation: Mapped[str] = mapped_column(String(30))
+    result_json: Mapped[str] = mapped_column(Text)
+    extraction_ms: Mapped[int] = mapped_column(Integer, default=0)
+    total_ms: Mapped[int] = mapped_column(Integer, default=0)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    application: Mapped[Application] = relationship(back_populates="runs")
+
+
+class Comment(Base):
+    __tablename__ = "comments"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    application_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
+    field: Mapped[str] = mapped_column(String(40), default="general")
+    author_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    body: Mapped[str] = mapped_column(Text)
+    resolved: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    application: Mapped[Application] = relationship(back_populates="comments")
+    author: Mapped[User] = relationship(lazy="joined")
+
+
+class StatusEvent(Base):
+    __tablename__ = "status_events"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    application_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
+    from_status: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    to_status: Mapped[str] = mapped_column(String(30))
+    actor_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    application: Mapped[Application] = relationship(back_populates="events")
+    actor: Mapped[User | None] = relationship(lazy="joined")
+
+
+class Notice(Base):
+    __tablename__ = "notices"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    application_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
+    body: Mapped[str] = mapped_column(Text)
+    drafted_by: Mapped[str] = mapped_column(String(20))  # ai | template
+    sent_by_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    application: Mapped[Application] = relationship(back_populates="notices")
+    sent_by: Mapped[User] = relationship(lazy="joined")
+
+
+class Batch(Base):
+    __tablename__ = "batches"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    applicant_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    filename: Mapped[str] = mapped_column(String(300))
+    status: Mapped[str] = mapped_column(String(20), default="processing")  # processing | done
+    total: Mapped[int] = mapped_column(Integer, default=0)
+    completed: Mapped[int] = mapped_column(Integer, default=0)
+    failed: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    applicant: Mapped[User] = relationship(lazy="joined")
+    items: Mapped[list[BatchItem]] = relationship(
+        back_populates="batch", cascade="all, delete-orphan", order_by="BatchItem.row_number"
+    )
+
+
+class BatchItem(Base):
+    __tablename__ = "batch_items"
+    __table_args__ = (UniqueConstraint("batch_id", "row_number"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    batch_id: Mapped[str] = mapped_column(ForeignKey("batches.id"), index=True)
+    row_number: Mapped[int] = mapped_column(Integer)
+    brand_name: Mapped[str] = mapped_column(String(200), default="")
+    image_name: Mapped[str] = mapped_column(String(300), default="")
+    application_id: Mapped[str | None] = mapped_column(ForeignKey("applications.id"), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | done | error
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    batch: Mapped[Batch] = relationship(back_populates="items")
+    application: Mapped[Application | None] = relationship(lazy="joined")

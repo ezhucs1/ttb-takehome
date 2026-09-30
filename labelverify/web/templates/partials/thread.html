@@ -1,0 +1,36 @@
+{% import "macros.html" as m %}
+{# Context: app, field, comments, user, can_comment (optional) #}
+<div class="thread" id="thread-body-{{ field }}">
+  {% if comments %}
+  <ul class="comments">
+    {% for c in comments %}
+    <li class="comment {% if c.resolved %}resolved{% endif %} {% if c.author.role == 'specialist' %}from-specialist{% else %}from-applicant{% endif %}">
+      {{ m.avatar(c.author, 'sm') }}
+      <div class="comment-body">
+        <div class="comment-head">
+          <strong>{{ c.author.name }}</strong>
+          <span class="muted">{{ 'TTB' if c.author.role == 'specialist' else c.author.organization }} · {{ c.created_at | ago }}</span>
+          {% if c.resolved %}<span class="pill pill-success pill-xs">Resolved</span>{% endif %}
+          {% if user and user.role == 'specialist' and not app.is_decided %}
+          <form class="inline" method="post" action="/applications/{{ app.id }}/comments/{{ c.id }}/resolve" data-async data-target="#thread-host-{{ field }}">
+            <input type="hidden" name="resolved" value="{{ 'false' if c.resolved else 'true' }}">
+            <button class="link-btn" type="submit">{{ 'Reopen' if c.resolved else 'Resolve' }}</button>
+          </form>
+          {% endif %}
+        </div>
+        <p>{{ c.body }}</p>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted thread-empty">No comments on this field yet.</p>
+  {% endif %}
+  {% if user and not app.is_decided and (can_comment is not defined or can_comment) %}
+  <form class="comment-form" method="post" action="/applications/{{ app.id }}/comments" data-async data-target="#thread-host-{{ field }}">
+    <input type="hidden" name="field" value="{{ field }}">
+    <textarea name="body" rows="2" required placeholder="{{ 'Ask the applicant a question or note what you checked…' if user.role == 'specialist' else 'Reply to the specialist…' }}"></textarea>
+    <button class="btn btn-secondary btn-sm" type="submit">Post</button>
+  </form>
+  {% endif %}
+</div>

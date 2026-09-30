@@ -1,9 +1,9 @@
 [
   {
     "id": "old-tom-bourbon",
-    "title": "Old Tom Bourbon (clean)",
-    "description": "The sample from the brief. Everything matches; expected result is approve.",
-    "file": "old-tom-bourbon.png",
+    "title": "Old Tom Bourbon · clean artwork",
+    "description": "The sample from the brief as print-ready artwork. Everything matches.",
+    "file": "old-tom-bourbon.jpg",
     "expected": "approve",
     "application": {
       "beverage_type": "distilled_spirits",
@@ -19,27 +19,27 @@
     "extraction": {
       "brand_name": {
         "value": "OLD TOM DISTILLERY",
-        "confidence": 0.96
+        "confidence": 0.97
       },
       "class_type": {
         "value": "Kentucky Straight Bourbon Whiskey",
-        "confidence": 0.96
+        "confidence": 0.97
       },
       "alcohol_content": {
         "value": "45% Alc./Vol. (90 Proof)",
-        "confidence": 0.96
+        "confidence": 0.97
       },
       "net_contents": {
         "value": "750 mL",
-        "confidence": 0.96
+        "confidence": 0.97
       },
       "producer_name": {
         "value": "Old Tom Distillery",
-        "confidence": 0.96
+        "confidence": 0.97
       },
       "producer_address": {
         "value": "Bardstown, Kentucky 40004",
-        "confidence": 0.96
+        "confidence": 0.97
       },
       "country_of_origin": {
         "value": null,
@@ -50,7 +50,7 @@
         "text": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
         "heading_all_caps": true,
         "heading_bold": true,
-        "confidence": 0.95
+        "confidence": 0.96
       },
       "image_quality": {
         "readable": true,
@@ -60,9 +60,9 @@
   },
   {
     "id": "old-tom-title-case-warning",
-    "title": "Old Tom Bourbon (title-case warning)",
-    "description": "Same label, but the warning heading reads 'Government Warning:'. Expected: request correction.",
-    "file": "old-tom-title-case-warning.png",
+    "title": "Old Tom Bourbon · title-case warning",
+    "description": "Same artwork, but the heading reads 'Government Warning:'. Jenny's rejection case.",
+    "file": "old-tom-title-case-warning.jpg",
     "expected": "request_correction",
     "application": {
       "beverage_type": "distilled_spirits",
@@ -78,27 +78,27 @@
     "extraction": {
       "brand_name": {
         "value": "OLD TOM DISTILLERY",
-        "confidence": 0.96
+        "confidence": 0.97
       },
       "class_type": {
         "value": "Kentucky Straight Bourbon Whiskey",
-        "confidence": 0.96
+        "confidence": 0.97
       },
       "alcohol_content": {
         "value": "45% Alc./Vol. (90 Proof)",
-        "confidence": 0.96
+        "confidence": 0.97
       },
       "net_contents": {
         "value": "750 mL",
-        "confidence": 0.96
+        "confidence": 0.97
       },
       "producer_name": {
         "value": "Old Tom Distillery",
-        "confidence": 0.96
+        "confidence": 0.97
       },
       "producer_address": {
         "value": "Bardstown, Kentucky 40004",
-        "confidence": 0.96
+        "confidence": 0.97
       },
       "country_of_origin": {
         "value": null,
@@ -109,7 +109,7 @@
         "text": "Government Warning: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
         "heading_all_caps": false,
         "heading_bold": true,
-        "confidence": 0.95
+        "confidence": 0.96
       },
       "image_quality": {
         "readable": true,
@@ -119,9 +119,9 @@
   },
   {
     "id": "old-tom-abv-mismatch",
-    "title": "Old Tom Bourbon (ABV mismatch)",
-    "description": "Label says 40% / 80 proof while the application says 45%. Expected: request correction.",
-    "file": "old-tom-abv-mismatch.png",
+    "title": "Old Tom Bourbon · bottle photo, ABV mismatch",
+    "description": "Photographed on the bottle. Label says 40% / 80 proof; the application says 45%.",
+    "file": "old-tom-abv-mismatch.jpg",
     "expected": "request_correction",
     "application": {
       "beverage_type": "distilled_spirits",
@@ -137,27 +137,27 @@
     "extraction": {
       "brand_name": {
         "value": "OLD TOM DISTILLERY",
-        "confidence": 0.96
+        "confidence": 0.97
       },
       "class_type": {
         "value": "Kentucky Straight Bourbon Whiskey",
-        "confidence": 0.96
+        "confidence": 0.97
       },
       "alcohol_content": {
         "value": "40% Alc./Vol. (80 Proof)",
-        "confidence": 0.96
+        "confidence": 0.93
       },
       "net_contents": {
         "value": "750 mL",
-        "confidence": 0.96
+        "confidence": 0.97
       },
       "producer_name": {
         "value": "Old Tom Distillery",
-        "confidence": 0.96
+        "confidence": 0.97
       },
       "producer_address": {
         "value": "Bardstown, Kentucky 40004",
-        "confidence": 0.96
+        "confidence": 0.88
       },
       "country_of_origin": {
         "value": null,
@@ -168,196 +168,21 @@
         "text": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
         "heading_all_caps": true,
         "heading_bold": true,
-        "confidence": 0.95
+        "confidence": 0.9
       },
       "image_quality": {
         "readable": true,
-        "issues": []
-      }
-    }
-  },
-  {
-    "id": "stones-throw-wine",
-    "title": "Stone's Throw Cabernet (case difference)",
-    "description": "Label prints STONE'S THROW, application says Stone's Throw. Dave's example; expected approve.",
-    "file": "stones-throw-wine.png",
-    "expected": "approve",
-    "application": {
-      "beverage_type": "wine",
-      "brand_name": "Stone's Throw",
-      "class_type": "Cabernet Sauvignon",
-      "alcohol_content": "14.5",
-      "net_contents": "750 mL",
-      "producer_name": "Stone's Throw Vineyards",
-      "producer_address": "St. Helena, CA",
-      "is_import": false,
-      "country_of_origin": ""
-    },
-    "extraction": {
-      "brand_name": {
-        "value": "STONE'S THROW",
-        "confidence": 0.96
-      },
-      "class_type": {
-        "value": "Cabernet Sauvignon",
-        "confidence": 0.96
-      },
-      "alcohol_content": {
-        "value": "14.5% Alc. by Vol.",
-        "confidence": 0.96
-      },
-      "net_contents": {
-        "value": "750 mL",
-        "confidence": 0.96
-      },
-      "producer_name": {
-        "value": "Stone's Throw Vineyards",
-        "confidence": 0.96
-      },
-      "producer_address": {
-        "value": "St. Helena, California",
-        "confidence": 0.96
-      },
-      "country_of_origin": {
-        "value": null,
-        "confidence": 0.0
-      },
-      "health_warning": {
-        "present": true,
-        "text": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
-        "heading_all_caps": true,
-        "heading_bold": true,
-        "confidence": 0.95
-      },
-      "image_quality": {
-        "readable": true,
-        "issues": []
-      }
-    }
-  },
-  {
-    "id": "glen-moray-scotch",
-    "title": "Glen Aldie Scotch (import)",
-    "description": "Imported spirit with 'Product of Scotland'. Application lists United Kingdom. Expected approve.",
-    "file": "glen-moray-scotch.png",
-    "expected": "approve",
-    "application": {
-      "beverage_type": "distilled_spirits",
-      "brand_name": "Glen Aldie",
-      "class_type": "Single Malt Scotch Whiskey",
-      "alcohol_content": "43%",
-      "net_contents": "750 mL",
-      "producer_name": "Glen Aldie Distillers",
-      "producer_address": "Speyside, Scotland",
-      "is_import": true,
-      "country_of_origin": "United Kingdom"
-    },
-    "extraction": {
-      "brand_name": {
-        "value": "GLEN ALDIE",
-        "confidence": 0.96
-      },
-      "class_type": {
-        "value": "Single Malt Scotch Whisky",
-        "confidence": 0.96
-      },
-      "alcohol_content": {
-        "value": "43% Alc./Vol. (86 Proof)",
-        "confidence": 0.96
-      },
-      "net_contents": {
-        "value": "750 mL",
-        "confidence": 0.96
-      },
-      "producer_name": {
-        "value": "Glen Aldie Distillers",
-        "confidence": 0.96
-      },
-      "producer_address": {
-        "value": "Speyside, Scotland",
-        "confidence": 0.96
-      },
-      "country_of_origin": {
-        "value": "PRODUCT OF SCOTLAND",
-        "confidence": 0.96
-      },
-      "health_warning": {
-        "present": true,
-        "text": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
-        "heading_all_caps": true,
-        "heading_bold": true,
-        "confidence": 0.95
-      },
-      "image_quality": {
-        "readable": true,
-        "issues": []
-      }
-    }
-  },
-  {
-    "id": "harbor-light-ipa-missing-warning",
-    "title": "Harbor Light IPA (no warning)",
-    "description": "Malt beverage with no health warning statement at all. Expected: request correction.",
-    "file": "harbor-light-ipa-missing-warning.png",
-    "expected": "request_correction",
-    "application": {
-      "beverage_type": "malt_beverage",
-      "brand_name": "Harbor Light",
-      "class_type": "IPA",
-      "alcohol_content": "6.8",
-      "net_contents": "12 fl oz",
-      "producer_name": "Harbor Light Brewing Co.",
-      "producer_address": "Portland, ME 04101",
-      "is_import": false,
-      "country_of_origin": ""
-    },
-    "extraction": {
-      "brand_name": {
-        "value": "HARBOR LIGHT",
-        "confidence": 0.96
-      },
-      "class_type": {
-        "value": "India Pale Ale",
-        "confidence": 0.96
-      },
-      "alcohol_content": {
-        "value": "6.8% ALC/VOL",
-        "confidence": 0.96
-      },
-      "net_contents": {
-        "value": "12 FL OZ (355 mL)",
-        "confidence": 0.96
-      },
-      "producer_name": {
-        "value": "Harbor Light Brewing Co.",
-        "confidence": 0.96
-      },
-      "producer_address": {
-        "value": "Portland, Maine 04101",
-        "confidence": 0.96
-      },
-      "country_of_origin": {
-        "value": null,
-        "confidence": 0.0
-      },
-      "health_warning": {
-        "present": false,
-        "text": null,
-        "heading_all_caps": null,
-        "heading_bold": null,
-        "confidence": 0.0
-      },
-      "image_quality": {
-        "readable": true,
-        "issues": []
+        "issues": [
+          "Mild reflection on the glass near the top left."
+        ]
       }
     }
   },
   {
     "id": "old-tom-angled-photo",
-    "title": "Old Tom Bourbon (angled photo)",
-    "description": "The clean label photographed slightly rotated; the demo extractor reads it with lower confidence. Expected: needs review.",
-    "file": "old-tom-angled-photo.png",
+    "title": "Old Tom Bourbon · angled phone photo",
+    "description": "Steep angle, glare, and grain. Readable, but the small print comes back with lower confidence.",
+    "file": "old-tom-angled-photo.jpg",
     "expected": "needs_review",
     "application": {
       "beverage_type": "distilled_spirits",
@@ -377,7 +202,7 @@
       },
       "class_type": {
         "value": "Kentucky Straight Bourbon Whiskey",
-        "confidence": 0.85
+        "confidence": 0.84
       },
       "alcohol_content": {
         "value": "45% Alc./Vol. (90 Proof)",
@@ -385,11 +210,11 @@
       },
       "net_contents": {
         "value": "750 mL",
-        "confidence": 0.85
+        "confidence": 0.86
       },
       "producer_name": {
         "value": "Old Tom Distillery",
-        "confidence": 0.7
+        "confidence": 0.72
       },
       "producer_address": {
         "value": "Bardstown, Kentucky 40004",
@@ -409,8 +234,364 @@
       "image_quality": {
         "readable": true,
         "issues": [
-          "Label is photographed at an angle; small text near the bottom is slightly skewed."
+          "Photographed at a steep angle with glare across the upper half; small print is soft."
         ]
+      }
+    }
+  },
+  {
+    "id": "stones-throw-wine",
+    "title": "Stone's Throw Cabernet · case difference",
+    "description": "Label prints STONE'S THROW in capitals; the application says Stone's Throw. Dave's example.",
+    "file": "stones-throw-wine.jpg",
+    "expected": "approve",
+    "application": {
+      "beverage_type": "wine",
+      "brand_name": "Stone's Throw",
+      "class_type": "Cabernet Sauvignon",
+      "alcohol_content": "14.5",
+      "net_contents": "750 mL",
+      "producer_name": "Stone's Throw Vineyards",
+      "producer_address": "St. Helena, CA",
+      "is_import": false,
+      "country_of_origin": ""
+    },
+    "extraction": {
+      "brand_name": {
+        "value": "STONE'S THROW",
+        "confidence": 0.97
+      },
+      "class_type": {
+        "value": "Cabernet Sauvignon",
+        "confidence": 0.97
+      },
+      "alcohol_content": {
+        "value": "14.5% Alc. by Vol.",
+        "confidence": 0.97
+      },
+      "net_contents": {
+        "value": "750 mL",
+        "confidence": 0.97
+      },
+      "producer_name": {
+        "value": "Stone's Throw Vineyards",
+        "confidence": 0.97
+      },
+      "producer_address": {
+        "value": "St. Helena, California",
+        "confidence": 0.97
+      },
+      "country_of_origin": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "health_warning": {
+        "present": true,
+        "text": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "heading_all_caps": true,
+        "heading_bold": true,
+        "confidence": 0.96
+      },
+      "image_quality": {
+        "readable": true,
+        "issues": []
+      }
+    }
+  },
+  {
+    "id": "sunset-rose-altered-warning",
+    "title": "Sunset Ridge Rosé · reworded warning",
+    "description": "The warning ends 'can cause health issues' instead of 'may cause health problems'.",
+    "file": "sunset-rose-altered-warning.jpg",
+    "expected": "request_correction",
+    "application": {
+      "beverage_type": "wine",
+      "brand_name": "Sunset Ridge",
+      "class_type": "Rosé Wine",
+      "alcohol_content": "12.5%",
+      "net_contents": "750 mL",
+      "producer_name": "Sunset Ridge Cellars",
+      "producer_address": "Sebastopol, CA",
+      "is_import": false,
+      "country_of_origin": ""
+    },
+    "extraction": {
+      "brand_name": {
+        "value": "SUNSET RIDGE",
+        "confidence": 0.97
+      },
+      "class_type": {
+        "value": "Rosé Wine",
+        "confidence": 0.97
+      },
+      "alcohol_content": {
+        "value": "12.5% Alc. by Vol.",
+        "confidence": 0.97
+      },
+      "net_contents": {
+        "value": "750 mL",
+        "confidence": 0.97
+      },
+      "producer_name": {
+        "value": "Sunset Ridge Cellars",
+        "confidence": 0.97
+      },
+      "producer_address": {
+        "value": "Sebastopol, California",
+        "confidence": 0.97
+      },
+      "country_of_origin": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "health_warning": {
+        "present": true,
+        "text": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and can cause health issues.",
+        "heading_all_caps": true,
+        "heading_bold": true,
+        "confidence": 0.96
+      },
+      "image_quality": {
+        "readable": true,
+        "issues": []
+      }
+    }
+  },
+  {
+    "id": "glen-aldie-scotch",
+    "title": "Glen Aldie Scotch · import",
+    "description": "Imported single malt with 'Product of Scotland'; the application lists United Kingdom.",
+    "file": "glen-aldie-scotch.jpg",
+    "expected": "approve",
+    "application": {
+      "beverage_type": "distilled_spirits",
+      "brand_name": "Glen Aldie",
+      "class_type": "Single Malt Scotch Whiskey",
+      "alcohol_content": "43%",
+      "net_contents": "750 mL",
+      "producer_name": "Glen Aldie Distillers",
+      "producer_address": "Speyside, Scotland",
+      "is_import": true,
+      "country_of_origin": "United Kingdom"
+    },
+    "extraction": {
+      "brand_name": {
+        "value": "GLEN ALDIE",
+        "confidence": 0.97
+      },
+      "class_type": {
+        "value": "Single Malt Scotch Whisky",
+        "confidence": 0.97
+      },
+      "alcohol_content": {
+        "value": "43% Alc./Vol. (86 Proof)",
+        "confidence": 0.97
+      },
+      "net_contents": {
+        "value": "750 mL",
+        "confidence": 0.97
+      },
+      "producer_name": {
+        "value": "Glen Aldie Distillers",
+        "confidence": 0.97
+      },
+      "producer_address": {
+        "value": "Speyside, Scotland",
+        "confidence": 0.97
+      },
+      "country_of_origin": {
+        "value": "PRODUCT OF SCOTLAND",
+        "confidence": 0.97
+      },
+      "health_warning": {
+        "present": true,
+        "text": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "heading_all_caps": true,
+        "heading_bold": true,
+        "confidence": 0.96
+      },
+      "image_quality": {
+        "readable": true,
+        "issues": []
+      }
+    }
+  },
+  {
+    "id": "harbor-light-ipa-missing-warning",
+    "title": "Harbor Light IPA · no warning",
+    "description": "Can artwork with no Government Health Warning Statement at all.",
+    "file": "harbor-light-ipa-missing-warning.jpg",
+    "expected": "request_correction",
+    "application": {
+      "beverage_type": "malt_beverage",
+      "brand_name": "Harbor Light",
+      "class_type": "IPA",
+      "alcohol_content": "6.8",
+      "net_contents": "12 fl oz",
+      "producer_name": "Harbor Light Brewing Co.",
+      "producer_address": "Portland, ME 04101",
+      "is_import": false,
+      "country_of_origin": ""
+    },
+    "extraction": {
+      "brand_name": {
+        "value": "HARBOR LIGHT",
+        "confidence": 0.97
+      },
+      "class_type": {
+        "value": "India Pale Ale",
+        "confidence": 0.97
+      },
+      "alcohol_content": {
+        "value": "6.8% ALC/VOL",
+        "confidence": 0.97
+      },
+      "net_contents": {
+        "value": "12 FL OZ (355 mL)",
+        "confidence": 0.97
+      },
+      "producer_name": {
+        "value": "Harbor Light Brewing Co.",
+        "confidence": 0.97
+      },
+      "producer_address": {
+        "value": "Portland, Maine 04101",
+        "confidence": 0.97
+      },
+      "country_of_origin": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "health_warning": {
+        "present": false,
+        "text": null,
+        "heading_all_caps": null,
+        "heading_bold": null,
+        "confidence": 0.0
+      },
+      "image_quality": {
+        "readable": true,
+        "issues": []
+      }
+    }
+  },
+  {
+    "id": "harbor-light-ipa-net-contents",
+    "title": "Harbor Light IPA · net contents mismatch",
+    "description": "Pint can (16 fl oz) submitted against an application that says 12 fl oz.",
+    "file": "harbor-light-ipa-net-contents.jpg",
+    "expected": "request_correction",
+    "application": {
+      "beverage_type": "malt_beverage",
+      "brand_name": "Harbor Light",
+      "class_type": "IPA",
+      "alcohol_content": "6.8",
+      "net_contents": "12 fl oz",
+      "producer_name": "Harbor Light Brewing Co.",
+      "producer_address": "Portland, ME 04101",
+      "is_import": false,
+      "country_of_origin": ""
+    },
+    "extraction": {
+      "brand_name": {
+        "value": "HARBOR LIGHT",
+        "confidence": 0.97
+      },
+      "class_type": {
+        "value": "India Pale Ale",
+        "confidence": 0.97
+      },
+      "alcohol_content": {
+        "value": "6.8% ALC/VOL",
+        "confidence": 0.94
+      },
+      "net_contents": {
+        "value": "16 FL OZ (473 mL)",
+        "confidence": 0.95
+      },
+      "producer_name": {
+        "value": "Harbor Light Brewing Co.",
+        "confidence": 0.9
+      },
+      "producer_address": {
+        "value": "Portland, Maine 04101",
+        "confidence": 0.86
+      },
+      "country_of_origin": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "health_warning": {
+        "present": true,
+        "text": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "heading_all_caps": true,
+        "heading_bold": true,
+        "confidence": 0.9
+      },
+      "image_quality": {
+        "readable": true,
+        "issues": [
+          "Curved can surface; text near the edges is compressed."
+        ]
+      }
+    }
+  },
+  {
+    "id": "copper-ridge-rye-typo",
+    "title": "Copper Ridge Rye · brand typo",
+    "description": "The label prints COPPER RIGDE (transposed letters). Similar, not identical, so a specialist decides.",
+    "file": "copper-ridge-rye-typo.jpg",
+    "expected": "needs_review",
+    "application": {
+      "beverage_type": "distilled_spirits",
+      "brand_name": "Copper Ridge",
+      "class_type": "Straight Rye Whiskey",
+      "alcohol_content": "50% (100 proof)",
+      "net_contents": "750 mL",
+      "producer_name": "Copper Ridge Distilling Co.",
+      "producer_address": "Lawrenceburg, IN 47025",
+      "is_import": false,
+      "country_of_origin": ""
+    },
+    "extraction": {
+      "brand_name": {
+        "value": "COPPER RIGDE",
+        "confidence": 0.97
+      },
+      "class_type": {
+        "value": "Straight Rye Whiskey",
+        "confidence": 0.97
+      },
+      "alcohol_content": {
+        "value": "50% Alc./Vol. (100 Proof)",
+        "confidence": 0.97
+      },
+      "net_contents": {
+        "value": "750 mL",
+        "confidence": 0.97
+      },
+      "producer_name": {
+        "value": "Copper Ridge Distilling Co.",
+        "confidence": 0.97
+      },
+      "producer_address": {
+        "value": "Lawrenceburg, Indiana 47025",
+        "confidence": 0.97
+      },
+      "country_of_origin": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "health_warning": {
+        "present": true,
+        "text": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "heading_all_caps": true,
+        "heading_bold": true,
+        "confidence": 0.96
+      },
+      "image_quality": {
+        "readable": true,
+        "issues": []
       }
     }
   }
