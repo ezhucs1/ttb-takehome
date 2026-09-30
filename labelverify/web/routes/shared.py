@@ -28,6 +28,18 @@ def _home_for(user: User) -> str:
     return "/specialist" if user.role == Role.SPECIALIST else "/applicant"
 
 
+def _safe_next(user: User, next_url: str) -> str:
+    """Where to go after login: the remembered page, unless it is off-site or belongs to
+    the other role (a session that expired as an applicant must not send a specialist
+    to an applicant page)."""
+    if not next_url.startswith("/") or next_url.startswith("//"):
+        return _home_for(user)
+    other = "/applicant" if user.role == Role.SPECIALIST else "/specialist"
+    if next_url == other or next_url.startswith(other + "/") or next_url.startswith(other + "?"):
+        return _home_for(user)
+    return next_url
+
+
 @router.get("/healthz")
 def healthz(request: Request) -> dict:
     return {"status": "ok", "extractor": renderer(request).extractor_label(request)}
@@ -112,8 +124,7 @@ def login(
             demo_password=DEMO_PASSWORD,
             error="That email and password do not match.",
         )
-    target = next if next.startswith("/") and not next.startswith("//") else _home_for(user)
-    response = RedirectResponse(target, status_code=303)
+    response = RedirectResponse(_safe_next(user, next), status_code=303)
     response.set_cookie(
         SESSION_COOKIE,
         sign_session(request, user.id),

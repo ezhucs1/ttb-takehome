@@ -4,6 +4,11 @@
   <div class="card-title">Decision</div>
   <p>{{ STATUS_LABELS[app.status] }} on {{ app.decided_at | dt }} by {{ app.specialist.name if app.specialist else 'TTB' }}.</p>
 </div>
+{% elif app.status == 'correction_requested' %}
+<div class="card" id="decision">
+  <div class="card-title"><svg class="icon"><use href="#i-clock"></use></svg> Waiting on the applicant</div>
+  <p>Your correction request{% if latest_notice %} went out on {{ latest_notice.created_at | dt }}{% endif %}. The next decision is theirs: they fix the label and resubmit, and the case comes back to the queue with a fresh AI check. Until then you can answer questions in the threads, and nothing else is needed from you.</p>
+</div>
 {% else %}
 <div class="card decision" id="decision">
   <div class="card-title">Your decision</div>

@@ -1,8 +1,12 @@
 {% extends "layout.html" %}
 {% block title %}{{ status }}{% endblock %}
 {% block content %}
-<div class="page-header"><div><h1>{{ 'Not found' if status == 404 else 'Something went wrong' }}</h1></div></div>
-<div class="card"><p>{{ message }}</p><p><a class="btn btn-secondary" href="/">Back to start</a></p></div>
+<div class="page-header"><div><h1>{% if status == 404 %}Not found{% elif status == 403 %}Not your page{% else %}Something went wrong{% endif %}</h1></div></div>
+<div class="card">
+  <p>{{ message }}</p>
+  {% if status == 403 %}<p class="muted">You are signed in as {{ user.name }} ({{ 'labeling specialist' if user.role == 'specialist' else 'applicant' }}). That page is for the other role.</p>{% endif %}
+  <p><a class="btn btn-secondary" href="/">{{ 'Go to your ' ~ ('queue' if user and user.role == 'specialist' else 'applications') if user else 'Back to start' }}</a></p>
+</div>
 {% endblock %}
 {% block auth %}
 <div class="auth-panel"><h1>{{ status }}</h1><p>{{ message }}</p><a class="btn btn-primary" href="/login">Sign in</a></div>

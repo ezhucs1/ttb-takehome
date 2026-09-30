@@ -75,6 +75,27 @@ class TestAuth:
         assert resp.status_code == 303 and resp.headers["location"].startswith("/login")
         assert anon.get("/").headers.get("content-type", "").startswith("text/html")
 
+    def test_login_ignores_a_next_url_from_the_other_role(self, app):
+        """A session that expired on an applicant page must not send a specialist there."""
+        client = TestClient(app)
+        resp = client.post(
+            "/login",
+            data={**SPECIALIST, "next": "/applicant/applications/abc"},
+            follow_redirects=False,
+        )
+        assert resp.headers["location"] == "/specialist"
+        resp = client.post("/login", data={**SPECIALIST, "next": "/inbox"}, follow_redirects=False)
+        assert resp.headers["location"] == "/inbox"
+        resp = client.post(
+            "/login", data={**SPECIALIST, "next": "//evil.example"}, follow_redirects=False
+        )
+        assert resp.headers["location"] == "/specialist"
+
+    def test_wrong_role_page_explains_itself(self, specialist):
+        resp = specialist.get("/applicant")
+        assert resp.status_code == 403 and "Not your page" in resp.text
+        assert "signed in as Sarah Chen" in resp.text and 'href="/"' in resp.text
+
     def test_bad_password(self, anon):
         resp = anon.post("/login", data={"email": SPECIALIST["email"], "password": "nope"})
         assert resp.status_code == 401 and "do not match" in resp.text
@@ -131,6 +152,9 @@ class TestSpecialistWorkflow:
         assert resp.status_code == 303
         page = specialist.get(f"/specialist/applications/{app_id}")
         assert "Correction requested" in page.text and "Correction request" in page.text
+        # No decision panel while the applicant holds the next move; threads stay open.
+        assert "Waiting on the applicant" in page.text and "Approve label" not in page.text
+        assert "comment-form" in page.text
         # The applicant now sees it as needing action, with the notice and field comments.
         dash = applicant.get("/applicant")
         assert "Corrections requested" in dash.text or "Correction requested" in dash.text
