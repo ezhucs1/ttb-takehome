@@ -12,8 +12,9 @@ recommends; a person decides.
 
 **For applicants**
 
-- Upload the label first, front and back panels together if the product has both; the
-  application form fills itself from what is printed across all panels.
+- Upload the label first, front and back panels together if the product has both. Images
+  can be added one at a time, removed individually, and reordered; the application form
+  fills itself from what is printed across all panels.
 - Run a pre-check before submitting and fix problems while they are cheap.
 - See correction requests as plain-language notices, reply on the exact field in
   question, and resubmit with a revised label. The application keeps its number.
@@ -29,6 +30,9 @@ recommends; a person decides.
   every field.
 - One-click approve, bulk approve for clean applications, or a correction request whose
   notice is drafted from the findings and edited before it goes out.
+
+Both roles get a light and a dark theme. The app follows the system preference and the
+toggle in the sidebar overrides it per browser.
 
 **The engine** (no web dependency, fully unit tested)
 

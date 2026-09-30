@@ -5,7 +5,9 @@
    data-toggle           button shows/hides a target
    data-confirm          confirm() before submit
    data-href             clickable table rows
-   data-viewer           zoomable label image
+   data-viewer           zoomable label image with panel thumbnails
+   data-file-picker      multi-image chooser that accumulates files, with remove/reorder
+   data-theme-toggle     light / dark switch
    #wizard               the three-step new application flow */
 (function () {
   "use strict";
@@ -13,6 +15,21 @@
   const $ = (sel, root) => (root || document).querySelector(sel);
   const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
 
+  // ---------------------------------------------------------------- theme
+  const theme = {
+    current() {
+      const set = document.documentElement.dataset.theme;
+      if (set) return set;
+      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    },
+    apply(name) {
+      document.documentElement.dataset.theme = name;
+      try { localStorage.setItem("lv-theme", name); } catch (e) { /* private mode */ }
+    },
+    toggle() { theme.apply(theme.current() === "dark" ? "light" : "dark"); },
+  };
+
+  // ---------------------------------------------------------------- helpers
   function busy(target, text) {
     target.innerHTML = `<div class="busy-note"><span class="spinner"></span><span>${text || "Working…"}</span></div>`;
   }
@@ -42,8 +59,113 @@
     }
   }
 
+  // ---------------------------------------------------------------- file picker
+  // A native <input type="file"> forgets its previous selection every time the dialog
+  // opens. The picker keeps its own list, syncs it back into the input (so plain form
+  // posts still work), and renders thumbnails with remove and reorder controls.
+  const PANEL_NAMES = ["Front", "Back", "Neck", "Panel 4", "Panel 5", "Panel 6"];
+
+  function filePicker(root) {
+    const input = $('input[type="file"]', root);
+    const list = $("[data-file-list]", root);
+    const hint = $("[data-file-hint]", root);
+    const max = parseInt(root.dataset.max || "4", 10);
+    let files = [];
+
+    const key = (f) => `${f.name}|${f.size}|${f.lastModified}`;
+
+    function sync() {
+      const dt = new DataTransfer();
+      files.forEach((f) => dt.items.add(f));
+      input.files = dt.files;
+      render();
+      root.dispatchEvent(new CustomEvent("picker:change", { bubbles: true, detail: { count: files.length } }));
+    }
+
+    function render() {
+      list.innerHTML = "";
+      list.hidden = files.length === 0;
+      files.forEach((file, i) => {
+        const fig = document.createElement("figure");
+        fig.className = "file-item";
+        fig.innerHTML =
+          `<img alt="">` +
+          `<div class="file-move"><button type="button" title="Move earlier" ${i === 0 ? "disabled" : ""} data-move="-1">&larr;</button>` +
+          `<button type="button" title="Move later" ${i === files.length - 1 ? "disabled" : ""} data-move="1">&rarr;</button></div>` +
+          `<button type="button" class="file-remove" title="Remove this image"><svg class="icon"><use href="#i-x"></use></svg></button>` +
+          `<figcaption><strong></strong> · <span></span></figcaption>`;
+        fig.querySelector(".file-remove").setAttribute("aria-label", `Remove ${file.name}`);
+        fig.querySelector("figcaption strong").textContent = PANEL_NAMES[i] || `Panel ${i + 1}`;
+        fig.querySelector("figcaption span").textContent = file.name;
+        const img = fig.querySelector("img");
+        img.src = URL.createObjectURL(file);
+        img.onload = () => URL.revokeObjectURL(img.src);
+        fig.querySelector(".file-remove").addEventListener("click", () => { files.splice(i, 1); sync(); });
+        $$("[data-move]", fig).forEach((btn) =>
+          btn.addEventListener("click", () => {
+            const j = i + parseInt(btn.dataset.move, 10);
+            if (j < 0 || j >= files.length) return;
+            [files[i], files[j]] = [files[j], files[i]];
+            sync();
+          })
+        );
+        list.appendChild(fig);
+      });
+      if (hint) {
+        hint.textContent = files.length
+          ? `${files.length} of ${max} images. The first is treated as the front label; use the arrows to reorder.`
+          : "";
+      }
+    }
+
+    input.addEventListener("change", () => {
+      const picked = Array.from(input.files || []);
+      const known = new Set(files.map(key));
+      const fresh = picked.filter((f) => !known.has(key(f)));
+      const room = Math.max(max - files.length, 0);
+      if (fresh.length > room) {
+        alert(`You can attach at most ${max} images. Only the first ${room} of the new ones were added.`);
+      }
+      files = files.concat(fresh.slice(0, room));
+      sync();
+    });
+
+    const dropzone = $(".dropzone", root);
+    if (dropzone) {
+      ["dragenter", "dragover"].forEach((evt) => dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.add("over"); }));
+      ["dragleave", "drop"].forEach((evt) => dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.remove("over"); }));
+      dropzone.addEventListener("drop", (e) => {
+        if (!e.dataTransfer.files.length) return;
+        const dt = new DataTransfer();
+        Array.from(e.dataTransfer.files).forEach((f) => dt.items.add(f));
+        input.files = dt.files;
+        input.dispatchEvent(new Event("change"));
+      });
+    }
+
+    const api = {
+      get files() { return files.slice(); },
+      clear() { files = []; sync(); },
+    };
+    root.picker = api;
+    return api;
+  }
+
+  // ---------------------------------------------------------------- wiring
   function wire(root) {
     root = root || document;
+
+    $$("[data-theme-toggle]", root).forEach((btn) => {
+      if (btn.dataset.wired) return;
+      btn.dataset.wired = "1";
+      btn.addEventListener("click", theme.toggle);
+    });
+
+    $$("[data-file-picker]", root).forEach((el) => {
+      if (el.dataset.wired) return;
+      el.dataset.wired = "1";
+      filePicker(el);
+    });
 
     $$("form[data-async]", root).forEach((form) => {
       if (form.dataset.wired) return;
@@ -159,62 +281,46 @@
     );
   }
 
+  // ---------------------------------------------------------------- wizard
   function wizard() {
     const root = $("#wizard");
     if (!root) return;
     const uploadForm = $("#upload-form");
-    const fileInput = $("#image");
-    const dropzone = $("#dropzone");
-    const preview = $("#upload-preview");
+    const pickerEl = $("[data-file-picker]", uploadForm);
+    const picker = pickerEl.picker;
     const sampleInput = $("#sample_id");
+    const samplePreview = $("#sample-preview");
     const status = $("#upload-status");
     const detailsForm = $("#details-form");
     const submitForm = $("#submit-form");
     const submitBtn = $("#submit-btn");
     let applicationId = null;
 
-    function showPreviews(items) {
-      preview.innerHTML = "";
-      items.forEach(({ src, label }) => {
-        const fig = document.createElement("figure");
-        fig.innerHTML = `<img alt=""><figcaption></figcaption>`;
-        fig.querySelector("img").src = src;
-        fig.querySelector("figcaption").textContent = label;
-        preview.appendChild(fig);
-      });
-      preview.hidden = items.length === 0;
-    }
-    const PANELS = ["Front", "Back", "Neck", "Panel 4"];
-
     function pickSample(btn) {
       sampleInput.value = btn.dataset.sampleId;
-      fileInput.value = "";
+      picker.clear();
       $$(".sample").forEach((b) => b.classList.toggle("selected", b === btn));
-      showPreviews([{ src: btn.querySelector("img").src, label: "Sample" }]);
+      samplePreview.hidden = false;
+      $("img", samplePreview).src = btn.querySelector("img").src;
+      $("span", samplePreview).textContent = `Sample: ${btn.textContent.trim()}`;
       const app = JSON.parse(btn.dataset.application || "{}");
       if (app.beverage_type) $("#beverage_type_1").value = app.beverage_type;
-      status.textContent = `Sample selected: ${btn.textContent.trim()}`;
+      status.textContent = "";
     }
     $$(".sample").forEach((btn) => btn.addEventListener("click", () => pickSample(btn)));
 
-    fileInput.addEventListener("change", () => {
-      const files = Array.from(fileInput.files || []);
-      if (!files.length) return;
-      if (files.length > 4) { status.textContent = "Choose at most 4 images."; fileInput.value = ""; return; }
-      sampleInput.value = "";
-      $$(".sample").forEach((b) => b.classList.remove("selected"));
-      showPreviews(files.map((f, i) => ({ src: URL.createObjectURL(f), label: `${PANELS[i]} · ${f.name}` })));
-      status.textContent = files.length === 1 ? files[0].name : `${files.length} images selected`;
-    });
-    ["dragenter", "dragover"].forEach((evt) => dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.add("over"); }));
-    ["dragleave", "drop"].forEach((evt) => dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.remove("over"); }));
-    dropzone.addEventListener("drop", (e) => {
-      if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; fileInput.dispatchEvent(new Event("change")); }
+    pickerEl.addEventListener("picker:change", (e) => {
+      if (e.detail.count > 0) {
+        sampleInput.value = "";
+        samplePreview.hidden = true;
+        $$(".sample").forEach((b) => b.classList.remove("selected"));
+      }
+      status.textContent = "";
     });
 
     uploadForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (!fileInput.files.length && !sampleInput.value) { status.textContent = "Choose a label image or a sample first."; return; }
+      if (!picker.files.length && !sampleInput.value) { status.textContent = "Choose a label image or a sample first."; return; }
       const btn = $("#upload-btn");
       btn.disabled = true;
       status.innerHTML = '<span class="spinner"></span> Reading the label…';
@@ -225,8 +331,8 @@
         if (!resp.ok) { status.textContent = data.detail || "Upload failed."; return; }
         applicationId = data.id;
         const secs = ((performance.now() - started) / 1000).toFixed(1);
-        status.textContent = `Read in ${secs} s · ${data.serial}`;
-        // Fill step 2.
+        const n = (data.image_urls || []).length;
+        status.textContent = `Read ${n > 1 ? n + " images" : "the label"} in ${secs} s · ${data.serial}`;
         $("#beverage_type").value = $("#beverage_type_1").value;
         for (const [key, value] of Object.entries(data.prefill || {})) {
           const el = detailsForm.elements[key];
@@ -256,7 +362,6 @@
     });
 
     submitForm.addEventListener("submit", () => {
-      // Carry the latest field values along with the submit.
       new FormData(detailsForm).forEach((value, key) => {
         if (submitForm.elements[key]) return;
         const input = document.createElement("input");

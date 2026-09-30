@@ -6,6 +6,11 @@
   <title>{% block title %}LabelVerify{% endblock %} · LabelVerify</title>
   <link rel="stylesheet" href="/static/app.css">
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <meta name="color-scheme" content="light dark">
+  <script>
+    // Apply the saved theme before first paint to avoid a flash of the wrong palette.
+    (function () { try { var t = localStorage.getItem("lv-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {} })();
+  </script>
 </head>
 <body class="{% block body_class %}{% endblock %}">
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -22,6 +27,8 @@
   <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Zm0 0v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
   <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M13 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 
@@ -59,6 +66,7 @@
       <div class="mode">
         <span class="mode-dot {% if demo_mode %}mode-demo{% endif %}"></span>
         <span>{{ extractor_label }}</span>
+        <button type="button" class="theme-toggle" data-theme-toggle title="Switch between light and dark" aria-label="Switch theme"><svg class="icon i-sun"><use href="#i-sun"></use></svg><svg class="icon i-moon"><use href="#i-moon"></use></svg></button>
       </div>
       <div class="me">
         <span class="avatar">{{ user.initials }}</span>
@@ -83,6 +91,7 @@
   </main>
 </div>
 {% else %}
+<button type="button" class="theme-toggle theme-toggle-floating" data-theme-toggle title="Switch between light and dark" aria-label="Switch theme"><svg class="icon i-sun"><use href="#i-sun"></use></svg><svg class="icon i-moon"><use href="#i-moon"></use></svg></button>
 <main class="auth">{% block auth %}{% endblock %}</main>
 {% endif %}
 <script src="/static/app.js" defer></script>
