@@ -8,10 +8,13 @@ specialist edits either version before sending, so nothing goes out unreviewed.
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 
 from .models import ApplicationData, FieldResult, Verdict, VerificationResult
+
+log = logging.getLogger(__name__)
 
 NOTICE_MODEL_ENV = "LABELVERIFY_NOTICE_MODEL"
 DEFAULT_NOTICE_MODEL = "claude-opus-5-5"
@@ -72,6 +75,26 @@ def template_notice(
     return "\n".join(lines)
 
 
+PROVIDERS = ("gemini", "claude", "template")
+
+
+def notice_provider() -> str:
+    """Who rewrites the notice: LABELVERIFY_NOTICE_PROVIDER, else by available key.
+
+    Notice drafting is not latency-bound (a specialist clicks a button and can wait a few
+    seconds), so the free Gemini tier is preferred when its key exists; the label reader
+    stays on whatever LABELVERIFY_EXTRACTOR selects. "template" disables the rewrite.
+    """
+    chosen = (os.environ.get("LABELVERIFY_NOTICE_PROVIDER") or "").strip().lower()
+    if chosen in PROVIDERS:
+        return chosen
+    if os.environ.get("GEMINI_API_KEY"):
+        return "gemini"
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return "claude"
+    return "template"
+
+
 def draft_notice(
     application: ApplicationData,
     result: VerificationResult,
@@ -80,17 +103,24 @@ def draft_notice(
     applicant_org: str,
     use_ai: bool | None = None,
 ) -> NoticeDraft:
-    """Template first; model rewrite when a key is configured and the rewrite succeeds."""
+    """Template first; a model rewrite on top when a provider is configured and succeeds.
+
+    The template is built from the comparison result, so every finding, quoted value, and
+    instruction comes from the engine. The model only changes the wording, and any failure
+    (rate limit, outage, empty reply) returns the template unchanged.
+    """
     template = template_notice(application, result, serial=serial, applicant_org=applicant_org)
-    if use_ai is None:
-        use_ai = bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("GEMINI_API_KEY"))
-    if not use_ai:
+    provider = notice_provider() if use_ai is None else ("claude" if use_ai else "template")
+    if use_ai and provider == "claude" and not os.environ.get("ANTHROPIC_API_KEY"):
+        provider = notice_provider()
+    if provider == "template":
         return NoticeDraft(body=template, source="template")
     try:
-        body = _ai_rewrite(template)
-    except Exception:  # any API failure falls back to the template; the specialist still edits
+        body = _ai_rewrite(template, provider)
+    except Exception as exc:  # the specialist still gets a complete, editable notice
+        log.warning("notice rewrite via %s failed, using template: %s", provider, exc)
         return NoticeDraft(body=template, source="template")
-    return NoticeDraft(body=body, source="ai")
+    return NoticeDraft(body=body, source=provider)
 
 
 REWRITE_SYSTEM = (
@@ -101,9 +131,9 @@ REWRITE_SYSTEM = (
 )
 
 
-def _ai_rewrite(template: str) -> str:
-    """Anthropic when its key is set, otherwise Gemini; same instructions either way."""
-    if not os.environ.get("ANTHROPIC_API_KEY") and os.environ.get("GEMINI_API_KEY"):
+def _ai_rewrite(template: str, provider: str) -> str:
+    """Rewrite with the chosen provider; same instructions either way."""
+    if provider == "gemini":
         from .extractors.gemini import generate_text
 
         text = generate_text(template, system=REWRITE_SYSTEM)

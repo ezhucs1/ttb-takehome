@@ -151,6 +151,19 @@ it in plainer language. The specialist edits either version before sending.
 own. The template guarantees a usable notice offline; the rewrite improves tone without
 changing facts because the prompt forbids adding or removing findings.
 
+## 8a. Notices can be worded by a different provider than the one that reads labels
+
+**Chose:** ``LABELVERIFY_NOTICE_PROVIDER`` selects who rewrites the correction notice,
+defaulting to Gemini when its key is present, while ``LABELVERIFY_EXTRACTOR`` keeps
+label reading on Claude.
+
+**Why:** the two jobs have different constraints. Reading a label is on the five-second
+path and needs calibrated confidence, so it stays on the measured Claude configuration.
+Drafting a notice happens when a specialist clicks a button, a few seconds is acceptable,
+and the content is fixed by the engine's findings before any model sees it. That makes it
+safe to hand the wording to a free tier: if the call fails or is rate limited, the
+specialist gets the template, which already lists every finding and fix.
+
 ## 9. Bold detection is a reviewed judgment, not a hard fail
 
 **Chose:** the model reports whether the warning heading looks bolder than the body; a
