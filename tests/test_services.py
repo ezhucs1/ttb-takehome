@@ -253,6 +253,29 @@ class TestUnreadActivity:
         db.commit()
         assert services.unread_counts(db, applicant, [app.id]) == {app.id: 1}
 
+    def test_activity_feed_lists_the_other_side_newest_first(self, db, users):
+        app, applicant = make_app(db, users, "old-tom-title-case-warning")
+        sarah = users["sarah.chen@ttb.gov"]
+        services.submit(db, app, applicant)
+        draft = services.draft_correction(app, use_ai=False)
+        services.decide(db, app, sarah, "request_correction", notice_body=draft.body)
+        services.add_comment(db, app, applicant, "health_warning", "Fixing the heading now.")
+        db.commit()
+
+        feed = services.activity_feed(db, applicant)
+        kinds = [i.kind for i in feed]
+        # Notice plus one comment per flagged field; the applicant's own reply is absent, and
+        # the correction-requested status event is not repeated next to the notice.
+        assert "notice" in kinds and "comment" in kinds and "status" not in kinds
+        assert all(i.unread for i in feed)
+        assert feed[0].anchor in ("notice", "field-health_warning")
+        assert [i.kind for i in services.activity_feed(db, sarah)] == ["comment"]
+
+        assert services.mark_all_seen(db, applicant) == 1
+        db.commit()
+        assert not any(i.unread for i in services.activity_feed(db, applicant))
+        assert services.unread_total(db, applicant) == 0
+
 
 class TestLabelSets:
     def test_front_and_back_panels_are_one_version(self, db, users):

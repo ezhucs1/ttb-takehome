@@ -247,9 +247,10 @@ class TestComments:
             headers={"X-Partial": "1"},
         )
         assert applicant.get("/me/unread").json()["applications"] == before + 1
-        dash = applicant.get("/applicant").text
-        assert 'class="row-unread"' in dash and "1 new since you last opened" in dash
-        assert 'data-unread-badge' in dash and 'data-unread-badge title="Applications with new activity" hidden' not in dash
+        inbox = applicant.get("/inbox").text
+        assert "Is the apostrophe printed?" in inbox and "on <em>Brand Name</em>" in inbox
+        assert f"/applicant/applications/{app_id}#field-brand_name" in inbox
+        assert 'data-unread-badge' in inbox and "hidden>" not in inbox.split("data-unread-badge")[1][:80]
 
         page = applicant.get(f"/applicant/applications/{app_id}").text
         assert "Is the apostrophe printed?" in page
@@ -267,6 +268,21 @@ class TestComments:
         assert applicant.get("/me/unread").json()["applications"] == before
         review = specialist.get(f"/specialist/applications/{app_id}").text
         assert "Yes, exactly as shown." in review and 'pill-xs">New</span>' in review
+
+    def test_inbox_mark_all_read(self, specialist, applicant):
+        app_id = ids_in(applicant.get("/applicant").text, "/applicant/applications")[0]
+        applicant.get(f"/applicant/applications/{app_id}")
+        specialist.post(
+            f"/applications/{app_id}/comments",
+            data={"field": "general", "body": "Quick question about the back panel."},
+            headers={"X-Partial": "1"},
+        )
+        assert "Mark all as read" in applicant.get("/inbox").text
+        resp = applicant.post("/inbox/read-all", follow_redirects=False)
+        assert resp.status_code == 303 and resp.headers["location"] == "/inbox"
+        after = applicant.get("/inbox").text
+        assert "Mark all as read" not in after and "Earlier" in after
+        assert "Quick question about the back panel." in after  # kept, just no longer new
 
     def test_unread_endpoint_requires_login(self, anon):
         assert anon.get("/me/unread", headers={"Accept": "application/json"}).status_code == 401

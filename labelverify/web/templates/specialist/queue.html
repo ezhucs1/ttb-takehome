@@ -36,10 +36,9 @@
     </thead>
     <tbody>
     {% for app in apps %}
-      {% set new = unread.get(app.id, 0) if unread is defined else 0 %}
-      <tr data-href="/specialist/applications/{{ app.id }}" {% if new %}class="row-unread"{% endif %}>
+      <tr data-href="/specialist/applications/{{ app.id }}">
         {% if tab == 'ready' %}<td class="check-col"><input type="checkbox" name="ids" value="{{ app.id }}" aria-label="Select {{ app.serial }}"></td>{% endif %}
-        <td class="mono">{% if new %}<span class="unread-dot" title="{{ new }} new since you last opened this"></span>{% endif %}{{ app.serial }}</td>
+        <td class="mono">{{ app.serial }}</td>
         <td><strong>{{ app.brand_name }}</strong><div class="muted small">{{ app.class_type }}</div></td>
         <td>{{ app.organization }}</td>
         <td>{{ BEVERAGE_LABELS.get(app.beverage_type) }}</td>

@@ -168,18 +168,25 @@ specialist gets the template, which already lists every finding and fix.
 
 **Chose:** one row per user and application recording when they last opened it. Anything
 the other party did after that (a comment, a notice, a decision, a resubmission) counts as
-unread. The sidebar badge counts applications with unread activity and refreshes every
-thirty seconds; list rows carry a dot; comments and notices are marked "New" on the page
-that consumes them.
+unread. It surfaces as a funnel with one entry point: an Inbox item in the sidebar whose
+count refreshes every thirty seconds, an inbox page listing each item with a link to the
+exact field, and "New" markers on the application page, which consume them. A first
+version also put dots on queue rows; they were removed because they duplicated the inbox
+and could only refresh with the page.
 
 **Considered:** a read flag on every comment and notice, updated as the user scrolls; a
-notifications table populated on every action; email.
+notifications table populated on every action; email; asking a model to decide what is
+worth notifying.
 
 **Why:** the interviews describe the pain as not knowing something is waiting, not as
 losing track inside a page. One timestamp per user answers "is anything new here" with one
 comparison and never drifts out of sync with the underlying records. A submission is not
 counted for specialists, because it is queue work rather than a message and the queue
-already shows it. Email belongs in production and is listed there.
+already shows it. Email belongs in production and is listed there. A model has no place
+in the mechanism: "what happened after you last looked" is bookkeeping that must be exact
+and instant, and a model call would add latency and a chance of being wrong. Where a
+model could help later is summarizing a long thread in the inbox, not deciding what is
+in it.
 
 ## 10. Bold detection is a reviewed judgment, not a hard fail
 

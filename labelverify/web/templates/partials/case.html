@@ -33,7 +33,7 @@
 
   <section class="case-main">
     {% if latest_notice and app.status in ('correction_requested', 'resubmitted', 'rejected') %}
-    <div class="card notice-card">
+    <div class="card notice-card" id="notice">
       <div class="card-title">
         {{ 'Correction request' if app.status != 'rejected' else 'Rejection notice' }}
         {% if unread is defined and unread.notice %}<span class="pill pill-info pill-xs">New</span>{% endif %}
@@ -62,7 +62,7 @@
           {% with field='general', comments=comments.get('general', []), unread_ids=(unread.comment_ids if unread is defined else []) %}{% include "partials/thread.html" %}{% endwith %}
         </div>
       </div>
-      <div class="card">
+      <div class="card" id="history">
         <div class="card-title">History</div>
         {% include "partials/timeline.html" %}
       </div>

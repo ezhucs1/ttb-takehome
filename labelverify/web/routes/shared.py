@@ -33,6 +33,28 @@ def healthz(request: Request) -> dict:
     return {"status": "ok", "extractor": renderer(request).extractor_label(request)}
 
 
+@router.get("/inbox")
+def inbox(request: Request, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    items = services.activity_feed(db, user)
+    return renderer(request).page(
+        request,
+        "inbox.html",
+        items=items,
+        unread_items=[i for i in items if i.unread],
+        read_items=[i for i in items if not i.unread],
+    )
+
+
+@router.post("/inbox/read-all")
+def inbox_read_all(
+    request: Request, db: Session = Depends(get_db), user: User = Depends(current_user)
+):
+    cleared = services.mark_all_seen(db, user)
+    db.commit()
+    message = f"Marked {cleared} application{'s' if cleared != 1 else ''} as read."
+    return renderer(request).redirect(request, "/inbox", flash=("info", message))
+
+
 @router.get("/me/unread")
 def unread(db: Session = Depends(get_db), user: User = Depends(current_user)) -> dict:
     """Applications with activity the user has not seen; polled by the sidebar badge."""

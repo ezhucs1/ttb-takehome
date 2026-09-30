@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from sqlalchemy import func, select, update
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, selectinload, sessionmaker
 
 from ..engine.extractors import ExtractionError, Extractor
 from ..engine.models import (
@@ -584,14 +584,153 @@ def unread_counts(db: Session, user: User, app_ids: Sequence[str]) -> dict[str, 
     return counts
 
 
-def unread_total(db: Session, user: User) -> int:
-    """How many of the user's applications carry unread activity (the sidebar badge)."""
+def _scoped_app_ids(db: Session, user: User) -> list[str]:
+    """Applications whose activity concerns this user: their own, or every non-draft one."""
     stmt = select(Application.id)
     if user.role == Role.APPLICANT:
         stmt = stmt.where(Application.applicant_id == user.id)
     else:
         stmt = stmt.where(Application.status != ApplicationStatus.DRAFT.value)
-    return len(unread_counts(db, user, list(db.scalars(stmt))))
+    return list(db.scalars(stmt))
+
+
+def unread_total(db: Session, user: User) -> int:
+    """How many of the user's applications carry unread activity (the sidebar badge)."""
+    return len(unread_counts(db, user, _scoped_app_ids(db, user)))
+
+
+@dataclass
+class ActivityItem:
+    """One line in the inbox: something the other party did on an application."""
+
+    kind: str  # comment | notice | status
+    app: Application
+    created_at: datetime
+    actor: User | None
+    field: str  # comment field, "general", or "" for notices and decisions
+    text: str
+    unread: bool
+
+    @property
+    def anchor(self) -> str:
+        if self.kind == "comment":
+            return "thread-host-general" if self.field == "general" else f"field-{self.field}"
+        return "notice" if self.kind == "notice" else "history"
+
+
+# Decisions shown in the applicant's inbox as status lines. Correction requests and
+# rejections arrive as notices, so listing their status event too would duplicate them.
+FEED_STATUSES = {
+    Role.APPLICANT: {ApplicationStatus.APPROVED},
+    Role.SPECIALIST: {ApplicationStatus.RESUBMITTED},
+}
+
+
+def activity_feed(db: Session, user: User, *, limit: int = 40) -> list[ActivityItem]:
+    """The other party's recent activity across the user's applications, newest first."""
+    ids = _scoped_app_ids(db, user)
+    if not ids:
+        return []
+    seen = {
+        view.application_id: view.seen_at
+        for view in db.scalars(
+            select(ApplicationView).where(
+                ApplicationView.user_id == user.id, ApplicationView.application_id.in_(ids)
+            )
+        )
+    }
+    other = other_role(user)
+
+    def unread(app_id: str, created_at: datetime) -> bool:
+        return _after(created_at, seen.get(app_id))
+
+    items: list[ActivityItem] = []
+    for c in db.scalars(
+        select(Comment)
+        .join(User, Comment.author_id == User.id)
+        .options(selectinload(Comment.application))
+        .where(User.role == other, Comment.application_id.in_(ids))
+        .order_by(Comment.created_at.desc())
+        .limit(limit)
+    ).unique():
+        items.append(
+            ActivityItem(
+                "comment",
+                c.application,
+                c.created_at,
+                c.author,
+                c.field,
+                c.body,
+                unread(c.application_id, c.created_at),
+            )
+        )
+    watched = [s.value for s in FEED_STATUSES[Role(user.role)]]
+    for e in db.scalars(
+        select(StatusEvent)
+        .join(User, StatusEvent.actor_id == User.id)
+        .options(selectinload(StatusEvent.application))
+        .where(
+            User.role == other,
+            StatusEvent.to_status.in_(watched),
+            StatusEvent.application_id.in_(ids),
+        )
+        .order_by(StatusEvent.created_at.desc())
+        .limit(limit)
+    ).unique():
+        items.append(
+            ActivityItem(
+                "status",
+                e.application,
+                e.created_at,
+                e.actor,
+                "",
+                e.note,
+                unread(e.application_id, e.created_at),
+            )
+        )
+    if user.role == Role.APPLICANT:
+        for n in db.scalars(
+            select(Notice)
+            .options(selectinload(Notice.application))
+            .where(Notice.application_id.in_(ids))
+            .order_by(Notice.created_at.desc())
+            .limit(limit)
+        ).unique():
+            items.append(
+                ActivityItem(
+                    "notice",
+                    n.application,
+                    n.created_at,
+                    n.sent_by,
+                    "",
+                    n.body,
+                    unread(n.application_id, n.created_at),
+                )
+            )
+    items.sort(key=lambda i: i.created_at, reverse=True)
+    return items[:limit]
+
+
+def mark_all_seen(db: Session, user: User) -> int:
+    """Clear the inbox: every application with unread activity counts as opened now."""
+    unread_ids = unread_counts(db, user, _scoped_app_ids(db, user))
+    now = utcnow()
+    existing = {
+        v.application_id: v
+        for v in db.scalars(
+            select(ApplicationView).where(
+                ApplicationView.user_id == user.id,
+                ApplicationView.application_id.in_(list(unread_ids)),
+            )
+        )
+    }
+    for app_id in unread_ids:
+        if app_id in existing:
+            existing[app_id].seen_at = now
+        else:
+            db.add(ApplicationView(user_id=user.id, application_id=app_id, seen_at=now))
+    db.flush()
+    return len(unread_ids)
 
 
 # --------------------------------------------------------------------------- queue and stats

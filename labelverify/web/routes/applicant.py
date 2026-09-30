@@ -78,7 +78,6 @@ def dashboard(
         needs_action=needs_action,
         filter=filter,
         filter_label=DASHBOARD_FILTERS[filter][0] if filter else "",
-        unread=services.unread_counts(db, user, [a.id for a in apps]),
     )
 
 

@@ -31,7 +31,6 @@ def queue(
         tabs=services.QUEUE_TABS,
         apps=apps,
         stats=services.queue_stats(db),
-        unread=services.unread_counts(db, user, [a.id for a in apps]),
     )
 
 
