@@ -502,3 +502,14 @@ def test_init_db_adds_columns_to_a_database_from_the_previous_release(tmp_path):
         app = db.query(Application).first()
         assert [(i.version, i.panel) for i in app.current_images] == [(1, 1)]
         assert app.latest_run.image_version == 1
+
+
+def test_secret_key_is_generated_once_and_reused(tmp_path, monkeypatch):
+    from labelverify.web.auth import secret_key
+
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    first = secret_key(tmp_path)
+    assert len(first) == 64 and (tmp_path / ".secret_key").read_text() == first
+    assert secret_key(tmp_path) == first  # survives a restart
+    monkeypatch.setenv("SECRET_KEY", "configured")
+    assert secret_key(tmp_path) == "configured"  # the environment always wins

@@ -8,14 +8,18 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import logging
 import os
 import secrets
 from collections.abc import Callable
+from pathlib import Path
 
 from fastapi import Depends, HTTPException, Request
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 
 from .models import Role, User
+
+log = logging.getLogger(__name__)
 
 SESSION_COOKIE = "lv_session"
 SESSION_MAX_AGE = 60 * 60 * 12
@@ -36,9 +40,46 @@ def verify_password(password: str, stored: str) -> bool:
     return hmac.compare_digest(hash_password(password, salt), stored)
 
 
-def secret_key() -> str:
-    """Configured key, or a per-process key (sessions then reset on restart; see docs)."""
-    return os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+def secret_key(data_dir: str | os.PathLike | None = None, *, database_url: str = "") -> str:
+    """The cookie-signing key.
+
+    ``SECRET_KEY`` in the environment wins (set it in any shared deployment). Otherwise a
+    key is generated once and kept next to the database, so sessions survive restarts
+    without anyone committing a secret. If that file cannot be written, the key is
+    per-process and sessions end when the server stops.
+    """
+    configured = os.environ.get("SECRET_KEY", "").strip()
+    if configured:
+        return configured
+    directory = Path(data_dir) if data_dir is not None else _default_data_dir(database_url)
+    path = directory / ".secret_key"
+    try:
+        existing = path.read_text().strip()
+        if len(existing) >= 32:
+            return existing
+    except OSError:
+        pass
+    key = secrets.token_hex(32)
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        path.write_text(key)
+        try:
+            path.chmod(0o600)
+        except OSError:
+            pass
+    except OSError as exc:
+        log.warning("could not store a secret key at %s (%s); sessions end on restart", path, exc)
+    return key
+
+
+def _default_data_dir(url: str = "") -> Path:
+    """Beside the SQLite file when there is one, else ./data."""
+    url = url or os.environ.get("DATABASE_URL", "")
+    if url.startswith("sqlite:///"):
+        file = url.removeprefix("sqlite:///")
+        if file and file != ":memory:":
+            return Path(file).resolve().parent
+    return Path("data")
 
 
 def _serializer(request: Request) -> URLSafeTimedSerializer:

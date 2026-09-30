@@ -173,7 +173,7 @@ exactly the vendor-pilot failure from the interviews.
 | `LABELVERIFY_EXTRACT_TIMEOUT` | `20` | Seconds before an extraction call is abandoned |
 | `LABELVERIFY_IMAGE_MAX_EDGE` | `1500` | Long edge in pixels after preprocessing; smaller is faster, larger keeps more small-print detail |
 | `DATABASE_URL` | `sqlite:///./data/labelverify.db` | SQLAlchemy URL; Postgres works unchanged |
-| `SECRET_KEY` | random per process | Signs session cookies; set it in any shared deployment |
+| `SECRET_KEY` | generated once, kept beside the database | Signs session cookies; set it explicitly in any shared deployment |
 
 ## How it is built
 

@@ -8,8 +8,9 @@ need. Ordered roughly by how soon each would matter.
 - **Authentication.** Seeded accounts with a shared demo password and a signed cookie.
   Production would use the agency's identity provider (PIV/CAC through SAML or OIDC) for
   specialists and Login.gov for applicants, with MFA.
-- **Session secret.** `SECRET_KEY` falls back to a per-process random key, so sessions
-  reset on restart. Set it explicitly in any shared deployment.
+- **Session secret.** With `SECRET_KEY` unset, a key is generated once and stored beside
+  the database, which is enough for one machine. A deployment with more than one instance,
+  or one that must survive losing its volume, sets `SECRET_KEY` from its secret store.
 - **Rate limiting and upload scanning.** None. Add a reverse-proxy limit on the upload
   endpoints and antivirus scanning of uploaded files.
 - **Audit trail.** Status events record who did what and when, but comments and notices

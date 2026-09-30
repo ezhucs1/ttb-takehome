@@ -54,7 +54,7 @@ def create_app(
     engine = make_engine(database_url)
     init_db(engine)
     app.state.session_factory = make_session_factory(engine)
-    app.state.secret_key = secret or secret_key()
+    app.state.secret_key = secret or secret_key(database_url=database_url or "")
     app.state.extractor = extractor
     app.state.samples = load_manifest()
     app.state.samples_by_id = {s["id"]: s for s in app.state.samples}
