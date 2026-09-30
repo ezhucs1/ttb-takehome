@@ -58,6 +58,22 @@ class TestClaudeExtractor:
         assert content[0]["source"]["data"] == "/9hmYWtl"  # base64 of the bytes above
         assert content[1]["type"] == "text"
 
+    def test_multiple_panels_are_numbered_in_one_request(self, extraction: LabelExtraction):
+        response = SimpleNamespace(stop_reason="end_turn", parsed_output=extraction)
+        client, messages = fake_client(response)
+        ClaudeExtractor(client).extract_panels([(b"front", "image/jpeg"), (b"back", "image/png")])
+        content = messages.calls[0]["messages"][0]["content"]
+        assert [c["type"] for c in content] == ["text", "image", "text", "image", "text"]
+        assert content[0]["text"] == "Label image 1 of 2:"
+        assert content[3]["source"]["media_type"] == "image/png"
+        assert "these 2 label images" in content[-1]["text"]
+
+    def test_confidence_outside_range_is_clamped_not_rejected(self):
+        from labelverify.engine.models import ExtractedField
+
+        assert ExtractedField(value="x", confidence=1.4).confidence == 1.0
+        assert ExtractedField(value="x", confidence=-0.2).confidence == 0.0
+
     def test_refusal_raises_extraction_error(self):
         client, _ = fake_client(SimpleNamespace(stop_reason="refusal", parsed_output=None))
         with pytest.raises(ExtractionError, match="declined"):
@@ -154,6 +170,16 @@ class TestRegistry:
     def test_environment_selects_tesseract(self, monkeypatch):
         monkeypatch.setenv("LABELVERIFY_EXTRACTOR", "tesseract")
         assert get_extractor().name == "tesseract"
+
+    def test_demo_extractor_reads_any_known_panel(self):
+        from labelverify.engine.extractors import DemoExtractor
+        from labelverify.engine.extractors.demo import SAMPLES_DIR, load_manifest
+
+        known = (SAMPLES_DIR / load_manifest()[0]["file"]).read_bytes()
+        result = DemoExtractor().extract_panels(
+            [(b"unknown back label", "image/png"), (known, "image/jpeg")]
+        )
+        assert result.brand_name.value
 
     def test_unknown_name_is_rejected(self):
         with pytest.raises(ValueError, match="Unknown extractor"):

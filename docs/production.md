@@ -49,9 +49,9 @@ need. Ordered roughly by how soon each would matter.
 - **Beverage-specific rules.** Only the seven common fields are checked. TTB rules differ
   by class (wine appellation and varietal percentages, malt beverage exemptions, spirits
   age statements). The comparison module is organized per field so these slot in.
-- **Multiple label panels.** One image per submission. Real applications often include
-  front, back, and neck labels; the extractor would take several images and the
-  comparison would merge them.
+- **Label panels.** Up to four images per set are read together. Production would let
+  the applicant tag each image (front, back, neck, strip) and show the specialist which
+  panel each field was read from.
 - **COLA integration.** Out of scope per the brief. The `Application` record mirrors the
   Form 5100.31 fields so an import from COLAs Online would be a mapping exercise.
 - **Notifications.** Applicants see correction requests on their dashboard but receive no

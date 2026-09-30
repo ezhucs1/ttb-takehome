@@ -12,7 +12,8 @@ recommends; a person decides.
 
 **For applicants**
 
-- Upload the label first; the application form fills itself from what is printed.
+- Upload the label first, front and back panels together if the product has both; the
+  application form fills itself from what is printed across all panels.
 - Run a pre-check before submitting and fix problems while they are cheap.
 - See correction requests as plain-language notices, reply on the exact field in
   question, and resubmit with a revised label. The application keeps its number.
@@ -50,7 +51,7 @@ Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 ```bash
 git clone https://github.com/ezhucs1/ttb-takehome && cd ttb-takehome
 uv venv && uv pip install -e ".[dev]"
-cp .env.example .env                                          # optional: add ANTHROPIC_API_KEY
+cp .env.example .env                                          # optional: add ANTHROPIC_API_KEY (read at startup)
 .venv/bin/uvicorn labelverify.web.app:serve --factory --reload  # http://127.0.0.1:8000
 ```
 
@@ -68,7 +69,7 @@ every screen has content.
 **Without an API key** the app runs in demo mode: the ten bundled sample labels work end
 to end, and uploading your own image gives a clear message instead of a made-up result.
 
-**With `ANTHROPIC_API_KEY` set** the vision extractor reads any label you upload, and the
+**With `ANTHROPIC_API_KEY` in `.env`** (or the environment) the vision extractor reads any label you upload, and the
 correction notice is rewritten by the model before the specialist edits it. Every result
 shows extraction time so you can check it against the five-second budget.
 
@@ -181,7 +182,8 @@ application. No model is involved in the comparison step.
   blocks many outbound domains; the extractor interface, the Tesseract fallback, and the
   absence of any CDN-loaded assets are the mitigations, and `docs/production.md` names
   the Azure-hosted path.
-- One label image per application. Multi-panel labels are a documented gap.
+- Up to four images per label set (front, back, neck). They are read together in one
+  model call and each field is reported once.
 - Only the seven fields named in the brief are checked; beverage-specific rules are not.
 - Bold detection on the warning heading is a visual judgment and is surfaced for review
   rather than failed automatically.

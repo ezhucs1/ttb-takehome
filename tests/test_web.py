@@ -301,6 +301,30 @@ class TestApplicantWorkflow:
         )
         assert app_id in specialist.get("/specialist?tab=review").text
 
+    def test_front_and_back_upload_creates_two_panels(self, applicant, specialist):
+        created = applicant.post(
+            "/applicant/applications",
+            data={"beverage_type": "distilled_spirits"},
+            files=[
+                ("images", ("front.jpg", sample_bytes("old-tom-bourbon"), "image/jpeg")),
+                ("images", ("back.jpg", sample_bytes("old-tom-title-case-warning"), "image/jpeg")),
+            ],
+            headers={"Accept": "application/json"},
+        )
+        assert created.status_code == 200
+        payload = created.json()
+        assert len(payload["image_urls"]) == 2
+        assert payload["prefill"]["brand_name"] == "OLD TOM DISTILLERY"
+        app_id = payload["id"]
+        applicant.post(
+            f"/applicant/applications/{app_id}/precheck", data=FORM, headers={"X-Partial": "1"}
+        )
+        applicant.post(
+            f"/applicant/applications/{app_id}/submit", data=FORM, follow_redirects=False
+        )
+        page = specialist.get(f"/specialist/applications/{app_id}").text
+        assert 'data-viewer-label="Front"' in page and 'data-viewer-label="Back"' in page
+
     def test_submit_requires_brand_and_class(self, applicant):
         app_id = applicant.post(
             "/applicant/applications",
@@ -317,7 +341,7 @@ class TestApplicantWorkflow:
     def test_upload_of_own_image_in_demo_mode_still_creates_a_draft(self, applicant, label_png):
         created = applicant.post(
             "/applicant/applications",
-            files={"image": ("mine.png", label_png, "image/png")},
+            files={"images": ("mine.png", label_png, "image/png")},
             data={"beverage_type": "wine"},
             headers={"Accept": "application/json"},
         )
@@ -328,7 +352,7 @@ class TestApplicantWorkflow:
     def test_garbage_upload_is_rejected(self, applicant):
         resp = applicant.post(
             "/applicant/applications",
-            files={"image": ("x.png", b"nope", "image/png")},
+            files={"images": ("x.png", b"nope", "image/png")},
             headers={"Accept": "application/json"},
         )
         assert resp.status_code == 400 and "readable image" in resp.json()["detail"]
@@ -344,7 +368,7 @@ class TestApplicantWorkflow:
         resp = applicant.post(
             f"/applicant/applications/{fix_id}/resubmit",
             data={**FORM, "message": "Uploaded corrected artwork."},
-            files={"image": ("fixed.png", sample_bytes("old-tom-bourbon"), "image/png")},
+            files=[("images", ("fixed.png", sample_bytes("old-tom-bourbon"), "image/png"))],
             follow_redirects=False,
         )
         assert resp.status_code == 303

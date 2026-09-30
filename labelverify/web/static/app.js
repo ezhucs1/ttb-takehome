@@ -121,9 +121,12 @@
         const r = viewer.getBoundingClientRect();
         img.style.transformOrigin = `${((e.clientX - r.left) / r.width) * 100}% ${((e.clientY - r.top) / r.height) * 100}%`;
       });
+      const caption = $("[data-viewer-caption]", viewer);
       $$("[data-viewer-src]").forEach((thumb) =>
         thumb.addEventListener("click", () => {
           img.src = thumb.dataset.viewerSrc;
+          viewer.classList.remove("zoomed");
+          if (caption && thumb.dataset.viewerLabel) caption.textContent = thumb.dataset.viewerLabel;
           $$("[data-viewer-src]").forEach((t) => t.classList.toggle("active", t === thumb));
         })
       );
@@ -170,12 +173,24 @@
     const submitBtn = $("#submit-btn");
     let applicationId = null;
 
+    function showPreviews(items) {
+      preview.innerHTML = "";
+      items.forEach(({ src, label }) => {
+        const fig = document.createElement("figure");
+        fig.innerHTML = `<img alt=""><figcaption></figcaption>`;
+        fig.querySelector("img").src = src;
+        fig.querySelector("figcaption").textContent = label;
+        preview.appendChild(fig);
+      });
+      preview.hidden = items.length === 0;
+    }
+    const PANELS = ["Front", "Back", "Neck", "Panel 4"];
+
     function pickSample(btn) {
       sampleInput.value = btn.dataset.sampleId;
       fileInput.value = "";
       $$(".sample").forEach((b) => b.classList.toggle("selected", b === btn));
-      preview.src = btn.querySelector("img").src;
-      preview.hidden = false;
+      showPreviews([{ src: btn.querySelector("img").src, label: "Sample" }]);
       const app = JSON.parse(btn.dataset.application || "{}");
       if (app.beverage_type) $("#beverage_type_1").value = app.beverage_type;
       status.textContent = `Sample selected: ${btn.textContent.trim()}`;
@@ -183,13 +198,13 @@
     $$(".sample").forEach((btn) => btn.addEventListener("click", () => pickSample(btn)));
 
     fileInput.addEventListener("change", () => {
-      const file = fileInput.files[0];
-      if (!file) return;
+      const files = Array.from(fileInput.files || []);
+      if (!files.length) return;
+      if (files.length > 4) { status.textContent = "Choose at most 4 images."; fileInput.value = ""; return; }
       sampleInput.value = "";
       $$(".sample").forEach((b) => b.classList.remove("selected"));
-      preview.src = URL.createObjectURL(file);
-      preview.hidden = false;
-      status.textContent = file.name;
+      showPreviews(files.map((f, i) => ({ src: URL.createObjectURL(f), label: `${PANELS[i]} · ${f.name}` })));
+      status.textContent = files.length === 1 ? files[0].name : `${files.length} images selected`;
     });
     ["dragenter", "dragover"].forEach((evt) => dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.add("over"); }));
     ["dragleave", "drop"].forEach((evt) => dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.remove("over"); }));
@@ -199,7 +214,7 @@
 
     uploadForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (!fileInput.files[0] && !sampleInput.value) { status.textContent = "Choose a label image or a sample first."; return; }
+      if (!fileInput.files.length && !sampleInput.value) { status.textContent = "Choose a label image or a sample first."; return; }
       const btn = $("#upload-btn");
       btn.disabled = true;
       status.innerHTML = '<span class="spinner"></span> Reading the label…';

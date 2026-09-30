@@ -50,6 +50,32 @@ def init_db(engine: Engine) -> None:
     from . import models  # noqa: F401  (registers tables)
 
     Base.metadata.create_all(engine)
+    _add_missing_columns(engine)
+
+
+# Columns added after the first release. create_all() never alters existing tables, so a
+# database created by an older version gets them here. Values are SQL literals.
+_ADDED_COLUMNS: dict[str, dict[str, str]] = {
+    "label_images": {
+        "version": "INTEGER NOT NULL DEFAULT 1",
+        "panel": "INTEGER NOT NULL DEFAULT 1",
+    },
+    "verification_runs": {"image_version": "INTEGER NOT NULL DEFAULT 1"},
+}
+
+
+def _add_missing_columns(engine: Engine) -> None:
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        for table, columns in _ADDED_COLUMNS.items():
+            if table not in inspector.get_table_names():
+                continue
+            existing = {c["name"] for c in inspector.get_columns(table)}
+            for name, ddl in columns.items():
+                if name not in existing:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
 
 
 def get_db(request: Request) -> Iterator[Session]:

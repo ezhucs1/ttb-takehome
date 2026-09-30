@@ -13,15 +13,19 @@ class FailingExtractor:
     def extract(self, image, media_type):
         raise ExtractionError("simulated outage")
 
+    def extract_panels(self, panels):
+        raise ExtractionError("simulated outage")
+
 
 class RecordingExtractor(FixtureExtractor):
     def __init__(self, extraction):
         super().__init__(extraction)
         self.received: list[tuple[int, str]] = []
 
-    def extract(self, image, media_type):
-        self.received.append((len(image), media_type))
-        return super().extract(image, media_type)
+    def extract_panels(self, panels):
+        for image, media_type in panels:
+            self.received.append((len(image), media_type))
+        return super().extract_panels(panels)
 
 
 def test_end_to_end_with_fixture_extractor(label_png, application, extraction):
@@ -34,6 +38,18 @@ def test_end_to_end_with_fixture_extractor(label_png, application, extraction):
     size, media_type = extractor.received[0]
     assert media_type == "image/jpeg"  # preprocessing re-encoded the PNG
     assert size > 0 and size != len(label_png)
+
+
+def test_several_panels_are_prepared_and_sent_together(label_png, application, extraction):
+    extractor = RecordingExtractor(extraction)
+    result = run_verification([label_png, label_png], application, extractor=extractor)
+    assert result.recommendation is Recommendation.APPROVE
+    assert len(extractor.received) == 2 and len(extractor.calls) == 1
+
+
+def test_no_images_is_an_error(application, extraction):
+    with pytest.raises(ExtractionError, match="No label images"):
+        run_verification([], application, extractor=FixtureExtractor(extraction))
 
 
 def test_prepare_can_be_skipped(label_png, application, extraction):

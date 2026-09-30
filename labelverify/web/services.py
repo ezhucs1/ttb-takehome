@@ -9,8 +9,10 @@ import csv
 import io
 import json
 import logging
+import re
 import secrets
 import zipfile
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
@@ -158,25 +160,47 @@ def validate_upload(data: bytes) -> None:
         raise UnreadableImageError("Image is larger than 10 MB. Please resize it and try again.")
 
 
-def attach_image(db: Session, app: Application, data: bytes, filename: str) -> LabelImage:
-    validate_upload(data)
-    prepared = prepare_image(data)  # raises UnreadableImageError for non-images
-    image = LabelImage(
-        application_id=app.id,
-        filename=filename or "label",
-        media_type=prepared.media_type,
-        data=prepared.data,
-        width=prepared.width,
-        height=prepared.height,
-    )
-    app.images.append(image)
+Upload = tuple[bytes, str]  # (raw bytes, filename)
+MAX_PANELS = 4
+
+
+def attach_images(db: Session, app: Application, uploads: Sequence[Upload]) -> list[LabelImage]:
+    """Store a new label set (front, back, neck ...) as the next version."""
+    if not uploads:
+        raise UnreadableImageError("Choose at least one label image.")
+    if len(uploads) > MAX_PANELS:
+        raise UnreadableImageError(f"Upload at most {MAX_PANELS} images per label set.")
+    for data, _ in uploads:
+        validate_upload(data)
+    prepared = [
+        (prepare_image(data), filename) for data, filename in uploads
+    ]  # validates all first
+    version = app.current_version + 1
+    images = []
+    for panel, (image, filename) in enumerate(prepared, start=1):
+        record = LabelImage(
+            application_id=app.id,
+            filename=filename or f"label-{panel}",
+            media_type=image.media_type,
+            data=image.data,
+            width=image.width,
+            height=image.height,
+            version=version,
+            panel=panel,
+        )
+        app.images.append(record)
+        images.append(record)
     db.flush()
-    return image
+    return images
 
 
-def extract_for_prefill(extractor: Extractor, image: LabelImage) -> LabelExtraction:
-    """Read fields from a stored (already prepared) label image."""
-    return extractor.extract(image.data, image.media_type)
+def panels_of(images: Sequence[LabelImage]) -> list[tuple[bytes, str]]:
+    return [(img.data, img.media_type) for img in images]
+
+
+def extract_for_prefill(extractor: Extractor, images: Sequence[LabelImage]) -> LabelExtraction:
+    """Read fields from stored (already prepared) label images."""
+    return extractor.extract_panels(panels_of(images))
 
 
 def prefill_fields(extraction: LabelExtraction) -> dict[str, str]:
@@ -196,21 +220,25 @@ def record_run(
     app: Application,
     extractor: Extractor,
     trigger: str,
-    *,
-    image: LabelImage | None = None,
 ) -> VerificationRun:
-    """Run verification on the application's current image and store the result."""
-    image = image or app.current_image
-    if image is None:
+    """Run verification on the application's current label set and store the result."""
+    images = app.current_images
+    if not images:
         raise WorkflowError("This application has no label image.")
+    image = images[0]
     try:
         result = run_verification(
-            image.data, to_application_data(app), extractor=extractor, prepare=False
+            [img.data for img in images],
+            to_application_data(app),
+            extractor=extractor,
+            prepare=False,
+            media_type=image.media_type,
         )
     except ExtractionError as exc:
         run = VerificationRun(
             application_id=app.id,
             image_id=image.id,
+            image_version=image.version,
             trigger=trigger,
             extractor=extractor.name,
             recommendation="error",
@@ -223,6 +251,7 @@ def record_run(
     run = VerificationRun(
         application_id=app.id,
         image_id=image.id,
+        image_version=image.version,
         trigger=trigger,
         extractor=result.extractor,
         recommendation=result.recommendation.value,
@@ -242,7 +271,7 @@ def record_run(
 
 
 def create_draft(
-    db: Session, applicant: User, data: ApplicationData, image_bytes: bytes, filename: str
+    db: Session, applicant: User, data: ApplicationData, uploads: Sequence[Upload]
 ) -> Application:
     app = Application(
         serial=next_serial(db),
@@ -253,7 +282,7 @@ def create_draft(
     )
     db.add(app)
     db.flush()
-    attach_image(db, app, image_bytes, filename)
+    attach_images(db, app, uploads)
     app.events.append(
         StatusEvent(
             application_id=app.id,
@@ -282,15 +311,14 @@ def resubmit(
     data: ApplicationData,
     extractor: Extractor,
     *,
-    image_bytes: bytes | None = None,
-    filename: str = "",
+    uploads: Sequence[Upload] = (),
     message: str = "",
 ) -> VerificationRun:
     if ApplicationStatus(app.status) is not ApplicationStatus.CORRECTION_REQUESTED:
         raise WorkflowError("Only applications with a correction request can be resubmitted.")
     update_fields(app, data)
-    if image_bytes:
-        attach_image(db, app, image_bytes, filename)
+    if uploads:
+        attach_images(db, app, uploads)
     run = record_run(db, app, extractor, "resubmit")
     if message.strip():
         add_comment(db, app, actor, "general", message)
@@ -557,6 +585,11 @@ BATCH_COLUMNS = [
 ]
 
 
+def split_image_names(cell: str) -> list[str]:
+    """The image column holds one file name, or several separated by ';' or '|'."""
+    return [n.strip() for n in re.split(r"[;|]", cell or "") if n.strip()]
+
+
 def batch_template_csv() -> str:
     buffer = io.StringIO()
     writer = csv.writer(buffer)
@@ -654,9 +687,15 @@ def process_batch(
         with session_factory() as db:
             item = db.get(BatchItem, item_id)
             try:
-                image = parsed.images.get(row.get("image", ""))
-                if image is None:
-                    raise WorkflowError(f"Image '{row.get('image')}' was not found in the zip.")
+                names = split_image_names(row.get("image", ""))
+                if not names:
+                    raise WorkflowError("The image column is empty.")
+                uploads = []
+                for name in names:
+                    image = parsed.images.get(name)
+                    if image is None:
+                        raise WorkflowError(f"Image '{name}' was not found in the zip.")
+                    uploads.append((image, name))
                 data = ApplicationData(
                     beverage_type=row.get("beverage_type", ""),
                     brand_name=row.get("brand_name", ""),
@@ -668,7 +707,7 @@ def process_batch(
                     is_import=row.get("is_import", "").lower() in ("true", "yes", "1", "y"),
                     country_of_origin=row.get("country_of_origin", ""),
                 )
-                app = create_draft(db, applicant, data, image, row.get("image", ""))
+                app = create_draft(db, applicant, data, uploads)
                 app.batch_id = batch_id
                 record_run(db, app, extractor, "batch")
                 submit(db, app, applicant)

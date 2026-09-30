@@ -5,8 +5,9 @@
   <form method="post" action="/applicant/applications/{{ app.id }}/resubmit" enctype="multipart/form-data" class="stack">
     {{ m.form_fields(app, [('distilled_spirits','Distilled spirits'),('wine','Wine'),('malt_beverage','Malt beverage')]) }}
     <div class="field">
-      <label for="image">Revised label image <span class="muted">(optional)</span></label>
-      <input type="file" name="image" id="image" accept="image/jpeg,image/png,image/webp">
+      <label for="images">Revised label images <span class="muted">(optional; front first, then back and neck)</span></label>
+      <input type="file" name="images" id="images" accept="image/jpeg,image/png,image/webp" multiple>
+      <div class="help">Uploading replaces the whole label set; the previous version stays in the history.</div>
     </div>
     <div class="field">
       <label for="message">Message to the specialist <span class="muted">(optional)</span></label>

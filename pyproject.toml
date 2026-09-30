@@ -16,6 +16,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "sqlalchemy>=2.0",
     "itsdangerous>=2.1",
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]

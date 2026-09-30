@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Sequence
 from pathlib import Path
 
 from ..models import LabelExtraction
 from ..preprocess import prepare_image
-from .base import ExtractionError
+from .base import ExtractionError, Panel
 
 SAMPLES_DIR = Path(__file__).resolve().parent.parent.parent / "samples"
 
@@ -39,13 +40,18 @@ class DemoExtractor:
             self._by_hash[_digest(prepare_image(raw).data)] = extraction
 
     def extract(self, image: bytes, media_type: str) -> LabelExtraction:
-        extraction = self._by_hash.get(_digest(image))
-        if extraction is None:
-            raise ExtractionError(
-                "Demo mode can only read the bundled sample labels. "
-                "Set ANTHROPIC_API_KEY to verify your own images."
-            )
-        return extraction.model_copy(deep=True)
+        return self.extract_panels([(image, media_type)])
+
+    def extract_panels(self, panels: Sequence[Panel]) -> LabelExtraction:
+        """The first panel that is a known sample wins; extra panels are ignored."""
+        for image, _ in panels:
+            extraction = self._by_hash.get(_digest(image))
+            if extraction is not None:
+                return extraction.model_copy(deep=True)
+        raise ExtractionError(
+            "Demo mode can only read the bundled sample labels. "
+            "Set ANTHROPIC_API_KEY to verify your own images."
+        )
 
 
 def _digest(data: bytes) -> str:

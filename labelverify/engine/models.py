@@ -12,7 +12,12 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def _clamp01(value: float) -> float:
+    """Models occasionally report 1.2 or -0.1; keep confidence in range instead of failing."""
+    return max(0.0, min(1.0, float(value)))
 
 
 class BeverageType(StrEnum):
@@ -47,10 +52,13 @@ class ExtractedField(BaseModel):
     )
     confidence: float = Field(
         default=0.0,
-        ge=0.0,
-        le=1.0,
         description="0 when the field is absent or unreadable, 1 when clearly legible.",
     )
+
+    @field_validator("confidence")
+    @classmethod
+    def _clamp(cls, value: float) -> float:
+        return _clamp01(value)
 
 
 class HealthWarningExtraction(BaseModel):
@@ -72,7 +80,12 @@ class HealthWarningExtraction(BaseModel):
         default=None,
         description="True when the 'GOVERNMENT WARNING' heading is visibly bolder than the body.",
     )
-    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    confidence: float = Field(default=0.0)
+
+    @field_validator("confidence")
+    @classmethod
+    def _clamp(cls, value: float) -> float:
+        return _clamp01(value)
 
 
 class ImageQuality(BaseModel):

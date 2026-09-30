@@ -26,12 +26,12 @@
               </select>
             </div>
             <div class="dropzone" id="dropzone">
-              <input type="file" name="image" id="image" accept="image/jpeg,image/png,image/webp">
+              <input type="file" name="images" id="image" accept="image/jpeg,image/png,image/webp" multiple>
               <svg class="icon icon-lg"><use href="#i-upload"></use></svg>
-              <p><strong>Drop the label photo or artwork here</strong><br><span class="muted">JPEG, PNG, or WebP up to 10 MB. Angled or imperfect photos are fine.</span></p>
+              <p><strong>Drop the label photos or artwork here</strong><br><span class="muted">Front label first, then back and neck labels if the product has them. Up to 4 images, JPEG, PNG, or WebP, 10 MB each. Angled or imperfect photos are fine.</span></p>
             </div>
             <input type="hidden" name="sample_id" id="sample_id" value="">
-            <img id="upload-preview" class="upload-preview" alt="" hidden>
+            <div id="upload-preview" class="upload-preview-grid" hidden></div>
             <div class="step-actions">
               <button type="submit" class="btn btn-primary" id="upload-btn">Read the label</button>
               <span class="muted" id="upload-status"></span>

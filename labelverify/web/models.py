@@ -125,8 +125,25 @@ class Application(Base):
     )
 
     @property
+    def current_version(self) -> int:
+        return max((img.version for img in self.images), default=0)
+
+    @property
+    def current_images(self) -> list[LabelImage]:
+        """All panels (front, back, neck) of the latest uploaded label set."""
+        version = self.current_version
+        return sorted((i for i in self.images if i.version == version), key=lambda i: i.panel)
+
+    @property
     def current_image(self) -> LabelImage | None:
-        return self.images[-1] if self.images else None
+        images = self.current_images
+        return images[0] if images else None
+
+    def images_by_version(self) -> list[tuple[int, list[LabelImage]]]:
+        grouped: dict[int, list[LabelImage]] = {}
+        for img in self.images:
+            grouped.setdefault(img.version, []).append(img)
+        return [(v, sorted(imgs, key=lambda i: i.panel)) for v, imgs in sorted(grouped.items())]
 
     @property
     def latest_run(self) -> VerificationRun | None:
@@ -164,9 +181,15 @@ class LabelImage(Base):
     data: Mapped[bytes] = mapped_column(LargeBinary)
     width: Mapped[int] = mapped_column(Integer, default=0)
     height: Mapped[int] = mapped_column(Integer, default=0)
+    version: Mapped[int] = mapped_column(Integer, default=1)  # upload set (1 = original)
+    panel: Mapped[int] = mapped_column(Integer, default=1)  # order within the set
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     application: Mapped[Application] = relationship(back_populates="images")
+
+    @property
+    def panel_label(self) -> str:
+        return {1: "Front", 2: "Back", 3: "Neck"}.get(self.panel, f"Panel {self.panel}")
 
 
 class VerificationRun(Base):
@@ -175,6 +198,7 @@ class VerificationRun(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
     application_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
     image_id: Mapped[str] = mapped_column(ForeignKey("label_images.id"))
+    image_version: Mapped[int] = mapped_column(Integer, default=1)
     trigger: Mapped[str] = mapped_column(String(20))  # precheck, submit, resubmit, batch, rerun
     extractor: Mapped[str] = mapped_column(String(80))
     recommendation: Mapped[str] = mapped_column(String(30))

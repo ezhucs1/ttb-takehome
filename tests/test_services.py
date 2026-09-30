@@ -7,9 +7,10 @@ import zipfile
 
 import pytest
 
-from labelverify.engine.extractors import DemoExtractor
+from labelverify.engine.extractors import DemoExtractor, FixtureExtractor
 from labelverify.engine.extractors.demo import SAMPLES_DIR, load_manifest
-from labelverify.engine.models import ApplicationData
+from labelverify.engine.models import ApplicationData, LabelExtraction
+from labelverify.engine.preprocess import UnreadableImageError
 from labelverify.web import services
 from labelverify.web.auth import verify_password
 from labelverify.web.db import init_db, make_engine, make_session_factory
@@ -48,7 +49,7 @@ def sample_bytes(sample_id: str) -> bytes:
 def make_app(db, users, sample_id="old-tom-bourbon", extractor=None):
     applicant = users["labels@oldtomdistillery.com"]
     data = ApplicationData.model_validate(sample(sample_id)["application"])
-    app = services.create_draft(db, applicant, data, sample_bytes(sample_id), "label.png")
+    app = services.create_draft(db, applicant, data, [(sample_bytes(sample_id), "label.png")])
     services.record_run(db, app, extractor or DemoExtractor(), "precheck")
     db.commit()
     return app, applicant
@@ -87,17 +88,12 @@ class TestDraftAndPrecheck:
     def test_extraction_failure_is_recorded_not_raised(self, db, users):
         applicant = users["labels@oldtomdistillery.com"]
         data = ApplicationData.model_validate(sample("old-tom-bourbon")["application"])
-        app = (
-            services.create_draft(db, applicant, data, b"\x89PNG" + b"\x00" * 10, "x.png")
-            if False
-            else None
-        )
         # A valid image that the demo extractor does not recognize:
         from PIL import Image
 
         buf = io.BytesIO()
         Image.new("RGB", (400, 400), "white").save(buf, format="PNG")
-        app = services.create_draft(db, applicant, data, buf.getvalue(), "blank.png")
+        app = services.create_draft(db, applicant, data, [(buf.getvalue(), "blank.png")])
         run = services.record_run(db, app, DemoExtractor(), "precheck")
         assert run.recommendation == "error"
         assert "ANTHROPIC_API_KEY" in run.error
@@ -164,8 +160,7 @@ class TestLifecycle:
             applicant,
             fixed,
             DemoExtractor(),
-            image_bytes=sample_bytes("old-tom-bourbon"),
-            filename="fixed.png",
+            uploads=[(sample_bytes("old-tom-bourbon"), "fixed.png")],
             message="Corrected the proof.",
         )
         assert run.trigger == "resubmit" and run.recommendation == "approve"
@@ -196,6 +191,70 @@ class TestLifecycle:
         assert c.resolved is True
         with pytest.raises(services.WorkflowError):
             services.add_comment(db, app, sarah, "nope", "x")
+
+
+class TestLabelSets:
+    def test_front_and_back_panels_are_one_version(self, db, users):
+        applicant = users["labels@oldtomdistillery.com"]
+        data = ApplicationData.model_validate(sample("old-tom-bourbon")["application"])
+        app = services.create_draft(
+            db,
+            applicant,
+            data,
+            [
+                (sample_bytes("old-tom-bourbon"), "front.jpg"),
+                (sample_bytes("old-tom-title-case-warning"), "back.jpg"),
+            ],
+        )
+        assert [(i.version, i.panel, i.panel_label) for i in app.current_images] == [
+            (1, 1, "Front"),
+            (1, 2, "Back"),
+        ]
+        assert app.current_image.filename == "front.jpg"
+        extractor = FixtureExtractor(
+            LabelExtraction.model_validate(sample("old-tom-bourbon")["extraction"])
+        )
+        run = services.record_run(db, app, extractor, "precheck")
+        assert run.image_version == 1 and run.recommendation == "approve"
+        assert len(extractor.calls[0]) == 2  # both panels went to the extractor
+
+    def test_resubmission_starts_a_new_version(self, db, users):
+        app, applicant = make_app(db, users, "old-tom-abv-mismatch")
+        sarah = users["sarah.chen@ttb.gov"]
+        services.submit(db, app, applicant)
+        services.decide(db, app, sarah, "request_correction", notice_body="fix")
+        fixed = ApplicationData.model_validate(sample("old-tom-bourbon")["application"])
+        services.resubmit(
+            db,
+            app,
+            applicant,
+            fixed,
+            DemoExtractor(),
+            uploads=[
+                (sample_bytes("old-tom-bourbon"), "front-v2.jpg"),
+                (sample_bytes("stones-throw-wine"), "back-v2.jpg"),
+            ],
+        )
+        assert app.current_version == 2
+        assert [i.filename for i in app.current_images] == ["front-v2.jpg", "back-v2.jpg"]
+        assert [v for v, _ in app.images_by_version()] == [1, 2]
+        assert app.latest_run.image_version == 2
+
+    def test_too_many_panels_is_rejected(self, db, users):
+        applicant = users["labels@oldtomdistillery.com"]
+        data = ApplicationData.model_validate(sample("old-tom-bourbon")["application"])
+        with pytest.raises(UnreadableImageError, match="at most 4"):
+            services.create_draft(
+                db,
+                applicant,
+                data,
+                [(sample_bytes("old-tom-bourbon"), f"{n}.jpg") for n in range(5)],
+            )
+
+    def test_batch_image_column_accepts_several_names(self):
+        assert services.split_image_names("front.jpg; back.jpg") == ["front.jpg", "back.jpg"]
+        assert services.split_image_names("only.png") == ["only.png"]
+        assert services.split_image_names("") == []
 
 
 class TestQueue:
@@ -303,3 +362,35 @@ def test_seed_populates_a_realistic_queue(db):
     assert len(services.queue(db, "decided")) >= 1
     seed(db)  # idempotent
     assert services.queue_stats(db) == stats
+
+
+def test_init_db_adds_columns_to_a_database_from_the_previous_release(tmp_path):
+    """Databases created before label sets existed gain version/panel columns on startup."""
+    import sqlite3
+
+    from sqlalchemy import text
+
+    from labelverify.web.db import init_db, make_engine, make_session_factory
+    from labelverify.web.models import Application
+
+    path = tmp_path / "old.db"
+    engine = make_engine(f"sqlite:///{path}")
+    init_db(engine)
+    with make_session_factory(engine)() as db:
+        seed(db)
+    engine.dispose()
+    with sqlite3.connect(path) as con:  # simulate the old schema
+        con.execute("ALTER TABLE label_images DROP COLUMN version")
+        con.execute("ALTER TABLE label_images DROP COLUMN panel")
+        con.execute("ALTER TABLE verification_runs DROP COLUMN image_version")
+        assert "version" not in [r[1] for r in con.execute("PRAGMA table_info(label_images)")]
+
+    engine = make_engine(f"sqlite:///{path}")
+    init_db(engine)  # second start on the same file
+    with engine.connect() as conn:
+        cols = [r[1] for r in conn.execute(text("PRAGMA table_info(label_images)"))]
+        assert "version" in cols and "panel" in cols
+    with make_session_factory(engine)() as db:
+        app = db.query(Application).first()
+        assert [(i.version, i.panel) for i in app.current_images] == [(1, 1)]
+        assert app.latest_run.image_version == 1

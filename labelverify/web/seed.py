@@ -103,7 +103,7 @@ def seed_applications(db: Session, users: dict[str, User], samples_dir: Path = S
         applicant = _applicant_for(sample["id"], users)
         image = (samples_dir / sample["file"]).read_bytes()
         data = ApplicationData.model_validate(sample["application"])
-        app = services.create_draft(db, applicant, data, image, sample["file"])
+        app = services.create_draft(db, applicant, data, [(image, sample["file"])])
         services.record_run(db, app, extractor, "precheck")
         state = sample.get("seed_state") or _default_state(sample.get("expected", ""), seen)
         if state == "draft":

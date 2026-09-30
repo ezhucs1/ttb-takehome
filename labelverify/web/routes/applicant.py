@@ -25,7 +25,13 @@ from .. import services
 from ..auth import require_applicant
 from ..db import get_db
 from ..models import ApplicationStatus, Batch, User
-from .common import application_from_form, load_application, read_upload, renderer, sample_image
+from .common import (
+    application_from_form,
+    load_application,
+    read_uploads,
+    renderer,
+    sample_image,
+)
 
 router = APIRouter(prefix="/applicant", dependencies=[Depends(require_applicant)])
 
@@ -57,24 +63,22 @@ async def create_application(
     request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_applicant),
-    image: UploadFile | None = File(default=None),
+    images: list[UploadFile] = File(default=[]),
     sample_id: str = Form(""),
     beverage_type: str = Form("distilled_spirits"),
 ):
-    """Step 1: store the label, run extraction, and return pre-filled form values."""
+    """Step 1: store the label set, run extraction, and return pre-filled form values."""
     try:
-        upload = await read_upload(image)
-        if upload is None and sample_id:
-            upload = sample_image(request, sample_id)
-        if upload is None:
+        uploads = await read_uploads(images)
+        if not uploads and sample_id:
+            uploads = [sample_image(request, sample_id)]
+        if not uploads:
             raise HTTPException(400, "Choose a label image or a sample label first.")
-        data, filename = upload
         app = services.create_draft(
             db,
             user,
             ApplicationData(beverage_type=beverage_type, brand_name="", class_type=""),
-            data,
-            filename,
+            uploads,
         )
     except UnreadableImageError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -85,7 +89,7 @@ async def create_application(
     prefill: dict[str, str] = {}
     warning = None
     try:
-        extraction = services.extract_for_prefill(extractor, app.current_image)
+        extraction = services.extract_for_prefill(extractor, app.current_images)
         prefill = services.prefill_fields(extraction)
         if not extraction.image_quality.readable:
             warning = "The label is hard to read: " + "; ".join(extraction.image_quality.issues)
@@ -93,12 +97,13 @@ async def create_application(
         warning = f"Could not read the label automatically ({exc}). Fill in the form by hand."
     elapsed_ms = int((time.perf_counter() - started) * 1000)
 
-    image_url = f"/applications/{app.id}/images/{app.current_image.id}"
+    image_urls = [f"/applications/{app.id}/images/{img.id}" for img in app.current_images]
     return JSONResponse(
         {
             "id": app.id,
             "serial": app.serial,
-            "image_url": image_url,
+            "image_url": image_urls[0],
+            "image_urls": image_urls,
             "prefill": prefill,
             "warning": warning,
             "extractor": extractor.name,
@@ -194,22 +199,21 @@ async def resubmit(
     app_id: str,
     db: Session = Depends(get_db),
     user: User = Depends(require_applicant),
-    image: UploadFile | None = File(default=None),
+    images: list[UploadFile] = File(default=[]),
     message: str = Form(""),
 ):
     app = load_application(db, app_id, user)
     form = await request.form()
     data = application_from_form(dict(form))
     try:
-        upload = await read_upload(image)
+        uploads = await read_uploads(images)
         services.resubmit(
             db,
             app,
             user,
             data,
             request.app.state.get_extractor(),
-            image_bytes=upload[0] if upload else None,
-            filename=upload[1] if upload else "",
+            uploads=uploads,
             message=message,
         )
     except (services.WorkflowError, UnreadableImageError) as exc:

@@ -53,6 +53,16 @@ async def read_upload(upload) -> tuple[bytes, str] | None:
     return data, upload.filename
 
 
+async def read_uploads(uploads) -> list[tuple[bytes, str]]:
+    """All non-empty files from a multi-file input, in the order chosen."""
+    result = []
+    for upload in uploads or []:
+        item = await read_upload(upload)
+        if item is not None:
+            result.append(item)
+    return result
+
+
 def sample_image(request: Request, sample_id: str) -> tuple[bytes, str]:
     from ...engine.extractors.demo import SAMPLES_DIR
 

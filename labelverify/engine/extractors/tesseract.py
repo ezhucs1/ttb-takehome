@@ -8,11 +8,12 @@ it produces carries a low confidence and lands in the "needs review" band.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from io import BytesIO
 
 from ..models import ExtractedField, HealthWarningExtraction, ImageQuality, LabelExtraction
 from ..normalize import _VOLUME_RE
-from .base import ExtractionError
+from .base import ExtractionError, Panel
 
 _WARNING_RE = re.compile(
     r"government\s+warning\s*:?.*?(?:health\s+problems\.?|machinery[^\n]*)",
@@ -80,16 +81,24 @@ class TesseractExtractor:
     name = "tesseract"
 
     def extract(self, image: bytes, media_type: str) -> LabelExtraction:
+        return self.extract_panels([(image, media_type)])
+
+    def extract_panels(self, panels: Sequence[Panel]) -> LabelExtraction:
+        """OCR every panel, concatenate the text, then classify it once."""
         try:
             import pytesseract
             from PIL import Image
         except ImportError as exc:  # pragma: no cover - dependency is declared
             raise ExtractionError("pytesseract is not installed.") from exc
-        try:
-            text = pytesseract.image_to_string(Image.open(BytesIO(image)))
-        except pytesseract.TesseractNotFoundError as exc:
-            raise ExtractionError("The tesseract binary is not installed on this machine.") from exc
-        return classify_text(text)
+        texts: list[str] = []
+        for image, _ in panels:
+            try:
+                texts.append(pytesseract.image_to_string(Image.open(BytesIO(image))))
+            except pytesseract.TesseractNotFoundError as exc:
+                raise ExtractionError(
+                    "The tesseract binary is not installed on this machine."
+                ) from exc
+        return classify_text("\n\n".join(texts))
 
 
 def classify_text(text: str) -> LabelExtraction:

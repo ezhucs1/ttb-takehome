@@ -109,5 +109,17 @@ def _wants_json(request: Request) -> bool:
 
 def serve() -> FastAPI:
     """Uvicorn entry point: ``uvicorn labelverify.web.app:serve --factory``."""
+    from dotenv import load_dotenv
+
+    load_dotenv()  # reads .env in the working directory; real env vars win
     logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
-    return create_app()
+    application = create_app()
+    log.info("extractor: %s", application.state.render.extractor_label(_fake_request(application)))
+    return application
+
+
+def _fake_request(application: FastAPI):
+    """Minimal stand-in so the startup log can reuse the renderer's label logic."""
+    from types import SimpleNamespace
+
+    return SimpleNamespace(app=application)

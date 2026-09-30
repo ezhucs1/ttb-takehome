@@ -376,3 +376,12 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(0,94,162,0.2
 .busy-note { display: flex; align-items: center; gap: 10px; color: var(--muted); padding: 24px; justify-content: center; }
 .spinner { width: 18px; height: 18px; border: 2px solid var(--line-strong); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Multi-panel uploads ------------------------------------------------------- */
+.upload-preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 12px; }
+.upload-preview-grid figure { margin: 0; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
+.upload-preview-grid img { width: 100%; aspect-ratio: 3 / 4; object-fit: contain; background: var(--gray-50); border-radius: 5px; }
+.upload-preview-grid figcaption { font-size: 0.78rem; color: var(--muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.viewer-caption { position: absolute; left: 10px; bottom: 10px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.78rem; padding: 3px 8px; border-radius: 999px; }
+.viewer-versions { flex-wrap: wrap; }
+.viewer-thumb.superseded { opacity: 0.55; }
