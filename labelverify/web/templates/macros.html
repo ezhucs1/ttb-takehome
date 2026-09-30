@@ -27,8 +27,8 @@
 </div>
 {%- endmacro %}
 
-{% macro stat(label, value, tone='neutral', href=None) -%}
-<{{ 'a' if href else 'div' }} class="stat stat-{{ tone }}" {% if href %}href="{{ href }}"{% endif %}>
+{% macro stat(label, value, tone='neutral', href=None, active=False) -%}
+<{{ 'a' if href else 'div' }} class="stat stat-{{ tone }} {% if active %}stat-active{% endif %}" {% if href %}href="{{ href }}"{% endif %} {% if active %}aria-current="true"{% endif %}>
   <div class="stat-value">{{ value }}</div>
   <div class="stat-label">{{ label }}</div>
 </{{ 'a' if href else 'div' }}>

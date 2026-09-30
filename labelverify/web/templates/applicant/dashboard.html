@@ -14,10 +14,10 @@
 </div>
 
 <div class="stat-grid">
-  {{ m.stat('Needs your action', counts.correction_requested, 'warning' if counts.correction_requested else 'neutral') }}
-  {{ m.stat('In review', counts.submitted + counts.under_review + counts.resubmitted, 'info') }}
-  {{ m.stat('Approved', counts.approved, 'success') }}
-  {{ m.stat('Drafts', counts.draft) }}
+  {{ m.stat('Needs your action', counts.correction_requested, 'warning' if counts.correction_requested else 'neutral', '/applicant?filter=action', filter == 'action') }}
+  {{ m.stat('In review', counts.submitted + counts.under_review + counts.resubmitted, 'info', '/applicant?filter=review', filter == 'review') }}
+  {{ m.stat('Approved', counts.approved, 'success', '/applicant?filter=approved', filter == 'approved') }}
+  {{ m.stat('Drafts', counts.draft, 'neutral', '/applicant?filter=drafts', filter == 'drafts') }}
 </div>
 
 {% if needs_action %}
@@ -35,6 +35,12 @@
 {% endif %}
 
 <div class="card card-flush">
+  {% if filter %}
+  <div class="filter-bar">
+    <span>Showing <strong>{{ filter_label }}</strong> · {{ apps | length }} application{{ 's' if apps | length != 1 }}</span>
+    <a href="/applicant">Show all</a>
+  </div>
+  {% endif %}
   {% if apps %}
   <div class="table-wrap">
   <table class="table table-hover">
@@ -58,7 +64,11 @@
   </table>
   </div>
   {% else %}
+  {% if filter %}
+  {{ m.empty('Nothing in ' ~ filter_label | lower, 'Choose another card above, or show all.') }}
+  {% else %}
   {{ m.empty('No applications yet', 'Start a new application to check a label before you submit it.') }}
+  {% endif %}
   {% endif %}
 </div>
 {% endblock %}

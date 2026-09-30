@@ -196,6 +196,12 @@
       btn.addEventListener("click", () => {
         const target = $(btn.dataset.toggle);
         if (target) target.hidden = !target.hidden;
+        // Expanding a thread counts as reading it: the "new" dot on the toggle goes away.
+        if (btn.classList.contains("has-new")) {
+          btn.classList.remove("has-new");
+          $$(".unread-dot", btn).forEach((d) => d.remove());
+          btn.title = "Comments on this field";
+        }
       });
     });
 
@@ -209,7 +215,8 @@
       if (row.dataset.wired) return;
       row.dataset.wired = "1";
       row.addEventListener("click", (e) => {
-        if (e.target.closest("a, button, input, label, form")) return;
+        // The queue table sits inside the bulk-approve form, so only real controls opt out.
+        if (e.target.closest("a, button, input, select, textarea, label, .check-col")) return;
         window.location.href = row.dataset.href;
       });
     });

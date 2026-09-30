@@ -305,6 +305,16 @@ class TestComments:
 
 
 class TestApplicantWorkflow:
+    def test_dashboard_cards_filter_the_table(self, applicant):
+        page = applicant.get("/applicant?filter=action").text
+        assert 'href="/applicant?filter=action"' in page and "stat-active" in page
+        assert "Showing <strong>Needs your action</strong>" in page
+        assert "Correction requested" in page and "Under review" not in page
+        assert "Under review" in applicant.get("/applicant?filter=review").text
+        # An unknown filter falls back to the full list.
+        everything = applicant.get("/applicant?filter=nope").text
+        assert "Showing <strong>" not in everything and "Under review" in everything
+
     def test_dashboard(self, applicant):
         resp = applicant.get("/applicant")
         assert resp.status_code == 200 and "My applications" in resp.text

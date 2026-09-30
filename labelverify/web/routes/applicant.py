@@ -36,21 +36,48 @@ from .common import (
 router = APIRouter(prefix="/applicant", dependencies=[Depends(require_applicant)])
 
 
+# Dashboard filters, keyed by the stat card that selects them.
+DASHBOARD_FILTERS: dict[str, tuple[str, tuple[ApplicationStatus, ...]]] = {
+    "action": ("Needs your action", (ApplicationStatus.CORRECTION_REQUESTED,)),
+    "review": (
+        "In review",
+        (
+            ApplicationStatus.SUBMITTED,
+            ApplicationStatus.UNDER_REVIEW,
+            ApplicationStatus.RESUBMITTED,
+        ),
+    ),
+    "approved": ("Approved", (ApplicationStatus.APPROVED,)),
+    "drafts": ("Drafts", (ApplicationStatus.DRAFT,)),
+}
+
+
 @router.get("")
 def dashboard(
-    request: Request, db: Session = Depends(get_db), user: User = Depends(require_applicant)
+    request: Request,
+    filter: str = "",
+    db: Session = Depends(get_db),
+    user: User = Depends(require_applicant),
 ):
     apps = services.applicant_applications(db, user)
     counts = {status.value: 0 for status in ApplicationStatus}
     for app in apps:
         counts[app.status] += 1
     needs_action = [a for a in apps if a.status == ApplicationStatus.CORRECTION_REQUESTED]
+    if filter not in DASHBOARD_FILTERS:
+        filter = ""
+    shown = apps
+    if filter:
+        statuses = {s.value for s in DASHBOARD_FILTERS[filter][1]}
+        shown = [a for a in apps if a.status in statuses]
     return renderer(request).page(
         request,
         "applicant/dashboard.html",
-        apps=apps,
+        apps=shown,
         counts=counts,
         needs_action=needs_action,
+        filter=filter,
+        filter_label=DASHBOARD_FILTERS[filter][0] if filter else "",
         unread=services.unread_counts(db, user, [a.id for a in apps]),
     )
 
