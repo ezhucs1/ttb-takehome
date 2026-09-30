@@ -1,0 +1,66 @@
+"""Image preparation before extraction.
+
+Phone photos arrive rotated (EXIF orientation), oversized, and sometimes washed out.
+Fixing that here keeps extraction fast (fewer image tokens, smaller uploads) and more
+accurate regardless of which extractor runs.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from io import BytesIO
+
+from PIL import Image, ImageOps, UnidentifiedImageError
+
+MAX_LONG_EDGE = 1500
+JPEG_QUALITY = 85
+SUPPORTED_MEDIA_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+
+
+class UnreadableImageError(ValueError):
+    """Raised when the uploaded bytes are not an image we can open."""
+
+
+@dataclass(frozen=True)
+class PreparedImage:
+    data: bytes
+    media_type: str
+    width: int
+    height: int
+    original_width: int
+    original_height: int
+
+
+def prepare_image(
+    data: bytes, *, max_long_edge: int = MAX_LONG_EDGE, autocontrast: bool = False
+) -> PreparedImage:
+    """Apply EXIF rotation, downscale to ``max_long_edge``, and re-encode as JPEG."""
+    try:
+        image = Image.open(BytesIO(data))
+        image.load()
+    except (UnidentifiedImageError, OSError, ValueError) as exc:
+        raise UnreadableImageError("The file is not a readable image.") from exc
+
+    original_width, original_height = image.size
+    image = ImageOps.exif_transpose(image) or image
+    if image.mode not in ("RGB", "L"):
+        image = image.convert("RGB")
+    if autocontrast:
+        image = ImageOps.autocontrast(image, cutoff=1)
+
+    longest = max(image.size)
+    if longest > max_long_edge:
+        scale = max_long_edge / longest
+        new_size = (round(image.width * scale), round(image.height * scale))
+        image = image.resize(new_size, Image.Resampling.LANCZOS)
+
+    buffer = BytesIO()
+    image.save(buffer, format="JPEG", quality=JPEG_QUALITY, optimize=True)
+    return PreparedImage(
+        data=buffer.getvalue(),
+        media_type="image/jpeg",
+        width=image.width,
+        height=image.height,
+        original_width=original_width,
+        original_height=original_height,
+    )

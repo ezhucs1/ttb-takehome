@@ -1,0 +1,133 @@
+"""Government Health Warning Statement rules (27 CFR Part 16).
+
+The statement must appear word for word, and the words "GOVERNMENT WARNING" must be
+in capital letters and bold type. The body is compared word for word after
+normalization; the heading is checked separately for capitalization and bold.
+"""
+
+from __future__ import annotations
+
+import difflib
+
+from .models import FieldResult, HealthWarningExtraction, Verdict, WordDiff
+from .normalize import collapse_whitespace, normalize_words
+
+HEADING = "GOVERNMENT WARNING:"
+
+STATUTORY_BODY = (
+    "(1) According to the Surgeon General, women should not drink alcoholic beverages "
+    "during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic "
+    "beverages impairs your ability to drive a car or operate machinery, and may cause "
+    "health problems."
+)
+
+STATUTORY_TEXT = f"{HEADING} {STATUTORY_BODY}"
+
+_HEADING_WORDS = ["government", "warning"]
+
+
+def split_heading(text: str) -> tuple[str, str]:
+    """Return (heading_as_printed, body_as_printed) from a transcribed statement."""
+    cleaned = collapse_whitespace(text)
+    lowered = cleaned.casefold()
+    idx = lowered.find("government warning")
+    if idx == -1:
+        return "", cleaned
+    end = idx + len("government warning")
+    if end < len(cleaned) and cleaned[end] == ":":
+        end += 1
+    return cleaned[idx:end], cleaned[end:].strip()
+
+
+def word_diff(expected: str, actual: str) -> list[WordDiff]:
+    """Word-level diff between the statutory body and the label body, for display."""
+    expected_words = normalize_words(expected)
+    actual_words = normalize_words(actual)
+    matcher = difflib.SequenceMatcher(a=expected_words, b=actual_words, autojunk=False)
+    diff: list[WordDiff] = []
+    for op, i1, i2, j1, j2 in matcher.get_opcodes():
+        if op == "equal":
+            diff.extend(WordDiff(op="equal", text=w) for w in expected_words[i1:i2])
+        elif op == "delete":
+            diff.extend(WordDiff(op="missing", text=w) for w in expected_words[i1:i2])
+        elif op == "insert":
+            diff.extend(WordDiff(op="extra", text=w) for w in actual_words[j1:j2])
+        else:  # replace
+            diff.extend(WordDiff(op="missing", text=w) for w in expected_words[i1:i2])
+            diff.extend(WordDiff(op="extra", text=w) for w in actual_words[j1:j2])
+    return diff
+
+
+def check_health_warning(extraction: HealthWarningExtraction) -> FieldResult:
+    base = dict(
+        field="health_warning",
+        label="Government Health Warning",
+        application_value=STATUTORY_TEXT,
+        confidence=extraction.confidence,
+    )
+
+    if not extraction.present or not extraction.text:
+        return FieldResult(
+            verdict=Verdict.MISMATCH,
+            label_value=None,
+            reason="No Government Health Warning Statement was found on the label.",
+            **base,
+        )
+
+    heading, body = split_heading(extraction.text)
+    notes: list[str] = []
+    problems: list[str] = []
+    review_reasons: list[str] = []
+
+    # Body: word for word after normalization.
+    diff = word_diff(STATUTORY_BODY, body)
+    wrong_words = [d for d in diff if d.op != "equal"]
+    if not normalize_words(body):
+        problems.append("The warning heading is present but the statement body is missing.")
+    elif wrong_words:
+        missing = sum(1 for d in wrong_words if d.op == "missing")
+        extra = sum(1 for d in wrong_words if d.op == "extra")
+        problems.append(
+            f"Statement text differs from the required wording ({missing} required word(s) "
+            f"missing, {extra} unexpected word(s))."
+        )
+
+    # Heading: must exist, must be all caps, should be bold.
+    if not heading:
+        problems.append("The statement does not begin with 'GOVERNMENT WARNING:'.")
+    else:
+        if not heading.endswith(":"):
+            notes.append("Heading is missing the trailing colon.")
+        heading_text = heading.rstrip(":")
+        heading_is_caps = heading_text == heading_text.upper()
+        if extraction.heading_all_caps is False or not heading_is_caps:
+            problems.append(
+                f"'GOVERNMENT WARNING' must be in capital letters (label shows '{heading}')."
+            )
+        if extraction.heading_bold is False:
+            review_reasons.append(
+                "The heading does not appear bold. Bold type is required; confirm visually."
+            )
+        elif extraction.heading_bold is None:
+            review_reasons.append(
+                "Could not determine whether the heading is bold; confirm visually."
+            )
+
+    if problems:
+        verdict = Verdict.MISMATCH
+        reason = " ".join(problems)
+    elif review_reasons:
+        verdict = Verdict.NEEDS_REVIEW
+        reason = " ".join(review_reasons)
+    else:
+        verdict = Verdict.MATCH
+        reason = "Statement matches the required wording; heading is capitalized and bold."
+
+    return FieldResult(
+        verdict=verdict,
+        label_value=collapse_whitespace(extraction.text),
+        reason=reason,
+        notes=notes + (review_reasons if problems else []),
+        diff=diff,
+        **base,
+    )
