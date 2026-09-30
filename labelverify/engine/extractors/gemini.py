@@ -4,17 +4,24 @@ Same job as the Claude extractor, through Gemini's ``generateContent`` endpoint 
 JSON response schema. Implemented against the REST API with the standard library so it
 adds no dependency; the free tier is enough to evaluate accuracy and latency.
 
+Model selection is deliberately not hardcoded: Google retires model names for new keys,
+so by default the extractor asks the models endpoint for the newest stable Flash model
+that supports generation. A configured model that comes back "not found" falls back to
+the replacement Google names in its error, or to discovery, once.
+
 Configuration:
     GEMINI_API_KEY                   required
-    LABELVERIFY_GEMINI_MODEL         default gemini-2.5-flash
-    LABELVERIFY_GEMINI_THINKING      thinking budget for 2.5 models (default 0 = off, fastest)
+    LABELVERIFY_GEMINI_MODEL         a model name, or blank / "auto" to discover (default)
+    LABELVERIFY_GEMINI_THINKING      optional thinking budget for Gemini 2.5 models (0 = off)
 """
 
 from __future__ import annotations
 
 import base64
 import json
+import logging
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -25,10 +32,26 @@ from ..models import LabelExtraction
 from .base import ExtractionError, Panel
 from .claude import SYSTEM_PROMPT, USER_PROMPT
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+log = logging.getLogger(__name__)
+
+AUTO = "auto"
 DEFAULT_TIMEOUT_SECONDS = 30.0
-ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+BASE = "https://generativelanguage.googleapis.com/v1beta"
+ENDPOINT = BASE + "/models/{model}:generateContent"
+MODELS_ENDPOINT = BASE + "/models?pageSize=200"
 _RETRY_STATUSES = {429, 503}
+_SUGGESTED_MODEL_RE = re.compile(r"models/([a-z0-9.\-]+)")
+_STABLE_FLASH_RE = re.compile(r"^gemini-(\d+)(?:\.(\d+))?-flash$")
+_EXCLUDE_WORDS = ("lite", "image", "tts", "live", "audio", "embedding", "thinking", "exp")
+
+_discovered: dict[str, str] = {}  # api key -> model, per process
+
+
+def configured_model() -> str:
+    return (os.environ.get("LABELVERIFY_GEMINI_MODEL") or AUTO).strip() or AUTO
+
+
+# --------------------------------------------------------------------------- schema
 
 
 def to_gemini_schema(schema: dict[str, Any]) -> dict[str, Any]:
@@ -69,6 +92,56 @@ def to_gemini_schema(schema: dict[str, Any]) -> dict[str, Any]:
     return convert(schema)
 
 
+# --------------------------------------------------------------------------- model discovery
+
+
+def pick_model(models: list[dict[str, Any]]) -> str | None:
+    """Choose the newest stable, full-size Flash model that supports generateContent.
+
+    Preference order: ``gemini-<major>.<minor>-flash`` by version, then any other Flash
+    variant that is not lite/preview-only for a different modality, then anything usable.
+    """
+    usable = [
+        m["name"].removeprefix("models/")
+        for m in models
+        if "generateContent" in (m.get("supportedGenerationMethods") or [])
+    ]
+
+    def version(name: str) -> tuple[int, int]:
+        match = _STABLE_FLASH_RE.match(name)
+        return (int(match.group(1)), int(match.group(2) or 0)) if match else (-1, -1)
+
+    stable = sorted((n for n in usable if _STABLE_FLASH_RE.match(n)), key=version, reverse=True)
+    if stable:
+        return stable[0]
+    flash = [n for n in usable if "flash" in n and not any(w in n for w in _EXCLUDE_WORDS)]
+    if flash:
+        return sorted(flash, reverse=True)[0]
+    return usable[0] if usable else None
+
+
+def discover_model(api_key: str, *, timeout: float, list_transport=None) -> str:
+    """Ask the models endpoint which model to use; cached per process and key."""
+    if api_key in _discovered:
+        return _discovered[api_key]
+    list_transport = list_transport or _http_get
+    try:
+        listing = list_transport(MODELS_ENDPOINT, api_key, timeout)
+    except _HttpStatus as exc:
+        raise ExtractionError(f"Could not list Gemini models: {_describe_status(exc)}") from exc
+    except (TimeoutError, urllib.error.URLError) as exc:
+        raise ExtractionError(f"Could not reach the Gemini API to list models: {exc}") from exc
+    model = pick_model(listing.get("models", []))
+    if not model:
+        raise ExtractionError("This Gemini key has no model that supports generateContent.")
+    log.info("gemini: using discovered model %s", model)
+    _discovered[api_key] = model
+    return model
+
+
+# --------------------------------------------------------------------------- extractor
+
+
 class GeminiExtractor:
     name = "gemini"
 
@@ -79,15 +152,25 @@ class GeminiExtractor:
         model: str | None = None,
         timeout: float | None = None,
         transport=None,
+        list_transport=None,
     ):
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY", "")
-        self.model = model or os.environ.get("LABELVERIFY_GEMINI_MODEL", DEFAULT_MODEL)
+        self.model = model or configured_model()
         self.timeout = timeout or float(
             os.environ.get("LABELVERIFY_EXTRACT_TIMEOUT", DEFAULT_TIMEOUT_SECONDS)
         )
-        self.thinking_budget = int(os.environ.get("LABELVERIFY_GEMINI_THINKING", "0"))
+        raw_budget = os.environ.get("LABELVERIFY_GEMINI_THINKING", "").strip()
+        self.thinking_budget = int(raw_budget) if raw_budget else None
         self._transport = transport or _http_post  # injectable for tests
+        self._list_transport = list_transport or _http_get
         self._schema = to_gemini_schema(LabelExtraction.model_json_schema())
+
+    def resolve_model(self) -> str:
+        if self.model == AUTO:
+            self.model = discover_model(
+                self.api_key, timeout=self.timeout, list_transport=self._list_transport
+            )
+        return self.model
 
     def build_request(self, panels: Sequence[Panel]) -> dict[str, Any]:
         parts: list[dict[str, Any]] = []
@@ -110,7 +193,9 @@ class GeminiExtractor:
             "temperature": 0,
             "max_output_tokens": 8192,
         }
-        if self.model.startswith("gemini-2.5"):
+        # Only Gemini 2.5 takes a thinking budget; newer generations use different knobs,
+        # so nothing is sent unless explicitly configured for a 2.5 model.
+        if self.thinking_budget is not None and self.model.startswith("gemini-2.5"):
             config["thinking_config"] = {"thinking_budget": self.thinking_budget}
         return {
             "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
@@ -126,10 +211,18 @@ class GeminiExtractor:
             raise ExtractionError("No label images were provided.")
         if not self.api_key:
             raise ExtractionError("GEMINI_API_KEY is not set.")
-        payload = self.build_request(panels)
-        response = call_gemini(
-            self.model, self.api_key, payload, timeout=self.timeout, transport=self._transport
-        )
+        self.resolve_model()
+        try:
+            response = self._call(panels)
+        except ModelNotFound as exc:
+            replacement = exc.suggested or discover_model(
+                self.api_key, timeout=self.timeout, list_transport=self._list_transport
+            )
+            if not replacement or replacement == self.model:
+                raise
+            log.warning("gemini: model %s unavailable, switching to %s", self.model, replacement)
+            self.model = replacement
+            response = self._call(panels)
         text = _response_text(response)
         try:
             return LabelExtraction.model_validate_json(text)
@@ -137,6 +230,15 @@ class GeminiExtractor:
             raise ExtractionError(
                 f"Gemini returned JSON that did not match the schema: {exc}"
             ) from exc
+
+    def _call(self, panels: Sequence[Panel]) -> dict[str, Any]:
+        return call_gemini(
+            self.model,
+            self.api_key,
+            self.build_request(panels),
+            timeout=self.timeout,
+            transport=self._transport,
+        )
 
 
 def generate_text(
@@ -146,7 +248,9 @@ def generate_text(
     api_key = os.environ.get("GEMINI_API_KEY", "")
     if not api_key:
         raise ExtractionError("GEMINI_API_KEY is not set.")
-    model = model or os.environ.get("LABELVERIFY_GEMINI_MODEL", DEFAULT_MODEL)
+    model = model or configured_model()
+    if model == AUTO:
+        model = discover_model(api_key, timeout=timeout)
     payload = {
         "system_instruction": {"parts": [{"text": system}]},
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
@@ -156,6 +260,14 @@ def generate_text(
 
 
 # --------------------------------------------------------------------------- transport
+
+
+class ModelNotFound(ExtractionError):
+    """The requested model is unavailable; ``suggested`` is Google's replacement, if named."""
+
+    def __init__(self, message: str, suggested: str | None):
+        super().__init__(message)
+        self.suggested = suggested
 
 
 def call_gemini(
@@ -171,6 +283,8 @@ def call_gemini(
             if exc.status in _RETRY_STATUSES and attempt == 1:
                 time.sleep(2.0)
                 continue
+            if exc.status == 404:
+                raise ModelNotFound(_describe_status(exc), _suggested_model(exc, model)) from exc
             raise ExtractionError(_describe_status(exc)) from exc
         except TimeoutError as exc:
             raise ExtractionError("Gemini did not respond within the time limit.") from exc
@@ -193,6 +307,15 @@ def _http_post(url: str, api_key: str, payload: dict[str, Any], timeout: float) 
         headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
         method="POST",
     )
+    return _send(request, timeout)
+
+
+def _http_get(url: str, api_key: str, timeout: float) -> dict[str, Any]:
+    request = urllib.request.Request(url, headers={"x-goog-api-key": api_key}, method="GET")
+    return _send(request, timeout)
+
+
+def _send(request: urllib.request.Request, timeout: float) -> dict[str, Any]:
     try:
         with urllib.request.urlopen(request, timeout=timeout) as resp:
             return json.loads(resp.read().decode())
@@ -200,18 +323,30 @@ def _http_post(url: str, api_key: str, payload: dict[str, Any], timeout: float) 
         raise _HttpStatus(exc.code, exc.read().decode(errors="replace")) from exc
 
 
-def _describe_status(exc: _HttpStatus) -> str:
-    detail = ""
+def _error_detail(exc: _HttpStatus) -> str:
     try:
-        detail = json.loads(exc.body).get("error", {}).get("message", "")
+        return json.loads(exc.body).get("error", {}).get("message", "")
     except (ValueError, AttributeError):
-        detail = exc.body[:200]
+        return exc.body[:200]
+
+
+def _suggested_model(exc: _HttpStatus, current: str) -> str | None:
+    """Google's not-found message often says 'use models/<replacement>'."""
+    names = [n for n in _SUGGESTED_MODEL_RE.findall(_error_detail(exc)) if n != current]
+    return names[0] if names else None
+
+
+def _describe_status(exc: _HttpStatus) -> str:
+    detail = _error_detail(exc)
     if exc.status in (401, 403) or "api key" in detail.lower():
         return f"The Gemini API key was rejected. Check GEMINI_API_KEY. {detail}".strip()
     if exc.status == 429:
         return f"Gemini free-tier rate limit reached; wait a minute and retry. {detail}".strip()
     if exc.status == 404:
-        return f"Gemini model not found; check LABELVERIFY_GEMINI_MODEL. {detail}".strip()
+        return (
+            "Gemini model not found. Leave LABELVERIFY_GEMINI_MODEL blank to pick one "
+            f"automatically. {detail}"
+        ).strip()
     return f"Gemini API error ({exc.status}): {detail}".strip()
 
 

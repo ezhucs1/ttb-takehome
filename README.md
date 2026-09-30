@@ -145,7 +145,7 @@ exactly the vendor-pilot failure from the interviews.
 | --- | --- | --- |
 | `ANTHROPIC_API_KEY` | | Enables the vision extractor and notice rewriting |
 | `GEMINI_API_KEY` | | Enables the Gemini extractor (and notice rewriting when no Anthropic key) |
-| `LABELVERIFY_GEMINI_MODEL` | `gemini-2.5-flash` | Gemini model for extraction |
+| `LABELVERIFY_GEMINI_MODEL` | auto | Gemini model; blank picks the newest stable Flash model from Google's model list, and a retired name falls back to the replacement Google suggests |
 | `LABELVERIFY_EXTRACTOR` | `claude`, else `gemini`, else `demo`, by which key is set | `claude`, `gemini`, `tesseract`, or `demo` |
 | `LABELVERIFY_MODEL` | `claude-opus-5-5` | Extraction model; swap to `claude-haiku-4-5` if latency measures over budget |
 | `LABELVERIFY_NOTICE_MODEL` | `claude-opus-5-5` | Model that rewrites correction notices |
