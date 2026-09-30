@@ -88,8 +88,9 @@ and set `LABELVERIFY_EXTRACTOR=tesseract` to run the local OCR fallback.
 Compare extractors on the same label from the command line:
 
 ```bash
-.venv/bin/python -m labelverify.cli extract label.jpg --extractor claude
-.venv/bin/python -m labelverify.cli extract label.jpg --extractor gemini
+.venv/bin/python -m labelverify.cli extract labelverify/samples/old-tom-angled-photo.jpg --extractor claude
+.venv/bin/python -m labelverify.cli extract labelverify/samples/old-tom-angled-photo.jpg --extractor gemini
+.venv/bin/python -m labelverify.cli extract ~/Pictures/my-bottle.jpg --extractor gemini   # any photo of yours
 ```
 
 ### Sample labels

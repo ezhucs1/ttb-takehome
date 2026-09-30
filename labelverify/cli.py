@@ -34,13 +34,23 @@ _ICONS = {
 }
 
 
-def _load_application(path: Path) -> ApplicationData:
-    return ApplicationData.model_validate_json(path.read_text())
+def _read_file(path_text: str, what: str) -> bytes:
+    path = Path(path_text).expanduser()
+    if not path.is_file():
+        sys.exit(
+            f"error: {what} not found: {path}\n"
+            "hint: pass a real image path, e.g. labelverify/samples/old-tom-bourbon.jpg"
+        )
+    return path.read_bytes()
+
+
+def _load_application(path_text: str) -> ApplicationData:
+    return ApplicationData.model_validate_json(_read_file(path_text, "application file"))
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
-    image = Path(args.image).read_bytes()
-    application = _load_application(Path(args.application))
+    image = _read_file(args.image, "image")
+    application = _load_application(args.application)
     extractor = get_extractor(args.extractor)
     fallback = default_fallback() if args.fallback else None
     try:
@@ -75,7 +85,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
 
 def cmd_extract(args: argparse.Namespace) -> int:
-    image = Path(args.image).read_bytes()
+    image = _read_file(args.image, "image")
     extractor = get_extractor(args.extractor)
     try:
         prepared = prepare_image(image)
