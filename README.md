@@ -154,6 +154,7 @@ exactly the vendor-pilot failure from the interviews.
 | `LABELVERIFY_MODEL` | `claude-sonnet-5-5` | Extraction model. Measured: Sonnet 5.5 4.1 s, Opus 5.5 6.0 s on the hardest sample; `claude-haiku-4-5` is faster if its reads hold up |
 | `LABELVERIFY_NOTICE_MODEL` | `claude-opus-5-5` | Model that rewrites correction notices |
 | `LABELVERIFY_EXTRACT_TIMEOUT` | `20` | Seconds before an extraction call is abandoned |
+| `LABELVERIFY_IMAGE_MAX_EDGE` | `1500` | Long edge in pixels after preprocessing; smaller is faster, larger keeps more small-print detail |
 | `DATABASE_URL` | `sqlite:///./data/labelverify.db` | SQLAlchemy URL; Postgres works unchanged |
 | `SECRET_KEY` | random per process | Signs session cookies; set it in any shared deployment |
 

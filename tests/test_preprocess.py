@@ -27,6 +27,14 @@ def test_large_image_is_downscaled_to_long_edge():
     assert len(prepared.data) < len(_png(4000, 3000))
 
 
+def test_max_edge_can_be_configured(monkeypatch):
+    monkeypatch.setenv("LABELVERIFY_IMAGE_MAX_EDGE", "1200")
+    prepared = prepare_image(_png(4000, 3000))
+    assert prepared.width == 1200
+    monkeypatch.setenv("LABELVERIFY_IMAGE_MAX_EDGE", "12")  # below the floor: ignored
+    assert prepare_image(_png(4000, 3000)).width == 1500
+
+
 def test_small_image_is_not_upscaled():
     prepared = prepare_image(_png(600, 400))
     assert (prepared.width, prepared.height) == (600, 400)

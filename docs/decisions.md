@@ -29,12 +29,18 @@ connection, median of three runs):
 | --- | --- | --- | --- |
 | Claude Opus 5.5, low effort | 6.0 s | yes, all fields | calibrated; named angle, lighting, blur |
 | Claude Sonnet 5.5, low effort | 4.1 s | yes, all fields | calibrated |
+| Claude Haiku 4.5 | 3.9 s (one run 19.5 s) | yes, all fields | calibrated, but named no image issues |
 | Gemini 3.8 Flash (free tier) | 13.9 s | yes, all fields | 1.0 on every field, no issues named |
 
 **Why:** the brief's budget is five seconds and the vendor pilot failed at thirty. Sonnet
 meets the budget with identical extraction on the hardest sample. Opus stays available by
 setting ``LABELVERIFY_MODEL`` for cases where accuracy on unusual labels matters more than
-speed. Haiku 4.5 is faster still and is the next thing to measure.
+speed. Haiku 4.5 measured only marginally faster with a long-tail outlier and less
+image-quality reporting, so it is not worth the loss of signal as the default; it remains
+a candidate for high-volume batch runs. The near-identical times across the three Claude
+tiers suggest the fixed cost is the image payload and output length rather than the
+model, which is why the preprocessing size is configurable
+(``LABELVERIFY_IMAGE_MAX_EDGE``) for further measurement.
 
 Gemini's free tier also produced 503 "high demand" errors and a timeout during the same
 session, and it reports full confidence on every field, which would disable the workflow's
