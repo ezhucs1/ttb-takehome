@@ -45,7 +45,11 @@ model, which is why the preprocessing size is configurable
 Measured: Opus 5.5 at 1200 px read the same sample correctly in 5.2 s versus 6.0 s at
 1500 px, but its confidence in the health warning fell from 0.85 to 0.75 and it flagged
 the small print as blurred. The small print is exactly where rejections happen, so 1500 px
-stays the default and 1200 px is an opt-in for speed on clean artwork.
+stays the default and 1200 px is an opt-in for speed on clean artwork. Sonnet 5.5 at
+1200 px measured 3.97 s against 4.08 s at 1500 px, confirming that image size is a minor
+factor: the remaining time is output generation (the JSON includes the full warning
+transcription, which the comparison needs) plus the round trip. About four seconds is
+the floor for this design, and it meets the brief.
 
 Gemini's free tier also produced 503 "high demand" errors and a timeout during the same
 session, and it reports full confidence on every field, which would disable the workflow's
