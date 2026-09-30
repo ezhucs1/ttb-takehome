@@ -435,6 +435,8 @@ def add_comment(db: Session, app: Application, author: User, field: str, body: s
         raise WorkflowError("Unknown field.")
     if not body.strip():
         raise WorkflowError("Comment cannot be empty.")
+    if app.is_decided:
+        raise WorkflowError("This application has been decided; its threads are closed.")
     comment = Comment(application_id=app.id, field=field, author_id=author.id, body=body.strip())
     app.comments.append(comment)
     db.flush()

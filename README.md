@@ -136,6 +136,16 @@ diff, image preprocessing, all three extractors (Claude against a fake client), 
 workflow services against a throwaway SQLite database, every HTTP route for both roles,
 batch processing, and one test per sample label asserting the promised recommendation.
 
+**Communication scenarios.** `tests/test_communication.py` plays out situations between
+an applicant and a specialist over HTTP on a clean database (demo users, no seeded
+applications): who sends, who receives, what shows where, when it counts as read, what
+the other side must never see, and that nothing is lost across a restart. Run it on its
+own with verbose names so the output reads as a checklist:
+
+```bash
+.venv/bin/python -m pytest tests/test_communication.py -v
+```
+
 ## Deploy
 
 **Docker**
