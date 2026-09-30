@@ -166,21 +166,25 @@ specialist gets the template, which already lists every finding and fix.
 
 ## 9. Unread activity is derived from a "last opened" timestamp, not per-item flags
 
-**Chose:** one row per user and application recording when they last opened it. Anything
-the other party did after that (a comment, a notice, a decision, a resubmission) counts as
-unread. It surfaces as a funnel with one entry point: an Inbox item in the sidebar whose
-count refreshes every thirty seconds, an inbox page listing each item with a link to the
-exact field, and "New" markers on the application page, which consume them. A first
-version also put dots on queue rows; they were removed because they duplicated the inbox
-and could only refresh with the page.
+**Chose:** each thing the other party does (a comment, a notice, a decision, a
+resubmission) is an inbox item with its own read state. An item is read when the user
+clicks it in the inbox, when they open its application directly from a list, or when they
+mark all as read. Reaching the application through an inbox link consumes only the clicked
+item, so three replies are three clicks or one "mark all". It surfaces as a funnel with
+one entry point: an Inbox item in the sidebar whose count refreshes every thirty seconds,
+the inbox page with a link that lands on the exact field, and "New" markers on the
+application page. Two earlier versions were replaced: dots on queue rows duplicated the
+inbox and only refreshed with the page, and tracking read state per application made one
+click clear every item on that application.
 
-**Considered:** a read flag on every comment and notice, updated as the user scrolls; a
-notifications table populated on every action; email; asking a model to decide what is
-worth notifying.
+**Considered:** marking items read as they scroll into view; a notifications table
+populated on every action; email; asking a model to decide what is worth notifying.
 
 **Why:** the interviews describe the pain as not knowing something is waiting, not as
-losing track inside a page. One timestamp per user answers "is anything new here" with one
-comparison and never drifts out of sync with the underlying records. A submission is not
+losing track inside a page. Read state is derived from the records themselves (a
+per-item receipt or the moment the application was opened) so it never drifts out of sync
+with the comments and notices it describes, and scroll-based reading is too easy to trigger
+by accident. A submission is not
 counted for specialists, because it is queue work rather than a message and the queue
 already shows it. Email belongs in production and is listed there. A model has no place
 in the mechanism: "what happened after you last looked" is bookkeeping that must be exact

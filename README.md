@@ -19,9 +19,10 @@ recommends; a person decides.
 - See correction requests as plain-language notices, reply on the exact field in
   question, and resubmit with a revised label. The application keeps its number.
 - Know when the other side has written. An Inbox in the sidebar carries a live count of
-  applications with activity you have not opened; the inbox lists each reply, notice, and
-  decision with a link that lands on the exact field; and new items are marked on the
-  application page until you open it. Works for both roles.
+  unread items; the inbox lists each reply, notice, and decision with a link that lands on
+  the exact field; new items are marked on the application page. Opening an item reads
+  that item only; opening the application from a list reads everything on it. Works for
+  both roles.
 - Batch upload: a CSV of applications plus a zip of images, up to 300 at a time, checked
   in the background with live progress.
 

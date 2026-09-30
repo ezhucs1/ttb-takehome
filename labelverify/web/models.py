@@ -238,6 +238,19 @@ class ApplicationView(Base):
     seen_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class ActivityRead(Base):
+    """A single inbox item (comment, notice, or status event) the user has read."""
+
+    __tablename__ = "activity_reads"
+    __table_args__ = (UniqueConstraint("user_id", "kind", "item_id"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(20))  # comment | notice | status
+    item_id: Mapped[str] = mapped_column(String(32))
+    read_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class StatusEvent(Base):
     __tablename__ = "status_events"
 

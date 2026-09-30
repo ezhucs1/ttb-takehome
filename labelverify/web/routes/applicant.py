@@ -211,7 +211,8 @@ def detail(
     user: User = Depends(require_applicant),
 ):
     app = load_application(db, app_id, user)
-    unread = services.unread_for(app, user, services.mark_seen(db, app, user))
+    # Arriving through an inbox link consumes only that item; a direct open consumes all.
+    unread = services.unread_for(db, app, user, consume=request.query_params.get("via") != "inbox")
     db.commit()
     run = app.latest_run
     return renderer(request).page(

@@ -240,23 +240,23 @@ class TestComments:
     def test_new_activity_shows_a_badge_until_the_page_is_opened(self, specialist, applicant):
         app_id = ids_in(applicant.get("/applicant").text, "/applicant/applications")[0]
         applicant.get(f"/applicant/applications/{app_id}")  # seen; nothing new afterwards
-        before = applicant.get("/me/unread").json()["applications"]
+        before = applicant.get("/me/unread").json()["count"]
         specialist.post(
             f"/applications/{app_id}/comments",
             data={"field": "brand_name", "body": "Is the apostrophe printed?"},
             headers={"X-Partial": "1"},
         )
-        assert applicant.get("/me/unread").json()["applications"] == before + 1
+        assert applicant.get("/me/unread").json()["count"] == before + 1
         inbox = applicant.get("/inbox").text
         assert "Is the apostrophe printed?" in inbox and "on <em>Brand Name</em>" in inbox
-        assert f"/applicant/applications/{app_id}#field-brand_name" in inbox
+        assert "/inbox/open/comment/" in inbox
         assert 'data-unread-badge' in inbox and "hidden>" not in inbox.split("data-unread-badge")[1][:80]
 
         page = applicant.get(f"/applicant/applications/{app_id}").text
         assert "Is the apostrophe printed?" in page
         assert 'pill-xs">New</span>' in page and "has-new" in page
         # Opening the page consumed it: the badge drops and the marker is gone on reload.
-        assert applicant.get("/me/unread").json()["applications"] == before
+        assert applicant.get("/me/unread").json()["count"] == before
         again = applicant.get(f"/applicant/applications/{app_id}").text
         assert 'pill-xs">New</span>' not in again and "has-new" not in again
         # The applicant's own reply is new for the specialist, not for the applicant.
@@ -265,9 +265,34 @@ class TestComments:
             data={"field": "brand_name", "body": "Yes, exactly as shown."},
             headers={"X-Partial": "1"},
         )
-        assert applicant.get("/me/unread").json()["applications"] == before
+        assert applicant.get("/me/unread").json()["count"] == before
         review = specialist.get(f"/specialist/applications/{app_id}").text
         assert "Yes, exactly as shown." in review and 'pill-xs">New</span>' in review
+
+    def test_clicking_one_inbox_item_keeps_the_others(self, specialist, applicant):
+        app_id = ids_in(applicant.get("/applicant").text, "/applicant/applications")[0]
+        applicant.get(f"/applicant/applications/{app_id}")
+        before = applicant.get("/me/unread").json()["count"]  # other applications' items
+        for n in range(3):
+            specialist.post(
+                f"/applications/{app_id}/comments",
+                data={"field": "brand_name", "body": f"Question {n}"},
+                headers={"X-Partial": "1"},
+            )
+        assert applicant.get("/me/unread").json()["count"] == before + 3
+        inbox = applicant.get("/inbox").text
+        links = re.findall(r"/inbox/open/comment/[0-9a-f]{32}", inbox)
+        pills = inbox.count('pill-xs">New</span>')
+        resp = applicant.get(links[0], follow_redirects=False)
+        assert resp.status_code == 303
+        assert resp.headers["location"] == f"/applicant/applications/{app_id}?via=inbox#field-brand_name"
+        page = applicant.get(resp.headers["location"]).text
+        assert page.count('pill-xs">New</span>') == 2  # the two unopened questions stay new
+        assert applicant.get("/me/unread").json()["count"] == before + 2
+        assert applicant.get("/inbox").text.count('pill-xs">New</span>') == pills - 1
+        # A cross-tenant item id is a 404, not a leak.
+        other = login(specialist.app, {"email": "compliance@stonesthrow.wine", "password": "labelverify"})
+        assert other.get(links[1], follow_redirects=False).status_code == 404
 
     def test_inbox_mark_all_read(self, specialist, applicant):
         app_id = ids_in(applicant.get("/applicant").text, "/applicant/applications")[0]

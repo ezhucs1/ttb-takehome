@@ -47,7 +47,7 @@
       </a>
       <a class="nav-item {% if path == '/inbox' %}active{% endif %}" href="/inbox">
         <svg class="icon"><use href="#i-bell"></use></svg> Inbox
-        <span class="nav-badge" data-unread-badge title="Applications with activity you have not opened" {% if not unread_total %}hidden{% endif %}>{{ unread_total or 0 }}</span>
+        <span class="nav-badge" data-unread-badge title="Inbox items you have not read" {% if not unread_total %}hidden{% endif %}>{{ unread_total or 0 }}</span>
       </a>
       <a class="nav-item {% if path.startswith('/specialist/applications') %}active{% endif %}" href="/specialist?tab=review">
         <svg class="icon"><use href="#i-alert"></use></svg> Needs a look
@@ -61,7 +61,7 @@
       </a>
       <a class="nav-item {% if path == '/inbox' %}active{% endif %}" href="/inbox">
         <svg class="icon"><use href="#i-bell"></use></svg> Inbox
-        <span class="nav-badge" data-unread-badge title="Applications with activity you have not opened" {% if not unread_total %}hidden{% endif %}>{{ unread_total or 0 }}</span>
+        <span class="nav-badge" data-unread-badge title="Inbox items you have not read" {% if not unread_total %}hidden{% endif %}>{{ unread_total or 0 }}</span>
       </a>
       <a class="nav-item {% if path.endswith('/new') %}active{% endif %}" href="/applicant/applications/new">
         <svg class="icon"><use href="#i-plus"></use></svg> New application

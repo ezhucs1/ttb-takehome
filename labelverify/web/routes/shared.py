@@ -45,20 +45,38 @@ def inbox(request: Request, db: Session = Depends(get_db), user: User = Depends(
     )
 
 
+@router.get("/inbox/open/{kind}/{item_id}")
+def inbox_open(
+    request: Request,
+    kind: str,
+    item_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    """Mark one item read, then go to its application without consuming the others."""
+    try:
+        app, anchor = services.open_item(db, user, kind, item_id)
+    except services.WorkflowError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    db.commit()
+    base = "/specialist/applications/" if user.role == Role.SPECIALIST else "/applicant/applications/"
+    return RedirectResponse(f"{base}{app.id}?via=inbox#{anchor}", status_code=303)
+
+
 @router.post("/inbox/read-all")
 def inbox_read_all(
     request: Request, db: Session = Depends(get_db), user: User = Depends(current_user)
 ):
     cleared = services.mark_all_seen(db, user)
     db.commit()
-    message = f"Marked {cleared} application{'s' if cleared != 1 else ''} as read."
+    message = f"Marked {cleared} item{'s' if cleared != 1 else ''} as read."
     return renderer(request).redirect(request, "/inbox", flash=("info", message))
 
 
 @router.get("/me/unread")
 def unread(db: Session = Depends(get_db), user: User = Depends(current_user)) -> dict:
-    """Applications with activity the user has not seen; polled by the sidebar badge."""
-    return {"applications": services.unread_total(db, user)}
+    """Inbox items the user has not read; polled by the sidebar badge."""
+    return {"count": services.unread_total(db, user)}
 
 
 @router.get("/")

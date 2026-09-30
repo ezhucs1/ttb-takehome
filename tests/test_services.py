@@ -204,15 +204,15 @@ class TestUnreadActivity:
         db.commit()
 
         # The applicant has never opened it: both of Sarah's comments are new, their own is not.
-        unread = services.unread_for(app, applicant, services.last_seen(db, app, applicant))
+        unread = services.unread_for(db, app, applicant, consume=False)
         assert unread.count == 2 and unread.fields == {"brand_name": 1, "general": 1}
         assert services.unread_counts(db, applicant, [app.id]) == {app.id: 2}
-        assert services.unread_total(db, applicant) == 1
+        assert services.unread_total(db, applicant) == 2
 
-        # Opening the page marks it seen; the first call reports there was no earlier visit.
-        assert services.mark_seen(db, app, applicant) is None
+        # Opening the page directly consumes everything on it.
+        assert services.unread_for(db, app, applicant, consume=True).count == 2
         db.commit()
-        assert not services.unread_for(app, applicant, services.last_seen(db, app, applicant))
+        assert not services.unread_for(db, app, applicant, consume=False)
         assert services.unread_counts(db, applicant, [app.id]) == {}
 
         # A later reply from the specialist is new again; the applicant's own reply never is.
@@ -232,8 +232,8 @@ class TestUnreadActivity:
         draft = services.draft_correction(app, use_ai=False)
         services.decide(db, app, sarah, "request_correction", notice_body=draft.body)
         db.commit()
-        unread = services.unread_for(app, applicant, None)
-        assert unread.notice and unread.status and unread.fields  # notice + field comments
+        unread = services.unread_for(db, app, applicant, consume=False)
+        assert unread.notice and unread.fields and not unread.status  # notice + field comments
         services.mark_seen(db, app, applicant)
         db.commit()
 
@@ -271,10 +271,34 @@ class TestUnreadActivity:
         assert feed[0].anchor in ("notice", "field-health_warning")
         assert [i.kind for i in services.activity_feed(db, sarah)] == ["comment"]
 
-        assert services.mark_all_seen(db, applicant) == 1
+        assert services.mark_all_seen(db, applicant) == len(feed)
         db.commit()
         assert not any(i.unread for i in services.activity_feed(db, applicant))
         assert services.unread_total(db, applicant) == 0
+
+    def test_opening_one_inbox_item_leaves_the_others_unread(self, db, users):
+        app, applicant = make_app(db, users)
+        sarah = users["sarah.chen@ttb.gov"]
+        services.submit(db, app, applicant)
+        for n in range(3):
+            services.add_comment(db, app, sarah, "general", f"Question {n}")
+        db.commit()
+        feed = services.activity_feed(db, applicant)
+        assert len(feed) == 3 and services.unread_total(db, applicant) == 3
+
+        opened, anchor = services.open_item(db, applicant, "comment", feed[0].item_id)
+        db.commit()
+        assert opened.id == app.id and anchor == "thread-host-general"
+        assert services.unread_total(db, applicant) == 2
+        assert [i.unread for i in services.activity_feed(db, applicant)] == [False, True, True]
+        # Landing on the page through the inbox link keeps the other two new...
+        assert services.unread_for(db, app, applicant, consume=False).count == 2
+        # ...while opening the application from a list consumes them.
+        assert services.unread_for(db, app, applicant, consume=True).count == 2
+        db.commit()
+        assert services.unread_total(db, applicant) == 0
+        with pytest.raises(services.WorkflowError):
+            services.open_item(db, applicant, "comment", "nope")
 
 
 class TestLabelSets:

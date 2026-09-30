@@ -2,11 +2,10 @@
 {% import "macros.html" as m %}
 {% block title %}Inbox{% endblock %}
 {% block content %}
-{% set detail_base = '/specialist/applications/' if user.role == 'specialist' else '/applicant/applications/' %}
 <div class="page-header">
   <div>
     <h1>Inbox</h1>
-    <p class="subtitle">What the {{ 'applicants' if user.role == 'specialist' else 'labeling specialist' }} did on your applications. Opening an application clears its items.</p>
+    <p class="subtitle">What the {{ 'applicants' if user.role == 'specialist' else 'labeling specialist' }} did on your applications. Each item stays new until you open it here or open its application from the list.</p>
   </div>
   {% if unread_items %}
   <div class="page-actions">
@@ -17,7 +16,7 @@
 
 {% macro item_row(i) -%}
 <li class="inbox-item {% if i.unread %}is-unread{% endif %}">
-  <a class="inbox-link" href="{{ detail_base }}{{ i.app.id }}#{{ i.anchor }}">
+  <a class="inbox-link" href="/inbox/open/{{ i.kind }}/{{ i.item_id }}">
     {% if i.actor %}{{ m.avatar(i.actor, 'sm') }}{% else %}<span class="avatar sm">TTB</span>{% endif %}
     <div class="inbox-body">
       <div class="inbox-title">

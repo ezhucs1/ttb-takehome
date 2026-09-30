@@ -32,6 +32,7 @@ from ..engine.notices import NoticeDraft, draft_notice, flagged_fields
 from ..engine.preprocess import UnreadableImageError, prepare_image
 from ..engine.verify import run_verification
 from .models import (
+    ActivityRead,
     Application,
     ApplicationStatus,
     ApplicationView,
@@ -452,35 +453,40 @@ def comments_by_field(app: Application) -> dict[str, list[Comment]]:
 
 
 # --------------------------------------------------------------------------- unread activity
+#
+# An inbox item is something the other party did on an application: a comment, a notice,
+# or a decision/resubmission. It is unread for a user until one of three things happens:
+#   * they click it in the inbox (a per-item read receipt in ``activity_reads``),
+#   * they open the application directly from a list (``application_views`` records the
+#     moment, and everything on that application before it counts as seen), or
+#   * they use "Mark all as read".
+# Reaching the application through an inbox link does not consume the other items on it.
 
-# Status changes worth telling the other party about. A submission is new work for the
-# queue, not a message, so it is not counted; a resubmission answers a correction request.
-NOTIFIED_STATUSES = {
-    Role.APPLICANT: {
-        ApplicationStatus.CORRECTION_REQUESTED,
-        ApplicationStatus.APPROVED,
-        ApplicationStatus.REJECTED,
-    },
+# Status changes worth listing. Correction requests and rejections arrive as notices, so
+# their status events would be duplicates; a plain submission is queue work, not a message.
+FEED_STATUSES = {
+    Role.APPLICANT: {ApplicationStatus.APPROVED},
     Role.SPECIALIST: {ApplicationStatus.RESUBMITTED},
 }
+ITEM_KINDS = ("comment", "notice", "status")
 
 
 def other_role(user: User) -> str:
     return Role.SPECIALIST if user.role == Role.APPLICANT else Role.APPLICANT
 
 
+ItemKey = tuple[str, str]  # (kind, item id)
+
+
 @dataclass
 class Unread:
-    """Activity on one application by the other party since the user last opened it."""
+    """Unread items on one application, for the page markers."""
 
     comment_ids: set[str] = field(default_factory=set)
     fields: dict[str, int] = field(default_factory=dict)  # field -> unread comments
     notice: bool = False
     status: bool = False
-
-    @property
-    def count(self) -> int:
-        return len(self.comment_ids) + (1 if (self.notice or self.status) else 0)
+    count: int = 0
 
     def __bool__(self) -> bool:
         return self.count > 0
@@ -488,6 +494,28 @@ class Unread:
 
 def _after(created_at: datetime, since: datetime | None) -> bool:
     return since is None or created_at > since
+
+
+def _seen_map(db: Session, user: User, app_ids: Sequence[str]) -> dict[str, datetime]:
+    if not app_ids:
+        return {}
+    return {
+        v.application_id: v.seen_at
+        for v in db.scalars(
+            select(ApplicationView).where(
+                ApplicationView.user_id == user.id, ApplicationView.application_id.in_(app_ids)
+            )
+        )
+    }
+
+
+def _read_keys(db: Session, user: User) -> set[ItemKey]:
+    return {
+        (kind, item_id)
+        for kind, item_id in db.execute(
+            select(ActivityRead.kind, ActivityRead.item_id).where(ActivityRead.user_id == user.id)
+        )
+    }
 
 
 def last_seen(db: Session, app: Application, user: User) -> datetime | None:
@@ -515,73 +543,55 @@ def mark_seen(db: Session, app: Application, user: User) -> datetime | None:
     return previous
 
 
-def unread_for(app: Application, user: User, since: datetime | None) -> Unread:
-    """What ``user`` has not seen on ``app``: the other party's comments, notices, decisions."""
-    other = other_role(user)
-    unread = Unread()
-    for c in app.comments:
-        if c.author.role == other and _after(c.created_at, since):
-            unread.comment_ids.add(c.id)
-            unread.fields[c.field] = unread.fields.get(c.field, 0) + 1
-    if user.role == Role.APPLICANT:
-        unread.notice = any(_after(n.created_at, since) for n in app.notices)
-    watched = NOTIFIED_STATUSES[Role(user.role)]
-    unread.status = any(
-        e.actor is not None
-        and e.actor.role == other
-        and e.to_status in watched
-        and _after(e.created_at, since)
-        for e in app.events
+def mark_item_read(db: Session, user: User, kind: str, item_id: str) -> None:
+    if kind not in ITEM_KINDS:
+        raise WorkflowError("Unknown inbox item.")
+    exists = db.scalar(
+        select(ActivityRead).where(
+            ActivityRead.user_id == user.id,
+            ActivityRead.kind == kind,
+            ActivityRead.item_id == item_id,
+        )
     )
-    return unread
+    if exists is None:
+        db.add(ActivityRead(user_id=user.id, kind=kind, item_id=item_id))
+        db.flush()
 
 
-def unread_counts(db: Session, user: User, app_ids: Sequence[str]) -> dict[str, int]:
-    """Unread item count per application, for lists. Only applications with activity appear."""
-    ids = list(app_ids)
-    if not ids:
-        return {}
-    seen = {
-        view.application_id: view.seen_at
-        for view in db.scalars(
-            select(ApplicationView).where(
-                ApplicationView.user_id == user.id, ApplicationView.application_id.in_(ids)
-            )
-        )
-    }
+def _app_items(app: Application, user: User) -> list[tuple[str, str, datetime, str]]:
+    """(kind, id, created_at, field) for every inbox-worthy item on one application."""
     other = other_role(user)
-    counts: dict[str, int] = {}
-    flagged: set[str] = set()
-
-    for app_id, created_at in db.execute(
-        select(Comment.application_id, Comment.created_at)
-        .join(User, Comment.author_id == User.id)
-        .where(User.role == other, Comment.application_id.in_(ids))
-    ):
-        if _after(created_at, seen.get(app_id)):
-            counts[app_id] = counts.get(app_id, 0) + 1
-
-    watched = [s.value for s in NOTIFIED_STATUSES[Role(user.role)]]
-    for app_id, created_at in db.execute(
-        select(StatusEvent.application_id, StatusEvent.created_at)
-        .join(User, StatusEvent.actor_id == User.id)
-        .where(
-            User.role == other,
-            StatusEvent.to_status.in_(watched),
-            StatusEvent.application_id.in_(ids),
-        )
-    ):
-        if _after(created_at, seen.get(app_id)):
-            flagged.add(app_id)
+    items = [
+        ("comment", c.id, c.created_at, c.field) for c in app.comments if c.author.role == other
+    ]
     if user.role == Role.APPLICANT:
-        for app_id, created_at in db.execute(
-            select(Notice.application_id, Notice.created_at).where(Notice.application_id.in_(ids))
-        ):
-            if _after(created_at, seen.get(app_id)):
-                flagged.add(app_id)
-    for app_id in flagged:
-        counts[app_id] = counts.get(app_id, 0) + 1
-    return counts
+        items += [("notice", n.id, n.created_at, "") for n in app.notices]
+    watched = FEED_STATUSES[Role(user.role)]
+    items += [
+        ("status", e.id, e.created_at, "")
+        for e in app.events
+        if e.actor is not None and e.actor.role == other and e.to_status in watched
+    ]
+    return items
+
+
+def unread_for(db: Session, app: Application, user: User, *, consume: bool) -> Unread:
+    """Unread items on ``app`` for the page. ``consume`` marks the application opened now."""
+    since = mark_seen(db, app, user) if consume else last_seen(db, app, user)
+    read = _read_keys(db, user)
+    unread = Unread()
+    for kind, item_id, created_at, fld in _app_items(app, user):
+        if not _after(created_at, since) or (kind, item_id) in read:
+            continue
+        unread.count += 1
+        if kind == "comment":
+            unread.comment_ids.add(item_id)
+            unread.fields[fld] = unread.fields.get(fld, 0) + 1
+        elif kind == "notice":
+            unread.notice = True
+        else:
+            unread.status = True
+    return unread
 
 
 def _scoped_app_ids(db: Session, user: User) -> list[str]:
@@ -594,9 +604,57 @@ def _scoped_app_ids(db: Session, user: User) -> list[str]:
     return list(db.scalars(stmt))
 
 
+def _item_rows(
+    db: Session, user: User, app_ids: Sequence[str], *, limit: int | None = None
+) -> list[tuple[str, str, str, datetime]]:
+    """(kind, id, application id, created_at) across many applications, three queries."""
+    if not app_ids:
+        return []
+    other = other_role(user)
+    rows: list[tuple[str, str, str, datetime]] = []
+    q = (
+        select(Comment.id, Comment.application_id, Comment.created_at)
+        .join(User, Comment.author_id == User.id)
+        .where(User.role == other, Comment.application_id.in_(app_ids))
+        .order_by(Comment.created_at.desc())
+    )
+    rows += [("comment", *r) for r in db.execute(q.limit(limit) if limit else q)]
+    watched = [s.value for s in FEED_STATUSES[Role(user.role)]]
+    q = (
+        select(StatusEvent.id, StatusEvent.application_id, StatusEvent.created_at)
+        .join(User, StatusEvent.actor_id == User.id)
+        .where(
+            User.role == other,
+            StatusEvent.to_status.in_(watched),
+            StatusEvent.application_id.in_(app_ids),
+        )
+        .order_by(StatusEvent.created_at.desc())
+    )
+    rows += [("status", *r) for r in db.execute(q.limit(limit) if limit else q)]
+    if user.role == Role.APPLICANT:
+        q = (
+            select(Notice.id, Notice.application_id, Notice.created_at)
+            .where(Notice.application_id.in_(app_ids))
+            .order_by(Notice.created_at.desc())
+        )
+        rows += [("notice", *r) for r in db.execute(q.limit(limit) if limit else q)]
+    return rows
+
+
+def unread_counts(db: Session, user: User, app_ids: Sequence[str]) -> dict[str, int]:
+    """Unread item count per application. Only applications with unread items appear."""
+    seen = _seen_map(db, user, app_ids)
+    read = _read_keys(db, user)
+    counts: dict[str, int] = {}
+    for kind, item_id, app_id, created_at in _item_rows(db, user, app_ids):
+        if _after(created_at, seen.get(app_id)) and (kind, item_id) not in read:
+            counts[app_id] = counts.get(app_id, 0) + 1
+    return counts
+
+
 def unread_total(db: Session, user: User) -> int:
-    """How many of the user's applications carry unread activity (the sidebar badge)."""
-    return len(unread_counts(db, user, _scoped_app_ids(db, user)))
+    """Unread items across the user's applications (the sidebar badge)."""
+    return sum(unread_counts(db, user, _scoped_app_ids(db, user)).values())
 
 
 @dataclass
@@ -604,6 +662,7 @@ class ActivityItem:
     """One line in the inbox: something the other party did on an application."""
 
     kind: str  # comment | notice | status
+    item_id: str
     app: Application
     created_at: datetime
     actor: User | None
@@ -618,33 +677,19 @@ class ActivityItem:
         return "notice" if self.kind == "notice" else "history"
 
 
-# Decisions shown in the applicant's inbox as status lines. Correction requests and
-# rejections arrive as notices, so listing their status event too would duplicate them.
-FEED_STATUSES = {
-    Role.APPLICANT: {ApplicationStatus.APPROVED},
-    Role.SPECIALIST: {ApplicationStatus.RESUBMITTED},
-}
-
-
 def activity_feed(db: Session, user: User, *, limit: int = 40) -> list[ActivityItem]:
     """The other party's recent activity across the user's applications, newest first."""
     ids = _scoped_app_ids(db, user)
     if not ids:
         return []
-    seen = {
-        view.application_id: view.seen_at
-        for view in db.scalars(
-            select(ApplicationView).where(
-                ApplicationView.user_id == user.id, ApplicationView.application_id.in_(ids)
-            )
-        )
-    }
-    other = other_role(user)
+    seen = _seen_map(db, user, ids)
+    read = _read_keys(db, user)
 
-    def unread(app_id: str, created_at: datetime) -> bool:
-        return _after(created_at, seen.get(app_id))
+    def is_unread(kind: str, item_id: str, app_id: str, created_at: datetime) -> bool:
+        return _after(created_at, seen.get(app_id)) and (kind, item_id) not in read
 
     items: list[ActivityItem] = []
+    other = other_role(user)
     for c in db.scalars(
         select(Comment)
         .join(User, Comment.author_id == User.id)
@@ -656,12 +701,13 @@ def activity_feed(db: Session, user: User, *, limit: int = 40) -> list[ActivityI
         items.append(
             ActivityItem(
                 "comment",
+                c.id,
                 c.application,
                 c.created_at,
                 c.author,
                 c.field,
                 c.body,
-                unread(c.application_id, c.created_at),
+                is_unread("comment", c.id, c.application_id, c.created_at),
             )
         )
     watched = [s.value for s in FEED_STATUSES[Role(user.role)]]
@@ -680,12 +726,13 @@ def activity_feed(db: Session, user: User, *, limit: int = 40) -> list[ActivityI
         items.append(
             ActivityItem(
                 "status",
+                e.id,
                 e.application,
                 e.created_at,
                 e.actor,
                 "",
                 e.note,
-                unread(e.application_id, e.created_at),
+                is_unread("status", e.id, e.application_id, e.created_at),
             )
         )
     if user.role == Role.APPLICANT:
@@ -699,20 +746,38 @@ def activity_feed(db: Session, user: User, *, limit: int = 40) -> list[ActivityI
             items.append(
                 ActivityItem(
                     "notice",
+                    n.id,
                     n.application,
                     n.created_at,
                     n.sent_by,
                     "",
                     n.body,
-                    unread(n.application_id, n.created_at),
+                    is_unread("notice", n.id, n.application_id, n.created_at),
                 )
             )
     items.sort(key=lambda i: i.created_at, reverse=True)
     return items[:limit]
 
 
+def open_item(db: Session, user: User, kind: str, item_id: str) -> tuple[Application, str]:
+    """Mark one inbox item read and return its application and page anchor."""
+    model = {"comment": Comment, "notice": Notice, "status": StatusEvent}.get(kind)
+    item = db.get(model, item_id) if model else None
+    if item is None:
+        raise WorkflowError("That inbox item no longer exists.")
+    app = item.application
+    if user.role == Role.APPLICANT and app.applicant_id != user.id:
+        raise WorkflowError("That inbox item no longer exists.")
+    mark_item_read(db, user, kind, item_id)
+    if kind == "comment":
+        anchor = "thread-host-general" if item.field == "general" else f"field-{item.field}"
+    else:
+        anchor = "notice" if kind == "notice" else "history"
+    return app, anchor
+
+
 def mark_all_seen(db: Session, user: User) -> int:
-    """Clear the inbox: every application with unread activity counts as opened now."""
+    """Clear the inbox: every application with unread items counts as opened now."""
     unread_ids = unread_counts(db, user, _scoped_app_ids(db, user))
     now = utcnow()
     existing = {
@@ -730,7 +795,7 @@ def mark_all_seen(db: Session, user: User) -> int:
         else:
             db.add(ApplicationView(user_id=user.id, application_id=app_id, seen_at=now))
     db.flush()
-    return len(unread_ids)
+    return sum(unread_ids.values())
 
 
 # --------------------------------------------------------------------------- queue and stats

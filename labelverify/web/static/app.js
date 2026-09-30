@@ -400,7 +400,7 @@
     });
   }
 
-  // The sidebar badge counts applications with activity the user has not opened yet.
+  // The sidebar badge counts inbox items the user has not read.
   // It refreshes quietly so a reply from the other side shows up without a reload.
   function unreadBadge() {
     const badges = $$("[data-unread-badge]");
@@ -410,7 +410,7 @@
       try {
         const resp = await fetch("/me/unread", { headers: { Accept: "application/json" } });
         if (!resp.ok) return;
-        const n = (await resp.json()).applications || 0;
+        const n = (await resp.json()).count || 0;
         badges.forEach((b) => { b.textContent = n; b.hidden = n === 0; });
         document.title = n ? `(${n}) ${baseTitle}` : baseTitle;
       } catch (err) { /* offline; try again next tick */ }
