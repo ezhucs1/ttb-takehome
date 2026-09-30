@@ -226,6 +226,18 @@ class Comment(Base):
     author: Mapped[User] = relationship(lazy="joined")
 
 
+class ApplicationView(Base):
+    """When a user last opened an application; activity after that is unread for them."""
+
+    __tablename__ = "application_views"
+    __table_args__ = (UniqueConstraint("user_id", "application_id"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
+    seen_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class StatusEvent(Base):
     __tablename__ = "status_events"
 

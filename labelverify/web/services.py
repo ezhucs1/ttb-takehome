@@ -14,7 +14,8 @@ import secrets
 import zipfile
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
 
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, sessionmaker
@@ -33,11 +34,13 @@ from ..engine.verify import run_verification
 from .models import (
     Application,
     ApplicationStatus,
+    ApplicationView,
     Batch,
     BatchItem,
     Comment,
     LabelImage,
     Notice,
+    Role,
     StatusEvent,
     User,
     VerificationRun,
@@ -446,6 +449,149 @@ def comments_by_field(app: Application) -> dict[str, list[Comment]]:
     for c in app.comments:
         grouped.setdefault(c.field, []).append(c)
     return grouped
+
+
+# --------------------------------------------------------------------------- unread activity
+
+# Status changes worth telling the other party about. A submission is new work for the
+# queue, not a message, so it is not counted; a resubmission answers a correction request.
+NOTIFIED_STATUSES = {
+    Role.APPLICANT: {
+        ApplicationStatus.CORRECTION_REQUESTED,
+        ApplicationStatus.APPROVED,
+        ApplicationStatus.REJECTED,
+    },
+    Role.SPECIALIST: {ApplicationStatus.RESUBMITTED},
+}
+
+
+def other_role(user: User) -> str:
+    return Role.SPECIALIST if user.role == Role.APPLICANT else Role.APPLICANT
+
+
+@dataclass
+class Unread:
+    """Activity on one application by the other party since the user last opened it."""
+
+    comment_ids: set[str] = field(default_factory=set)
+    fields: dict[str, int] = field(default_factory=dict)  # field -> unread comments
+    notice: bool = False
+    status: bool = False
+
+    @property
+    def count(self) -> int:
+        return len(self.comment_ids) + (1 if (self.notice or self.status) else 0)
+
+    def __bool__(self) -> bool:
+        return self.count > 0
+
+
+def _after(created_at: datetime, since: datetime | None) -> bool:
+    return since is None or created_at > since
+
+
+def last_seen(db: Session, app: Application, user: User) -> datetime | None:
+    view = db.scalar(
+        select(ApplicationView).where(
+            ApplicationView.user_id == user.id, ApplicationView.application_id == app.id
+        )
+    )
+    return view.seen_at if view else None
+
+
+def mark_seen(db: Session, app: Application, user: User) -> datetime | None:
+    """Record that ``user`` opened ``app`` now; returns when they last did, if ever."""
+    view = db.scalar(
+        select(ApplicationView).where(
+            ApplicationView.user_id == user.id, ApplicationView.application_id == app.id
+        )
+    )
+    previous = view.seen_at if view else None
+    if view is None:
+        db.add(ApplicationView(user_id=user.id, application_id=app.id, seen_at=utcnow()))
+    else:
+        view.seen_at = utcnow()
+    db.flush()
+    return previous
+
+
+def unread_for(app: Application, user: User, since: datetime | None) -> Unread:
+    """What ``user`` has not seen on ``app``: the other party's comments, notices, decisions."""
+    other = other_role(user)
+    unread = Unread()
+    for c in app.comments:
+        if c.author.role == other and _after(c.created_at, since):
+            unread.comment_ids.add(c.id)
+            unread.fields[c.field] = unread.fields.get(c.field, 0) + 1
+    if user.role == Role.APPLICANT:
+        unread.notice = any(_after(n.created_at, since) for n in app.notices)
+    watched = NOTIFIED_STATUSES[Role(user.role)]
+    unread.status = any(
+        e.actor is not None
+        and e.actor.role == other
+        and e.to_status in watched
+        and _after(e.created_at, since)
+        for e in app.events
+    )
+    return unread
+
+
+def unread_counts(db: Session, user: User, app_ids: Sequence[str]) -> dict[str, int]:
+    """Unread item count per application, for lists. Only applications with activity appear."""
+    ids = list(app_ids)
+    if not ids:
+        return {}
+    seen = {
+        view.application_id: view.seen_at
+        for view in db.scalars(
+            select(ApplicationView).where(
+                ApplicationView.user_id == user.id, ApplicationView.application_id.in_(ids)
+            )
+        )
+    }
+    other = other_role(user)
+    counts: dict[str, int] = {}
+    flagged: set[str] = set()
+
+    for app_id, created_at in db.execute(
+        select(Comment.application_id, Comment.created_at)
+        .join(User, Comment.author_id == User.id)
+        .where(User.role == other, Comment.application_id.in_(ids))
+    ):
+        if _after(created_at, seen.get(app_id)):
+            counts[app_id] = counts.get(app_id, 0) + 1
+
+    watched = [s.value for s in NOTIFIED_STATUSES[Role(user.role)]]
+    for app_id, created_at in db.execute(
+        select(StatusEvent.application_id, StatusEvent.created_at)
+        .join(User, StatusEvent.actor_id == User.id)
+        .where(
+            User.role == other,
+            StatusEvent.to_status.in_(watched),
+            StatusEvent.application_id.in_(ids),
+        )
+    ):
+        if _after(created_at, seen.get(app_id)):
+            flagged.add(app_id)
+    if user.role == Role.APPLICANT:
+        for app_id, created_at in db.execute(
+            select(Notice.application_id, Notice.created_at).where(Notice.application_id.in_(ids))
+        ):
+            if _after(created_at, seen.get(app_id)):
+                flagged.add(app_id)
+    for app_id in flagged:
+        counts[app_id] = counts.get(app_id, 0) + 1
+    return counts
+
+
+def unread_total(db: Session, user: User) -> int:
+    """How many of the user's applications carry unread activity (the sidebar badge)."""
+    stmt = select(Application.id)
+    if user.role == Role.APPLICANT:
+        stmt = stmt.where(Application.applicant_id == user.id)
+    else:
+        stmt = stmt.where(Application.status != ApplicationStatus.DRAFT.value)
+    return len(unread_counts(db, user, list(db.scalars(stmt))))
 
 
 # --------------------------------------------------------------------------- queue and stats

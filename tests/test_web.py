@@ -135,6 +135,15 @@ class TestSpecialistWorkflow:
         dash = applicant.get("/applicant")
         assert "Corrections requested" in dash.text or "Correction requested" in dash.text
 
+    def test_drafted_notice_can_be_discarded(self, specialist):
+        app_id = ids_in(specialist.get("/specialist?tab=review").text, "/specialist/applications")[
+            0
+        ]
+        draft = specialist.post(
+            f"/specialist/applications/{app_id}/notice", headers={"X-Partial": "1"}
+        )
+        assert draft.status_code == 200 and "data-notice-discard" in draft.text
+
     def test_correction_without_notice_is_rejected(self, specialist):
         app_id = ids_in(specialist.get("/specialist?tab=review").text, "/specialist/applications")[
             0
@@ -227,6 +236,40 @@ class TestComments:
             f"/applications/{app_id}/comments/{comment_id}/resolve", headers={"X-Partial": "1"}
         )
         assert resolved.status_code == 200 and "Resolved" in resolved.text
+
+    def test_new_activity_shows_a_badge_until_the_page_is_opened(self, specialist, applicant):
+        app_id = ids_in(applicant.get("/applicant").text, "/applicant/applications")[0]
+        applicant.get(f"/applicant/applications/{app_id}")  # seen; nothing new afterwards
+        before = applicant.get("/me/unread").json()["applications"]
+        specialist.post(
+            f"/applications/{app_id}/comments",
+            data={"field": "brand_name", "body": "Is the apostrophe printed?"},
+            headers={"X-Partial": "1"},
+        )
+        assert applicant.get("/me/unread").json()["applications"] == before + 1
+        dash = applicant.get("/applicant").text
+        assert 'class="row-unread"' in dash and "1 new since you last opened" in dash
+        assert 'data-unread-badge' in dash and 'data-unread-badge title="Applications with new activity" hidden' not in dash
+
+        page = applicant.get(f"/applicant/applications/{app_id}").text
+        assert "Is the apostrophe printed?" in page
+        assert 'pill-xs">New</span>' in page and "has-new" in page
+        # Opening the page consumed it: the badge drops and the marker is gone on reload.
+        assert applicant.get("/me/unread").json()["applications"] == before
+        again = applicant.get(f"/applicant/applications/{app_id}").text
+        assert 'pill-xs">New</span>' not in again and "has-new" not in again
+        # The applicant's own reply is new for the specialist, not for the applicant.
+        applicant.post(
+            f"/applications/{app_id}/comments",
+            data={"field": "brand_name", "body": "Yes, exactly as shown."},
+            headers={"X-Partial": "1"},
+        )
+        assert applicant.get("/me/unread").json()["applications"] == before
+        review = specialist.get(f"/specialist/applications/{app_id}").text
+        assert "Yes, exactly as shown." in review and 'pill-xs">New</span>' in review
+
+    def test_unread_endpoint_requires_login(self, anon):
+        assert anon.get("/me/unread", headers={"Accept": "application/json"}).status_code == 401
 
     def test_empty_comment_and_unknown_field(self, specialist):
         app_id = ids_in(specialist.get("/specialist").text, "/specialist/applications")[0]

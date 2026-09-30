@@ -46,7 +46,12 @@ def dashboard(
         counts[app.status] += 1
     needs_action = [a for a in apps if a.status == ApplicationStatus.CORRECTION_REQUESTED]
     return renderer(request).page(
-        request, "applicant/dashboard.html", apps=apps, counts=counts, needs_action=needs_action
+        request,
+        "applicant/dashboard.html",
+        apps=apps,
+        counts=counts,
+        needs_action=needs_action,
+        unread=services.unread_counts(db, user, [a.id for a in apps]),
     )
 
 
@@ -180,6 +185,8 @@ def detail(
     user: User = Depends(require_applicant),
 ):
     app = load_application(db, app_id, user)
+    unread = services.unread_for(app, user, services.mark_seen(db, app, user))
+    db.commit()
     run = app.latest_run
     return renderer(request).page(
         request,
@@ -190,6 +197,7 @@ def detail(
         comments=services.comments_by_field(app),
         can_comment=not app.is_decided,
         latest_notice=app.notices[-1] if app.notices else None,
+        unread=unread,
     )
 
 

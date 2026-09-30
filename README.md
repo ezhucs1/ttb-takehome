@@ -18,6 +18,9 @@ recommends; a person decides.
 - Run a pre-check before submitting and fix problems while they are cheap.
 - See correction requests as plain-language notices, reply on the exact field in
   question, and resubmit with a revised label. The application keeps its number.
+- Know when the other side has written: a badge in the sidebar counts applications with
+  activity you have not opened yet, rows carry a dot, and new comments and notices are
+  marked until you open the page. Works for both roles.
 - Batch upload: a CSV of applications plus a zip of images, up to 300 at a time, checked
   in the background with live progress.
 
@@ -29,7 +32,8 @@ recommends; a person decides.
   field, a word-level diff of the Government Health Warning, and a comment thread on
   every field.
 - One-click approve, bulk approve for clean applications, or a correction request whose
-  notice is drafted from the findings and edited before it goes out.
+  notice is drafted from the findings and edited before it goes out. A drafted notice can be
+  discarded, which puts the panel back exactly as it was.
 
 Both roles get a light and a dark theme. The app follows the system preference and the
 toggle in the sidebar overrides it per browser.
@@ -121,7 +125,7 @@ Regenerate them with `.venv/bin/python scripts/make_samples.py`.
 ### Tests
 
 ```bash
-.venv/bin/python -m pytest     # 181 tests, all offline with a fake API client
+.venv/bin/python -m pytest     # all offline, with a fake API client
 .venv/bin/ruff check .         # lint
 ```
 
@@ -174,7 +178,7 @@ labelverify/
     extractors/           claude and gemini (vision), tesseract (local OCR), demo (samples), fixture (tests)
   web/
     app.py                FastAPI factory, session middleware, error handlers
-    models.py             SQLAlchemy tables: users, applications, images, runs, comments, events, notices, batches
+    models.py             SQLAlchemy tables: users, applications, images, runs, comments, events, notices, views, batches
     services.py           every state change: create, verify, submit, review, decide, resubmit, batch
     routes/               shared (auth, images, comments), applicant, specialist, api
     templates/            Jinja2 pages and partials

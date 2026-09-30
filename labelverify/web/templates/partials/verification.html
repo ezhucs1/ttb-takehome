@@ -51,6 +51,7 @@
   {% for f in result.fields %}
     {% set thread = comments.get(f.field, []) %}
     {% set open_count = thread | rejectattr('resolved') | list | length %}
+    {% set new_count = unread.fields.get(f.field, 0) if unread is defined else 0 %}
     <tr class="row-{{ f.verdict.value }}" id="field-{{ f.field }}">
       <th scope="row">
         <div class="field-name">{{ f.label }}</div>
@@ -76,8 +77,8 @@
         <div class="verdict">
           {{ m.verdict_badge(f.verdict.value) }}
           {% if can_comment or thread %}
-          <button type="button" class="thread-toggle {% if open_count %}has-open{% endif %}" data-toggle="#thread-{{ f.field }}" title="Comments on this field">
-            <svg class="icon"><use href="#i-comment"></use></svg>{{ thread | length if thread else '' }}
+          <button type="button" class="thread-toggle {% if open_count %}has-open{% endif %} {% if new_count %}has-new{% endif %}" data-toggle="#thread-{{ f.field }}" title="{% if new_count %}{{ new_count }} new comment{{ 's' if new_count != 1 }} on this field{% else %}Comments on this field{% endif %}">
+            <svg class="icon"><use href="#i-comment"></use></svg>{{ thread | length if thread else '' }}{% if new_count %}<span class="unread-dot" aria-label="new"></span>{% endif %}
           </button>
           {% endif %}
         </div>
@@ -86,10 +87,10 @@
       </td>
     </tr>
     {% if can_comment or thread %}
-    <tr class="thread-row" id="thread-{{ f.field }}" {% if not open_count %}hidden{% endif %}>
+    <tr class="thread-row" id="thread-{{ f.field }}" {% if not open_count and not new_count %}hidden{% endif %}>
       <td colspan="4">
         <div class="thread-host" id="thread-host-{{ f.field }}">
-          {% with field=f.field, comments=thread %}{% include "partials/thread.html" %}{% endwith %}
+          {% with field=f.field, comments=thread, unread_ids=(unread.comment_ids if unread is defined else []) %}{% include "partials/thread.html" %}{% endwith %}
         </div>
       </td>
     </tr>

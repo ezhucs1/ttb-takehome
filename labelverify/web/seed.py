@@ -54,6 +54,17 @@ USERS = [
 ]
 
 
+# Applicant replies seeded on the correction-requested samples, so the specialist's queue
+# shows unread activity on first login. Keyed by sample id: (field, message).
+SEED_REPLIES = {
+    "old-tom-title-case-warning": (
+        "health_warning",
+        "Understood. Our printer is resetting the heading in capitals; revised artwork "
+        "will be uploaded this week.",
+    ),
+}
+
+
 def seed_users(db: Session) -> dict[str, User]:
     users: dict[str, User] = {}
     for spec in USERS:
@@ -121,14 +132,9 @@ def seed_applications(db: Session, users: dict[str, User], samples_dir: Path = S
                 notice_body=draft.body,
                 notice_source=draft.source,
             )
-            if sample.get("seed_reply"):
-                services.add_comment(
-                    db,
-                    app,
-                    applicant,
-                    sample.get("seed_reply_field", "general"),
-                    sample["seed_reply"],
-                )
+            if sample["id"] in SEED_REPLIES:
+                reply_field, reply = SEED_REPLIES[sample["id"]]
+                services.add_comment(db, app, applicant, reply_field, reply)
         elif state == "under_review":
             services.claim_for_review(db, app, sarah)
         created += 1

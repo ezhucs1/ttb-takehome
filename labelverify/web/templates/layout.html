@@ -43,6 +43,7 @@
       {% if user.role == 'specialist' %}
       <a class="nav-item {% if path == '/specialist' %}active{% endif %}" href="/specialist">
         <svg class="icon"><use href="#i-inbox"></use></svg> Review queue
+        <span class="nav-badge" data-unread-badge title="Applications with new activity" {% if not unread_total %}hidden{% endif %}>{{ unread_total or 0 }}</span>
       </a>
       <a class="nav-item {% if path.startswith('/specialist/applications') %}active{% endif %}" href="/specialist?tab=review">
         <svg class="icon"><use href="#i-alert"></use></svg> Needs a look
@@ -53,6 +54,7 @@
       {% else %}
       <a class="nav-item {% if path == '/applicant' or path.startswith('/applicant/applications/') and not path.endswith('/new') %}active{% endif %}" href="/applicant">
         <svg class="icon"><use href="#i-layers"></use></svg> My applications
+        <span class="nav-badge" data-unread-badge title="Applications with new activity" {% if not unread_total %}hidden{% endif %}>{{ unread_total or 0 }}</span>
       </a>
       <a class="nav-item {% if path.endswith('/new') %}active{% endif %}" href="/applicant/applications/new">
         <svg class="icon"><use href="#i-plus"></use></svg> New application

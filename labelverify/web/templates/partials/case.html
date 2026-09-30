@@ -1,5 +1,5 @@
 {% import "macros.html" as m %}
-{# Shared application view. Context: app, run, result, comments, can_comment, latest_notice, applicant_view #}
+{# Shared application view. Context: app, run, result, comments, can_comment, latest_notice, applicant_view, unread (optional) #}
 <div class="case">
   <section class="case-image">
     <div class="viewer" data-viewer>
@@ -36,6 +36,7 @@
     <div class="card notice-card">
       <div class="card-title">
         {{ 'Correction request' if app.status != 'rejected' else 'Rejection notice' }}
+        {% if unread is defined and unread.notice %}<span class="pill pill-info pill-xs">New</span>{% endif %}
         <span class="muted">from {{ latest_notice.sent_by.name }} · {{ latest_notice.created_at | dt }}</span>
       </div>
       <pre class="notice-body">{{ latest_notice.body }}</pre>
@@ -56,9 +57,9 @@
 
     <div class="grid-2">
       <div class="card">
-        <div class="card-title">General discussion</div>
+        <div class="card-title">General discussion{% if unread is defined and unread.fields.get('general') %} <span class="pill pill-info pill-xs">{{ unread.fields['general'] }} new</span>{% endif %}</div>
         <div class="thread-host" id="thread-host-general">
-          {% with field='general', comments=comments.get('general', []) %}{% include "partials/thread.html" %}{% endwith %}
+          {% with field='general', comments=comments.get('general', []), unread_ids=(unread.comment_ids if unread is defined else []) %}{% include "partials/thread.html" %}{% endwith %}
         </div>
       </div>
       <div class="card">

@@ -12,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, URLSafeSerializer
 
 from ..engine.extractors import resolve_extractor_name
+from . import services
 from .models import ApplicationStatus
 from .services import FIELD_LABELS
 
@@ -147,6 +148,9 @@ class Renderer:
         context.setdefault("extractor_label", self.extractor_label(request))
         context.setdefault("demo_mode", self.extractor_label(request) == "Demo mode")
         context.setdefault("path", request.url.path)
+        if context["user"] is not None and "unread_total" not in context:
+            with request.app.state.session_factory() as db:
+                context["unread_total"] = services.unread_total(db, context["user"])
         response = self.templates.TemplateResponse(request, name, context, status_code=status_code)
         if flash:
             response.delete_cookie(FLASH_COOKIE)

@@ -23,13 +23,15 @@ def queue(
 ):
     if tab not in services.QUEUE_TABS:
         tab = "open"
+    apps = services.queue(db, tab)
     return renderer(request).page(
         request,
         "specialist/queue.html",
         tab=tab,
         tabs=services.QUEUE_TABS,
-        apps=services.queue(db, tab),
+        apps=apps,
         stats=services.queue_stats(db),
+        unread=services.unread_counts(db, user, [a.id for a in apps]),
     )
 
 
@@ -56,19 +58,22 @@ def review(
     user: User = Depends(require_specialist),
 ):
     app = load_application(db, app_id, user)
-    if services.claim_for_review(db, app, user):
-        db.commit()
+    services.claim_for_review(db, app, user)
+    unread = services.unread_for(app, user, services.mark_seen(db, app, user))
+    db.commit()
     run = app.latest_run
+    result = services.result_of(run)
     return renderer(request).page(
         request,
         "specialist/review.html",
         app=app,
         run=run,
-        result=services.result_of(run),
+        result=result,
         comments=services.comments_by_field(app),
         can_comment=not app.is_decided,
         latest_notice=app.notices[-1] if app.notices else None,
-        flagged=services.flagged_fields(services.result_of(run)) if services.result_of(run) else [],
+        flagged=services.flagged_fields(result) if result else [],
+        unread=unread,
     )
 
 

@@ -193,6 +193,67 @@ class TestLifecycle:
             services.add_comment(db, app, sarah, "nope", "x")
 
 
+class TestUnreadActivity:
+    def test_other_partys_comments_are_unread_until_the_page_is_opened(self, db, users):
+        app, applicant = make_app(db, users)
+        sarah = users["sarah.chen@ttb.gov"]
+        services.submit(db, app, applicant)
+        services.add_comment(db, app, sarah, "brand_name", "Please confirm the apostrophe.")
+        services.add_comment(db, app, sarah, "general", "Also, which panel is the front?")
+        services.add_comment(db, app, applicant, "general", "The left one.")
+        db.commit()
+
+        # The applicant has never opened it: both of Sarah's comments are new, their own is not.
+        unread = services.unread_for(app, applicant, services.last_seen(db, app, applicant))
+        assert unread.count == 2 and unread.fields == {"brand_name": 1, "general": 1}
+        assert services.unread_counts(db, applicant, [app.id]) == {app.id: 2}
+        assert services.unread_total(db, applicant) == 1
+
+        # Opening the page marks it seen; the first call reports there was no earlier visit.
+        assert services.mark_seen(db, app, applicant) is None
+        db.commit()
+        assert not services.unread_for(app, applicant, services.last_seen(db, app, applicant))
+        assert services.unread_counts(db, applicant, [app.id]) == {}
+
+        # A later reply from the specialist is new again; the applicant's own reply never is.
+        services.add_comment(db, app, sarah, "brand_name", "Thanks, resolved.")
+        db.commit()
+        assert services.unread_counts(db, applicant, [app.id]) == {app.id: 1}
+        assert services.unread_counts(db, sarah, [app.id]) == {app.id: 1}  # "The left one."
+
+    def test_decisions_and_resubmissions_notify_the_other_side(self, db, users):
+        app, applicant = make_app(db, users, "old-tom-title-case-warning")
+        sarah = users["sarah.chen@ttb.gov"]
+        services.submit(db, app, applicant)
+        db.commit()
+        # A submission is queue work, not a message: nothing is unread for the specialist.
+        assert services.unread_counts(db, sarah, [app.id]) == {}
+
+        draft = services.draft_correction(app, use_ai=False)
+        services.decide(db, app, sarah, "request_correction", notice_body=draft.body)
+        db.commit()
+        unread = services.unread_for(app, applicant, None)
+        assert unread.notice and unread.status and unread.fields  # notice + field comments
+        services.mark_seen(db, app, applicant)
+        db.commit()
+
+        services.resubmit(
+            db,
+            app,
+            applicant,
+            services.to_application_data(app),
+            DemoExtractor(),
+            message="Fixed the heading.",
+        )
+        db.commit()
+        # The resubmission itself plus the applicant's message that came with it.
+        assert services.unread_counts(db, sarah, [app.id]) == {app.id: 2}
+        services.mark_seen(db, app, sarah)
+        services.decide(db, app, sarah, "approve")
+        db.commit()
+        assert services.unread_counts(db, applicant, [app.id]) == {app.id: 1}
+
+
 class TestLabelSets:
     def test_front_and_back_panels_are_one_version(self, db, users):
         applicant = users["labels@oldtomdistillery.com"]

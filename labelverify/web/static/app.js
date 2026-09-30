@@ -374,11 +374,43 @@
   function decisionPanel() {
     const host = $("#notice-host");
     if (!host) return;
-    document.addEventListener("fetch:done", () => {
-      const ready = !!$("#notice-host textarea");
-      $("#send-correction").disabled = !ready;
+    const original = host.innerHTML; // the explanatory text shown before any draft exists
+    const syncSend = () => { $("#send-correction").disabled = !$("#notice-host textarea"); };
+    document.addEventListener("fetch:done", syncSend);
+    // Discard a drafted notice: a mis-click or a change of mind puts the panel back exactly
+    // as it was before generation, and the send button locks again.
+    host.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-notice-discard]");
+      if (!btn) return;
+      const textarea = $("textarea", host);
+      const edited = textarea && textarea.value !== textarea.defaultValue;
+      if (edited && !window.confirm("Discard this draft, including your edits?")) return;
+      host.innerHTML = original;
+      wire(host);
+      syncSend();
+      const draftBtn = $('[data-fetch$="/notice"]');
+      if (draftBtn) draftBtn.focus();
     });
   }
 
-  document.addEventListener("DOMContentLoaded", () => { wire(document); wizard(); decisionPanel(); });
+  // The sidebar badge counts applications with activity the user has not opened yet.
+  // It refreshes quietly so a reply from the other side shows up without a reload.
+  function unreadBadge() {
+    const badges = $$("[data-unread-badge]");
+    if (!badges.length) return;
+    const baseTitle = document.title;
+    const tick = async () => {
+      try {
+        const resp = await fetch("/me/unread", { headers: { Accept: "application/json" } });
+        if (!resp.ok) return;
+        const n = (await resp.json()).applications || 0;
+        badges.forEach((b) => { b.textContent = n; b.hidden = n === 0; });
+        document.title = n ? `(${n}) ${baseTitle}` : baseTitle;
+      } catch (err) { /* offline; try again next tick */ }
+    };
+    setInterval(tick, 30000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => { wire(document); wizard(); decisionPanel(); unreadBadge(); });
 })();

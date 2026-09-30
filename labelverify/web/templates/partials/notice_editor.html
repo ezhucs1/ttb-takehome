@@ -8,6 +8,9 @@
       {% else %}Drafted from the findings{% endif %}
     </span>
     <span class="muted">Edit freely. Nothing is sent until you choose Request correction.</span>
+    <button type="button" class="link-btn notice-discard" data-notice-discard title="Remove this draft and go back to the state before it was generated">
+      <svg class="icon"><use href="#i-x"></use></svg> Discard draft
+    </button>
   </div>
   <input type="hidden" name="notice_source" value="{{ draft.source }}">
   <textarea name="notice_body" rows="16" required>{{ draft.body }}</textarea>

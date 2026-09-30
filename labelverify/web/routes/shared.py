@@ -33,6 +33,12 @@ def healthz(request: Request) -> dict:
     return {"status": "ok", "extractor": renderer(request).extractor_label(request)}
 
 
+@router.get("/me/unread")
+def unread(db: Session = Depends(get_db), user: User = Depends(current_user)) -> dict:
+    """Applications with activity the user has not seen; polled by the sidebar badge."""
+    return {"applications": services.unread_total(db, user)}
+
+
 @router.get("/")
 def home(request: Request, user: User | None = Depends(optional_user)):
     return RedirectResponse(_home_for(user) if user else "/login", status_code=303)

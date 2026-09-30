@@ -164,7 +164,24 @@ and the content is fixed by the engine's findings before any model sees it. That
 safe to hand the wording to a free tier: if the call fails or is rate limited, the
 specialist gets the template, which already lists every finding and fix.
 
-## 9. Bold detection is a reviewed judgment, not a hard fail
+## 9. Unread activity is derived from a "last opened" timestamp, not per-item flags
+
+**Chose:** one row per user and application recording when they last opened it. Anything
+the other party did after that (a comment, a notice, a decision, a resubmission) counts as
+unread. The sidebar badge counts applications with unread activity and refreshes every
+thirty seconds; list rows carry a dot; comments and notices are marked "New" on the page
+that consumes them.
+
+**Considered:** a read flag on every comment and notice, updated as the user scrolls; a
+notifications table populated on every action; email.
+
+**Why:** the interviews describe the pain as not knowing something is waiting, not as
+losing track inside a page. One timestamp per user answers "is anything new here" with one
+comparison and never drifts out of sync with the underlying records. A submission is not
+counted for specialists, because it is queue work rather than a message and the queue
+already shows it. Email belongs in production and is listed there.
+
+## 10. Bold detection is a reviewed judgment, not a hard fail
 
 **Chose:** the model reports whether the warning heading looks bolder than the body; a
 "no" or "unsure" produces "needs review", never "mismatch".

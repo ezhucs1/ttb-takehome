@@ -54,7 +54,7 @@ need. Ordered roughly by how soon each would matter.
   panel each field was read from.
 - **COLA integration.** Out of scope per the brief. The `Application` record mirrors the
   Form 5100.31 fields so an import from COLAs Online would be a mapping exercise.
-- **Notifications.** Applicants see correction requests on their dashboard but receive no
-  email. Add email on status changes.
+- **Notifications.** Both roles see in-app badges and "New" markers for activity they have
+  not opened, but nothing leaves the app. Add email on status changes and on replies.
 - **Accessibility.** Semantic markup and keyboard-operable controls, but no formal
   Section 508 audit yet.
