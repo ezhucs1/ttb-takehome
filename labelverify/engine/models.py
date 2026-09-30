@@ -116,7 +116,8 @@ class WordDiff(BaseModel):
     """One token of a word-level diff, used to render the warning statement comparison."""
 
     op: str = Field(description="'equal', 'missing', or 'extra'")
-    text: str
+    text: str = Field(description="Normalized token used for the comparison.")
+    display: str = Field(default="", description="The word as printed, for rendering.")
 
 
 class FieldResult(BaseModel):

@@ -1,0 +1,55 @@
+{% set rec = result.recommendation.value %}
+<div class="banner banner-{{ rec }}">
+  <div class="banner-title">
+    {% if rec == "approve" %}All fields match. Recommend approval.
+    {% elif rec == "needs_review" %}Needs a specialist's eye.
+    {% else %}Corrections needed before approval.
+    {% endif %}
+  </div>
+  <div class="banner-meta">
+    Read by {{ result.extractor }} in {{ result.extraction_ms }} ms, total {{ result.total_ms }} ms
+  </div>
+</div>
+
+{% if result.summary %}
+<ul class="summary">
+  {% for line in result.summary %}<li>{{ line }}</li>{% endfor %}
+</ul>
+{% endif %}
+
+<table class="fields">
+  <thead>
+    <tr><th>Field</th><th>Application</th><th>On the label</th><th>Result</th></tr>
+  </thead>
+  <tbody>
+  {% for f in result.fields %}
+    <tr class="verdict-{{ f.verdict.value }}">
+      <th scope="row">{{ f.label }}</th>
+      <td>{% if f.field == "health_warning" %}<span class="muted">Required statutory text</span>{% else %}{{ f.application_value or "—" }}{% endif %}</td>
+      <td>
+        {% if f.field == "health_warning" and f.diff %}
+          <div class="diff">
+            {% for d in f.diff %}<span class="d-{{ d.op }}">{{ d.display or d.text }}</span> {% endfor %}
+          </div>
+          {% if f.label_value %}<details><summary>As printed</summary><p class="mono">{{ f.label_value }}</p></details>{% endif %}
+        {% else %}
+          {{ f.label_value if f.label_value else "not found" }}
+        {% endif %}
+      </td>
+      <td>
+        <span class="badge badge-{{ f.verdict.value }}">
+          {% if f.verdict.value == "match" %}Match
+          {% elif f.verdict.value == "needs_review" %}Review
+          {% elif f.verdict.value == "mismatch" %}Mismatch
+          {% else %}N/A{% endif %}
+        </span>
+        <div class="reason">{{ f.reason }}</div>
+        {% for n in f.notes %}<div class="note">{{ n }}</div>{% endfor %}
+        {% if f.verdict.value != "not_applicable" and f.confidence %}
+        <div class="confidence">Read confidence {{ (f.confidence * 100) | round | int }}%</div>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>

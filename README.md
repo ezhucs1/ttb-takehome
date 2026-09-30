@@ -4,21 +4,49 @@ AI-assisted alcohol label verification for TTB COLA review. An applicant uploads
 artwork and application data, the engine reads the label and compares it field by field
 against the application, and a labeling specialist reviews the result and decides.
 
-This repository currently contains the **verification engine and its tests**. The web
-application (applicant and specialist workflows, batch upload) is built on top of it.
+**Status:** the verification engine, its tests, and the single-label check screen are done.
+The applicant and specialist workflows and batch upload are next.
 
-## Setup
+## Run it
 
 Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv venv && uv pip install -e ".[dev]"
-cp .env.example .env            # add ANTHROPIC_API_KEY for the vision extractor
-.venv/bin/python -m pytest      # 123 tests, runs offline
+cp .env.example .env                                   # optional: add ANTHROPIC_API_KEY
+.venv/bin/uvicorn labelverify.web.app:app --reload     # http://127.0.0.1:8000
 ```
 
+Open http://127.0.0.1:8000, click a sample label, and press **Check label**.
+
+**Without an API key** the app runs in demo mode: the seven bundled sample labels work
+end to end (clean, title-case warning, ABV mismatch, case-only brand difference, import,
+missing warning, angled photo), but your own images are refused with a clear message.
+
+**With `ANTHROPIC_API_KEY` set** the vision extractor reads any label you upload. The
+result banner shows extraction time so you can check it against the five-second budget.
+
 Optional: install the `tesseract` binary (`apt install tesseract-ocr` or `brew install tesseract`)
-to enable the local OCR fallback.
+and set `LABELVERIFY_EXTRACTOR=tesseract` to run the local OCR fallback.
+
+### Docker
+
+```bash
+docker build -t labelverify .
+docker run -p 8000:8000 -e ANTHROPIC_API_KEY=... labelverify
+```
+
+### Tests
+
+```bash
+.venv/bin/python -m pytest      # 144 tests, run offline with a fake API client
+.venv/bin/ruff check .          # lint
+```
+
+### JSON API
+
+`POST /api/verify` with multipart fields `image` (file) or `sample_id`, plus
+`application` (the JSON below as a string). Interactive docs at `/api/docs`.
 
 ## Try the engine from the command line
 
@@ -85,7 +113,7 @@ own; the specialist always decides.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `LABELVERIFY_EXTRACTOR` | `claude` | `claude` or `tesseract` |
+| `LABELVERIFY_EXTRACTOR` | `claude` if a key is set, else `demo` | `claude`, `tesseract`, or `demo` |
 | `ANTHROPIC_API_KEY` | | Required for the `claude` extractor |
 | `LABELVERIFY_MODEL` | `claude-opus-5-5` | Swap to `claude-haiku-4-5` if latency measures over budget |
 | `LABELVERIFY_EXTRACT_TIMEOUT` | `20` | Seconds before an extraction call is abandoned |
@@ -102,6 +130,11 @@ labelverify/
     compare.py            per-field comparison rules and roll-up
     preprocess.py         image preparation
     verify.py             orchestration with timing and fallback
-    extractors/           claude (vision model), tesseract (local OCR), fixture (tests)
+    extractors/           claude (vision model), tesseract (local OCR), demo (samples), fixture (tests)
+  samples/                bundled sample labels and their manifest (regenerate: scripts/make_samples.py)
+  web/
+    app.py                FastAPI routes: check screen, JSON API, sample images
+    templates/            Jinja2 pages and result partial
+    static/               stylesheet and the small script that submits the form
 tests/                    pytest suite, runs offline with a fake API client
 ```

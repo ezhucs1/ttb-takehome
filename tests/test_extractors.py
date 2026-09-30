@@ -141,9 +141,15 @@ class TestTesseractClassification:
 
 
 class TestRegistry:
-    def test_default_is_claude(self, monkeypatch):
+    def test_default_is_claude_when_a_key_is_configured(self, monkeypatch):
         monkeypatch.delenv("LABELVERIFY_EXTRACTOR", raising=False)
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
         assert get_extractor().name == "claude"
+
+    def test_default_is_demo_without_a_key(self, monkeypatch):
+        monkeypatch.delenv("LABELVERIFY_EXTRACTOR", raising=False)
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        assert get_extractor().name == "demo"
 
     def test_environment_selects_tesseract(self, monkeypatch):
         monkeypatch.setenv("LABELVERIFY_EXTRACTOR", "tesseract")

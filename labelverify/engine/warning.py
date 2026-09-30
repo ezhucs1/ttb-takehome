@@ -41,21 +41,41 @@ def split_heading(text: str) -> tuple[str, str]:
 
 def word_diff(expected: str, actual: str) -> list[WordDiff]:
     """Word-level diff between the statutory body and the label body, for display."""
-    expected_words = normalize_words(expected)
-    actual_words = normalize_words(actual)
+    expected_tokens = _tokens(expected)
+    actual_tokens = _tokens(actual)
+    expected_words = [t for t, _ in expected_tokens]
+    actual_words = [t for t, _ in actual_tokens]
     matcher = difflib.SequenceMatcher(a=expected_words, b=actual_words, autojunk=False)
     diff: list[WordDiff] = []
+
+    def add(op: str, tokens: list[tuple[str, str]]) -> None:
+        diff.extend(WordDiff(op=op, text=t, display=d) for t, d in tokens)
+
     for op, i1, i2, j1, j2 in matcher.get_opcodes():
         if op == "equal":
-            diff.extend(WordDiff(op="equal", text=w) for w in expected_words[i1:i2])
+            add("equal", actual_tokens[j1:j2])  # show the label's own words when they match
         elif op == "delete":
-            diff.extend(WordDiff(op="missing", text=w) for w in expected_words[i1:i2])
+            add("missing", expected_tokens[i1:i2])
         elif op == "insert":
-            diff.extend(WordDiff(op="extra", text=w) for w in actual_words[j1:j2])
+            add("extra", actual_tokens[j1:j2])
         else:  # replace
-            diff.extend(WordDiff(op="missing", text=w) for w in expected_words[i1:i2])
-            diff.extend(WordDiff(op="extra", text=w) for w in actual_words[j1:j2])
+            add("missing", expected_tokens[i1:i2])
+            add("extra", actual_tokens[j1:j2])
     return diff
+
+
+def _tokens(text: str) -> list[tuple[str, str]]:
+    """(normalized token, word as printed) pairs; punctuation-only words are dropped."""
+    pairs: list[tuple[str, str]] = []
+    for raw in collapse_whitespace(text).split():
+        normalized = normalize_words(raw)
+        if not normalized:
+            continue
+        if len(normalized) == 1:
+            pairs.append((normalized[0], raw))
+        else:  # e.g. "car/truck" normalizes to two tokens; show each as itself
+            pairs.extend((token, token) for token in normalized)
+    return pairs
 
 
 def check_health_warning(extraction: HealthWarningExtraction) -> FieldResult:

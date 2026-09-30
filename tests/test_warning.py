@@ -104,3 +104,12 @@ def test_split_heading():
 
 def test_word_diff_identical_bodies():
     assert all(d.op == "equal" for d in word_diff(STATUTORY_BODY, STATUTORY_BODY))
+
+
+def test_word_diff_keeps_words_as_printed_for_display():
+    printed = STATUTORY_BODY.upper().replace("MAY CAUSE HEALTH PROBLEMS", "CAN CAUSE HEALTH ISSUES")
+    diff = word_diff(STATUTORY_BODY, printed)
+    assert diff[0].display == "(1)" and diff[0].text == "1"
+    assert [d.display for d in diff if d.op == "extra"] == ["CAN", "ISSUES."]
+    assert [d.display for d in diff if d.op == "missing"] == ["may", "problems."]
+    assert any(d.display == "ACCORDING" for d in diff if d.op == "equal")
