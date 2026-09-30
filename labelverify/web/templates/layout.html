@@ -42,18 +42,12 @@
     </a>
     <nav class="nav">
       {% if user.role == 'specialist' %}
-      <a class="nav-item {% if path == '/specialist' %}active{% endif %}" href="/specialist">
+      <a class="nav-item {% if path == '/specialist' or path.startswith('/specialist/applications') %}active{% endif %}" href="/specialist">
         <svg class="icon"><use href="#i-inbox"></use></svg> Review queue
       </a>
       <a class="nav-item {% if path == '/inbox' %}active{% endif %}" href="/inbox">
         <svg class="icon"><use href="#i-bell"></use></svg> Inbox
         <span class="nav-badge" data-unread-badge title="Inbox items you have not read" {% if not unread_total %}hidden{% endif %}>{{ unread_total or 0 }}</span>
-      </a>
-      <a class="nav-item {% if path.startswith('/specialist/applications') %}active{% endif %}" href="/specialist?tab=review">
-        <svg class="icon"><use href="#i-alert"></use></svg> Needs a look
-      </a>
-      <a class="nav-item" href="/specialist?tab=decided">
-        <svg class="icon"><use href="#i-check"></use></svg> Decided
       </a>
       {% else %}
       <a class="nav-item {% if path == '/applicant' or path.startswith('/applicant/applications/') and not path.endswith('/new') %}active{% endif %}" href="/applicant">

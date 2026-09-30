@@ -14,7 +14,7 @@
   {{ m.stat('Ready to approve', stats.ready, 'success', '/specialist?tab=ready', tab == 'ready') }}
   {{ m.stat('Needs a look', stats.review, 'warning', '/specialist?tab=review', tab == 'review') }}
   {{ m.stat('Awaiting applicant', stats.corrections, 'neutral', '/specialist?tab=corrections', tab == 'corrections') }}
-  {{ m.stat('Approved today', stats.approved_today, 'success') }}
+  {{ m.stat('Decided today', stats.decided_today, 'success', '/specialist?tab=decided', tab == 'decided') }}
 </div>
 
 <div class="card card-flush">

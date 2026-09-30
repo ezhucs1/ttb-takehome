@@ -32,6 +32,7 @@ from ..engine.notices import NoticeDraft, draft_notice, flagged_fields
 from ..engine.preprocess import UnreadableImageError, prepare_image
 from ..engine.verify import run_verification
 from .models import (
+    DECIDED_STATUSES,
     ActivityRead,
     Application,
     ApplicationStatus,
@@ -809,7 +810,7 @@ class QueueStats:
     ready: int
     review: int
     corrections: int
-    approved_today: int
+    decided_today: int
 
 
 QUEUE_TABS = {
@@ -905,8 +906,9 @@ def queue_stats(db: Session) -> QueueStats:
             Application.recommendation != Recommendation.APPROVE.value,
         ),
         corrections=count(Application.status == ApplicationStatus.CORRECTION_REQUESTED.value),
-        approved_today=count(
-            Application.status == ApplicationStatus.APPROVED.value, Application.decided_at >= today
+        decided_today=count(
+            Application.status.in_([s.value for s in DECIDED_STATUSES]),
+            Application.decided_at >= today,
         ),
     )
 
