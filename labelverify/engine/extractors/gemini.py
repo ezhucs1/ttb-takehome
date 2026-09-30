@@ -40,6 +40,9 @@ BASE = "https://generativelanguage.googleapis.com/v1beta"
 ENDPOINT = BASE + "/models/{model}:generateContent"
 MODELS_ENDPOINT = BASE + "/models?pageSize=200"
 _RETRY_STATUSES = {429, 503}
+# Free-tier keys see "high demand" 503s and per-minute 429s often; back off a few times
+# before giving up. Total added wait is about nine seconds.
+_BACKOFF_SECONDS = (1.5, 3.0, 4.5)
 _SUGGESTED_MODEL_RE = re.compile(r"models/([a-z0-9.\-]+)")
 _STABLE_FLASH_RE = re.compile(r"^gemini-(\d+)(?:\.(\d+))?-flash$")
 _EXCLUDE_WORDS = ("lite", "image", "tts", "live", "audio", "embedding", "thinking", "exp")
@@ -276,13 +279,19 @@ def call_gemini(
     """POST to generateContent with one retry on rate limiting or overload."""
     transport = transport or _http_post
     url = ENDPOINT.format(model=model)
-    for attempt in (1, 2):
+    for attempt in range(len(_BACKOFF_SECONDS) + 1):
         try:
             return transport(url, api_key, payload, timeout)
         except _HttpStatus as exc:
-            if exc.status in _RETRY_STATUSES and attempt == 1:
-                time.sleep(2.0)
-                continue
+            if exc.status in _RETRY_STATUSES:
+                if attempt < len(_BACKOFF_SECONDS):
+                    log.info("gemini: %s, retrying in %.1fs", exc.status, _BACKOFF_SECONDS[attempt])
+                    time.sleep(_BACKOFF_SECONDS[attempt])
+                    continue
+                raise ExtractionError(
+                    f"Gemini is still unavailable after {len(_BACKOFF_SECONDS)} retries: "
+                    f"{_describe_status(exc)}"
+                ) from exc
             if exc.status == 404:
                 raise ModelNotFound(_describe_status(exc), _suggested_model(exc, model)) from exc
             raise ExtractionError(_describe_status(exc)) from exc
@@ -290,7 +299,7 @@ def call_gemini(
             raise ExtractionError("Gemini did not respond within the time limit.") from exc
         except urllib.error.URLError as exc:
             raise ExtractionError(f"Could not reach the Gemini API: {exc.reason}") from exc
-    raise ExtractionError("Gemini is rate limiting this key; try again in a minute.")
+    raise AssertionError("unreachable")  # every path above returns or raises
 
 
 class _HttpStatus(Exception):
@@ -342,6 +351,8 @@ def _describe_status(exc: _HttpStatus) -> str:
         return f"The Gemini API key was rejected. Check GEMINI_API_KEY. {detail}".strip()
     if exc.status == 429:
         return f"Gemini free-tier rate limit reached; wait a minute and retry. {detail}".strip()
+    if exc.status == 503:
+        return f"Gemini is overloaded (high demand on the free tier). {detail}".strip()
     if exc.status == 404:
         return (
             "Gemini model not found. Leave LABELVERIFY_GEMINI_MODEL blank to pick one "

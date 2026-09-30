@@ -91,6 +91,10 @@ Compare extractors on the same label from the command line:
 .venv/bin/python -m labelverify.cli extract labelverify/samples/old-tom-angled-photo.jpg --extractor claude
 .venv/bin/python -m labelverify.cli extract labelverify/samples/old-tom-angled-photo.jpg --extractor gemini
 .venv/bin/python -m labelverify.cli extract ~/Pictures/my-bottle.jpg --extractor gemini   # any photo of yours
+
+# Median latency per extractor on one image (what the five-second budget is measured against)
+.venv/bin/python -m labelverify.cli bench labelverify/samples/old-tom-angled-photo.jpg --extractors claude,gemini --runs 3
+LABELVERIFY_MODEL=claude-haiku-4-5 .venv/bin/python -m labelverify.cli bench labelverify/samples/old-tom-angled-photo.jpg --extractors claude
 ```
 
 ### Sample labels

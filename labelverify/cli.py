@@ -103,6 +103,39 @@ def cmd_extract(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_bench(args: argparse.Namespace) -> int:
+    """Time each extractor on the same image several times; prints per-run and median."""
+    import statistics
+
+    image = _read_file(args.image, "image")
+    prepared = prepare_image(image)
+    names = [n.strip() for n in args.extractors.split(",") if n.strip()]
+    print(f"image: {args.image} ({prepared.width}x{prepared.height} after preprocessing)")
+    print(
+        f"{'extractor':<12} {'model':<24} {'runs':>4} {'median ms':>10} {'min ms':>8} {'max ms':>8}"
+    )
+    for name in names:
+        extractor = get_extractor(name)
+        times: list[int] = []
+        failures: list[str] = []
+        for _ in range(args.runs):
+            started = time.perf_counter()
+            try:
+                extractor.extract(prepared.data, prepared.media_type)
+                times.append(int((time.perf_counter() - started) * 1000))
+            except ExtractionError as exc:
+                failures.append(str(exc))
+        model = getattr(extractor, "model", "")
+        if times:
+            print(
+                f"{name:<12} {model:<24} {len(times):>4} {int(statistics.median(times)):>10} "
+                f"{min(times):>8} {max(times):>8}"
+            )
+        if failures:
+            print(f"{name:<12} {len(failures)} failed run(s): {failures[-1]}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     from dotenv import load_dotenv
 
@@ -132,6 +165,12 @@ def main(argv: list[str] | None = None) -> int:
     extract_p.add_argument("image")
     extract_p.add_argument("--extractor", default=None)
     extract_p.set_defaults(func=cmd_extract)
+
+    bench_p = sub.add_parser("bench", help="Time extractors on one image and print medians.")
+    bench_p.add_argument("image")
+    bench_p.add_argument("--extractors", default="claude,gemini", help="Comma-separated names.")
+    bench_p.add_argument("--runs", type=int, default=3)
+    bench_p.set_defaults(func=cmd_bench)
 
     args = parser.parse_args(argv)
     return args.func(args)

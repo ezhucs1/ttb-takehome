@@ -240,9 +240,21 @@ class TestGeminiExtractor:
                 b"x", "image/png"
             )
 
-    def test_rate_limit_retries_once_then_reports(self, monkeypatch, extraction):
+    def test_rate_limit_retries_with_backoff_then_reports(self, monkeypatch, extraction):
         monkeypatch.setattr("labelverify.engine.extractors.gemini.time.sleep", lambda s: None)
         ok = gemini_response(extraction.model_dump_json())
+        overloaded = _HttpStatus(503, json.dumps({"error": {"message": "high demand"}}))
+        transport = FakeTransport(overloaded, overloaded, overloaded, ok)
+        extractor = GeminiExtractor(api_key="k", model="gemini-3.8-flash", transport=transport)
+        assert extractor.extract(b"x", "image/png") == extraction
+        assert len(transport.calls) == 4
+
+        transport = FakeTransport(overloaded, overloaded, overloaded, overloaded)
+        with pytest.raises(ExtractionError, match="after 3 retries.*overloaded"):
+            GeminiExtractor(api_key="k", model="gemini-3.8-flash", transport=transport).extract(
+                b"x", "image/png"
+            )
+
         transport = FakeTransport(_HttpStatus(429, "{}"), ok)
         assert (
             GeminiExtractor(api_key="k", model="gemini-3.8-flash", transport=transport).extract(
