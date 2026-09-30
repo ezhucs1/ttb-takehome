@@ -57,6 +57,19 @@ proves the workflow does not depend on one endpoint. Demo mode exists so reviewe
 exercise every screen without an API key; it refuses unknown images rather than
 inventing results.
 
+## 4a. A second vision provider (Gemini) behind the same interface
+
+**Chose:** a Gemini extractor that speaks the same ``LabelExtraction`` schema, using the
+REST API through the standard library, selected by ``LABELVERIFY_EXTRACTOR=gemini`` or
+automatically when only a Gemini key is configured.
+
+**Why:** two reasons. The free tier makes it possible to evaluate the tool at zero cost,
+and having two providers proves the extractor boundary is real: the comparison engine,
+workflow, and UI did not change. The same system prompt is shared, so accuracy
+differences come from the model, not the instructions. Free-tier requests may be used by
+the provider for training, so it is for synthetic and public labels, not real
+submissions.
+
 ## 5. Server-rendered HTML with a small script, no front-end framework
 
 **Chose:** FastAPI plus Jinja2 templates, one stylesheet, and about 250 lines of plain

@@ -83,7 +83,7 @@ def draft_notice(
     """Template first; model rewrite when a key is configured and the rewrite succeeds."""
     template = template_notice(application, result, serial=serial, applicant_org=applicant_org)
     if use_ai is None:
-        use_ai = bool(os.environ.get("ANTHROPIC_API_KEY"))
+        use_ai = bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("GEMINI_API_KEY"))
     if not use_ai:
         return NoticeDraft(body=template, source="template")
     try:
@@ -93,7 +93,24 @@ def draft_notice(
     return NoticeDraft(body=body, source="ai")
 
 
+REWRITE_SYSTEM = (
+    "You write correction notices for the TTB labeling division. Rewrite the notice "
+    "below in plain, courteous English for a small business owner. Keep every factual "
+    "finding, every quoted value, and the regulatory citation exactly as given. Keep the "
+    "numbered list. Do not add findings, apologies, or legal threats. Return only the letter."
+)
+
+
 def _ai_rewrite(template: str) -> str:
+    """Anthropic when its key is set, otherwise Gemini; same instructions either way."""
+    if not os.environ.get("ANTHROPIC_API_KEY") and os.environ.get("GEMINI_API_KEY"):
+        from .extractors.gemini import generate_text
+
+        text = generate_text(template, system=REWRITE_SYSTEM)
+        if not text:
+            raise RuntimeError("empty rewrite")
+        return text
+
     import anthropic
 
     client = anthropic.Anthropic(max_retries=1, timeout=20.0)
@@ -101,12 +118,7 @@ def _ai_rewrite(template: str) -> str:
         model=os.environ.get(NOTICE_MODEL_ENV, DEFAULT_NOTICE_MODEL),
         max_tokens=1500,
         output_config={"effort": "low"},
-        system=(
-            "You write correction notices for the TTB labeling division. Rewrite the notice "
-            "below in plain, courteous English for a small business owner. Keep every factual "
-            "finding, every quoted value, and the regulatory citation exactly as given. Keep the "
-            "numbered list. Do not add findings, apologies, or legal threats. Return only the letter."
-        ),
+        system=REWRITE_SYSTEM,
         messages=[{"role": "user", "content": template}],
     )
     if response.stop_reason != "end_turn":

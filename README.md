@@ -77,8 +77,20 @@ to end, and uploading your own image gives a clear message instead of a made-up 
 correction notice is rewritten by the model before the specialist edits it. Every result
 shows extraction time so you can check it against the five-second budget.
 
+**With `GEMINI_API_KEY` instead** the same flow runs on Google Gemini (the free tier is
+enough to try it). Set `LABELVERIFY_EXTRACTOR=gemini` to force it when both keys are
+present. The free tier allows a small number of requests per minute, so batch uploads
+will pace themselves with retries.
+
 Optional: install `tesseract` (`apt install tesseract-ocr` or `brew install tesseract`)
 and set `LABELVERIFY_EXTRACTOR=tesseract` to run the local OCR fallback.
+
+Compare extractors on the same label from the command line:
+
+```bash
+.venv/bin/python -m labelverify.cli extract label.jpg --extractor claude
+.venv/bin/python -m labelverify.cli extract label.jpg --extractor gemini
+```
 
 ### Sample labels
 
@@ -131,7 +143,9 @@ exactly the vendor-pilot failure from the interviews.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `ANTHROPIC_API_KEY` | | Enables the vision extractor and notice rewriting |
-| `LABELVERIFY_EXTRACTOR` | `claude` if a key is set, else `demo` | `claude`, `tesseract`, or `demo` |
+| `GEMINI_API_KEY` | | Enables the Gemini extractor (and notice rewriting when no Anthropic key) |
+| `LABELVERIFY_GEMINI_MODEL` | `gemini-2.5-flash` | Gemini model for extraction |
+| `LABELVERIFY_EXTRACTOR` | `claude`, else `gemini`, else `demo`, by which key is set | `claude`, `gemini`, `tesseract`, or `demo` |
 | `LABELVERIFY_MODEL` | `claude-opus-5-5` | Extraction model; swap to `claude-haiku-4-5` if latency measures over budget |
 | `LABELVERIFY_NOTICE_MODEL` | `claude-opus-5-5` | Model that rewrites correction notices |
 | `LABELVERIFY_EXTRACT_TIMEOUT` | `20` | Seconds before an extraction call is abandoned |
@@ -150,7 +164,7 @@ labelverify/
     preprocess.py         EXIF rotation, 1500 px downscale, JPEG re-encode
     notices.py            correction notice template and optional model rewrite
     verify.py             orchestration with timing and fallback
-    extractors/           claude (vision), tesseract (local OCR), demo (samples), fixture (tests)
+    extractors/           claude and gemini (vision), tesseract (local OCR), demo (samples), fixture (tests)
   web/
     app.py                FastAPI factory, session middleware, error handlers
     models.py             SQLAlchemy tables: users, applications, images, runs, comments, events, notices, batches

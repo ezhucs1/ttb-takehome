@@ -105,7 +105,11 @@ def main(argv: list[str] | None = None) -> int:
     verify_p.add_argument(
         "--application", required=True, help="Path to an ApplicationData JSON file."
     )
-    verify_p.add_argument("--extractor", default=None, help="claude (default) or tesseract.")
+    verify_p.add_argument(
+        "--extractor",
+        default=None,
+        help="claude, gemini, tesseract, or demo (default: by configured key).",
+    )
     verify_p.add_argument(
         "--fallback",
         action="store_true",

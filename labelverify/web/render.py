@@ -63,6 +63,7 @@ VERDICT_LABELS = {
 
 EXTRACTOR_LABELS = {
     "claude": "Claude vision model",
+    "gemini": "Gemini vision model",
     "tesseract": "Local OCR (Tesseract)",
     "demo": "Demo mode",
     "fixture": "Test fixture",
