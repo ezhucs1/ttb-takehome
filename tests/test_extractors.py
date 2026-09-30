@@ -74,6 +74,13 @@ class TestClaudeExtractor:
         assert ExtractedField(value="x", confidence=1.4).confidence == 1.0
         assert ExtractedField(value="x", confidence=-0.2).confidence == 0.0
 
+    def test_haiku_is_called_without_effort(self, extraction: LabelExtraction):
+        response = SimpleNamespace(stop_reason="end_turn", parsed_output=extraction)
+        client, messages = fake_client(response)
+        ClaudeExtractor(client, model="claude-haiku-4-5").extract(b"x", "image/jpeg")
+        assert "output_config" not in messages.calls[0]
+        assert messages.calls[0]["model"] == "claude-haiku-4-5"
+
     def test_refusal_raises_extraction_error(self):
         client, _ = fake_client(SimpleNamespace(stop_reason="refusal", parsed_output=None))
         with pytest.raises(ExtractionError, match="declined"):

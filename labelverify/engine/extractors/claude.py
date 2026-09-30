@@ -17,7 +17,9 @@ import anthropic
 from ..models import LabelExtraction
 from .base import ExtractionError, Panel
 
-DEFAULT_MODEL = "claude-opus-5-5"
+# Measured on the angled-photo sample from a home connection: Opus 5.5 read it correctly in
+# 6.0 s, Sonnet 5.5 in 4.1 s (median of 3). The brief's budget is 5 s, so Sonnet is the default.
+DEFAULT_MODEL = "claude-sonnet-5-5"
 DEFAULT_TIMEOUT_SECONDS = 20.0
 
 SYSTEM_PROMPT = """You are assisting a TTB labeling specialist. You will be shown one or more images of the same alcohol beverage product's labels: typically the front label, and sometimes the back or neck label, as artwork or as photographs of the container. Read every image carefully and report exactly what is printed, combining the panels into one answer.
@@ -39,6 +41,11 @@ Rules:
 - image_quality.readable is false when substantial parts of the label text cannot be read. List concrete issues such as "glare across the bottom third of the front label" or "back label photographed at a steep angle"."""
 
 USER_PROMPT = "Extract the required TTB label fields from {what}."
+
+
+def supports_effort(model: str) -> bool:
+    """Haiku 4.5 rejects ``output_config.effort``; the Sonnet and Opus lines accept it."""
+    return "haiku" not in model.lower()
 
 
 class ClaudeExtractor:
@@ -92,15 +99,17 @@ class ClaudeExtractor:
     def extract_panels(self, panels: Sequence[Panel]) -> LabelExtraction:
         if not panels:
             raise ExtractionError("No label images were provided.")
+        request: dict = dict(
+            model=self.model,
+            max_tokens=8192,
+            system=SYSTEM_PROMPT,
+            messages=self.build_messages(panels),
+            output_format=LabelExtraction,
+        )
+        if supports_effort(self.model):
+            request["output_config"] = {"effort": self.effort}
         try:
-            response = self.client.messages.parse(
-                model=self.model,
-                max_tokens=8192,
-                system=SYSTEM_PROMPT,
-                messages=self.build_messages(panels),
-                output_format=LabelExtraction,
-                output_config={"effort": self.effort},
-            )
+            response = self.client.messages.parse(**request)
         except anthropic.APITimeoutError as exc:
             raise ExtractionError("The model did not respond within the time limit.") from exc
         except anthropic.APIConnectionError as exc:
