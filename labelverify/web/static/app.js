@@ -483,8 +483,9 @@
     $("[data-label-read]", panel).innerHTML = items.map((i) => {
       const value = lastRead[i.field];
       const mark = i.requirement === "required" ? '<span class="req" title="Required">*</span>' : "";
+      const shown = value && value.length > 48 ? value.slice(0, 48).trimEnd() + "…" : value;
       const found = value
-        ? `<span class="read-found">&#10003; ${esc(value)}</span>`
+        ? `<span class="read-found" title="${esc(value)}">&#10003; ${esc(shown)}</span>`
         : i.requirement === "required"
           ? '<span class="read-missing">not found on the label</span>'
           : '<span class="muted">not on the label</span>';

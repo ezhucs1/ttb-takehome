@@ -9,7 +9,7 @@
 {%- endmacro %}
 
 {% macro verdict_badge(verdict, uncertain=False) -%}
-<span class="badge badge-{{ verdict }}">{{ VERDICT_LABELS.get(verdict, verdict) }}</span>{% if uncertain %} <span class="badge badge-uncertain" title="The values agree, but the read was low confidence">unverified read</span>{% endif %}
+<span class="badge badge-{{ verdict }}">{{ VERDICT_LABELS.get(verdict, verdict) }}</span>{% if uncertain %} <span class="badge badge-uncertain" title="The values agree, but the reader was not confident of its transcription; check the image">uncertain read</span>{% endif %}
 {%- endmacro %}
 
 {% macro avatar(user, size='') -%}

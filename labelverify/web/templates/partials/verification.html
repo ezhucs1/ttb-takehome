@@ -26,7 +26,7 @@
     </span>
   </div>
   <div class="banner-meta">
-    {% if result.rules_part %}<span title="Rules applied"><a href="/rules" class="banner-link">{{ BEVERAGE_LABELS.get(result.beverage_type, 'Type unknown') }} · 27 CFR part {{ result.rules_part }}</a>{% if result.beverage_type_inferred %} · type taken from the label{% endif %}</span>{% endif %}
+    {% if result.rules_part %}<span title="Rules applied"><a href="/rules" class="banner-link" target="_blank" rel="noopener">{{ BEVERAGE_LABELS.get(result.beverage_type, 'Type unknown') }} · 27 CFR part {{ result.rules_part }}</a>{% if result.beverage_type_inferred %} · type taken from the label{% endif %}</span>{% endif %}
     <span title="Extractor">{{ result.extractor }}</span>
     <span title="Extraction time">{{ result.extraction_ms }} ms read{% if result.reused_read %} (reused from upload){% endif %} · {{ result.total_ms }} ms compare</span>
   </div>
@@ -36,7 +36,7 @@
 <div class="banner banner-warn ocr-banner">
   <div class="banner-main">
     <strong>Read with local OCR{% if 'fallback' in result.extractor %}: the vision model was unavailable{% endif %}.</strong>
-    <span>Every value was read by Tesseract at low confidence. Rows marked <em>unverified read</em> agree with the application but need a look at the image; the field assignment can be wrong, so a mismatch here may be the reader, not the label.</span>
+    <span>Every value was read by Tesseract at low confidence. Rows marked <em>uncertain read</em> agree with the application but need a look at the image; the field assignment can be wrong, so a mismatch here may be the reader, not the label.</span>
   </div>
 </div>
 {% endif %}

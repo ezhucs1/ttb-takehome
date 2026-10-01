@@ -17,9 +17,14 @@ from ..models import ExtractedField, HealthWarningExtraction, ImageQuality, Labe
 from ..normalize import STATE_NAMES, VOLUME_RE
 from .base import ExtractionError, Panel
 
+# The full statement first; the shorter ending only when OCR lost the last words. One
+# pattern with both endings stops at "machinery" whenever "health problems." sits on
+# the next line, which is how most labels wrap it.
 _WARNING_RE = re.compile(
-    r"government\s+warning\s*:?.*?(?:health\s+problems\.?|machinery[^\n]*)",
-    re.IGNORECASE | re.DOTALL,
+    r"government\s+warning\s*:?.*?health\s+problems\.?", re.IGNORECASE | re.DOTALL
+)
+_WARNING_CUT_RE = re.compile(
+    r"government\s+warning\s*:?.*?machinery[^\n]*", re.IGNORECASE | re.DOTALL
 )
 _ALCOHOL_RE = re.compile(
     r"(?:alc(?:ohol)?\.?\s*)?\d{1,2}(?:[.,]\d{1,2})?\s*%\s*(?:alc(?:ohol)?\.?(?:\s*/\s*|\s+by\s+|\s*)vol(?:ume)?\.?|abv)?"
@@ -373,7 +378,7 @@ def _first_match(pattern: re.Pattern[str], text: str) -> str | None:
 
 
 def _extract_warning(text: str) -> HealthWarningExtraction:
-    m = _WARNING_RE.search(text)
+    m = _WARNING_RE.search(text) or _WARNING_CUT_RE.search(text)
     if not m:
         return HealthWarningExtraction(present=False, confidence=0.0)
     statement = re.sub(r"\s+", " ", m.group(0)).strip()

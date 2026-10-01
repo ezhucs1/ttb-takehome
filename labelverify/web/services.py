@@ -308,9 +308,7 @@ def label_carries(extraction: LabelExtraction) -> dict[str, str | None]:
         for item, attr in LABEL_ONLY_ITEMS.items()
     }
     warning = extraction.health_warning
-    found["health_warning"] = (
-        (warning.text or "GOVERNMENT WARNING")[:40].rstrip() + "…" if warning.present else None
-    )
+    found["health_warning"] = (warning.text or "GOVERNMENT WARNING") if warning.present else None
     return found
 
 

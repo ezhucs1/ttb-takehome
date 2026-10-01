@@ -492,7 +492,7 @@ kicker above the brand, and the form had been filled from that read, so the comp
 agreed with itself.
 
 Two changes. The gate now keeps the verdict the comparison found and marks the row
-"unverified read"; the roll-up still sends the application to review and the summary
+"uncertain read"; the roll-up still sends the application to review and the summary
 says how many matching rows came from a poor read. A table of identical values that says
 "match, unverified" is honest about what was compared; a table that says "review" on every
 row is not, and it hid the real mismatches among them. A genuine difference on a poor read

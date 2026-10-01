@@ -194,7 +194,7 @@ panel and dark labels are read inverted:
 | Warning present | 13 of 14 | the word-for-word check still runs on what was read |
 
 About one second per label. Every OCR value is reported at low confidence, so the rows
-that agree with the application show "match · unverified read", the ones that differ show
+that agree with the application show "match · uncertain read", the ones that differ show
 a mismatch, and the application goes to review either way. The form in step 2 is filled
 from the read: correct the fields that are wrong before checking, exactly as you would
 check a model read against your application.
@@ -344,6 +344,7 @@ application. No model is involved in the comparison step.
 
 - [docs/decisions.md](docs/decisions.md): engineering decisions with alternatives and reasoning
 - [docs/production.md](docs/production.md): what a production deployment would need (identity, FedRAMP, firewall, storage, evaluation)
+- `docs/user-guide.md`: how each role uses the app, screen by screen, and what every tag, badge, and symbol on the result means.
 
 ## Assumptions and limitations
 
