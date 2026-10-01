@@ -452,7 +452,9 @@
     // Items printed on the label that are not entered here.
     const panel = $("#label-read");
     if (!panel) return;
-    const items = (chosen ? chosen.checklist : []).filter((i) => !FORM_ITEMS.includes(i.field) && i.checked_by === "engine");
+    const items = (chosen ? chosen.checklist : [])
+      .filter((i) => !FORM_ITEMS.includes(i.field) && i.checked_by === "engine")
+      .sort((a, b) => (a.requirement === "required" ? 0 : 1) - (b.requirement === "required" ? 0 : 1));
     if (!chosen || !items.length || !Object.keys(lastRead).length) { panel.hidden = true; return; }
     $("[data-label-read]", panel).innerHTML = items.map((i) => {
       const value = lastRead[i.field];
@@ -462,12 +464,11 @@
         : i.requirement === "required"
           ? '<span class="read-missing">not found on the label</span>'
           : '<span class="muted">not on the label</span>';
-      return `<li><span class="label-read-name">${esc(i.label)}${mark}</span>${found}<span class="cite" title="${esc(i.note || "")}">${esc(i.citation)}</span></li>`;
+      const tip = `${i.citation}${i.note ? " · " + i.note : ""}`;
+      return `<li title="${esc(tip)}"><span class="label-read-name">${esc(i.label)}${mark}</span>${found}</li>`;
     }).join("");
-    $("[data-label-read-note]", panel).textContent =
-      `${chosen.name}, 27 CFR part ${chosen.part}. ` +
-      (typeSource === "label" ? "The type was detected from the label; change it above if that is wrong. " : "") +
-      "Run the check below to compare everything against the rules.";
+    $("[data-label-read-note]", panel).innerHTML =
+      `<span class="req">*</span> required for ${esc(chosen.name.toLowerCase())}. See <a href="/rules" target="_blank" rel="noopener">Reference</a> for the rule behind each item.`;
     panel.hidden = false;
   }
 

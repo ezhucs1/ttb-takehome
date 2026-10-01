@@ -547,8 +547,7 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--acce
 .label-read-head .eyebrow { margin: 0; }
 .label-read ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 18px; }
 @media (max-width: 800px) { .label-read ul { grid-template-columns: 1fr; } }
-.label-read li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: 0.86rem; }
-.label-read li .cite { margin: 0; }
+.label-read li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: 0.88rem; }
 .label-read-name { font-weight: 600; }
 .label-read .req { color: var(--danger-fg); font-weight: 700; margin-left: 2px; }
 .label-read .read-found { color: var(--success-fg); }
