@@ -32,3 +32,14 @@ def test_missing_file_is_a_friendly_error(monkeypatch):
     with pytest.raises(SystemExit) as stop:
         main(["extract", "no-such-label.jpg"])
     assert "no-such-label.jpg" in str(stop.value) and "hint" in str(stop.value)
+
+
+def test_extract_reports_panel_sizes_and_honours_timeout_flag(capsys, monkeypatch):
+    monkeypatch.delenv("LABELVERIFY_EXTRACT_TIMEOUT", raising=False)
+    front = str(SAMPLES_DIR / "old-tom-bourbon.jpg")
+    assert main(["extract", front, "--extractor", "demo", "--timeout", "90"]) == 0
+    err = capsys.readouterr().err
+    assert "# panel 1:" in err and "KB sent" in err
+    import os
+
+    assert os.environ["LABELVERIFY_EXTRACT_TIMEOUT"] == "90.0"

@@ -144,8 +144,13 @@ Compare extractors on the same label from the command line:
 
 # Median latency per extractor on one image (what the five-second budget is measured against)
 .venv/bin/python -m labelverify.cli bench labelverify/samples/old-tom-angled-photo.jpg --extractors claude,gemini --runs 3
-LABELVERIFY_MODEL=claude-haiku-4-5 .venv/bin/python -m labelverify.cli bench labelverify/samples/old-tom-angled-photo.jpg --extractors claude
+.venv/bin/python -m labelverify.cli bench labelverify/samples/old-tom-angled-photo.jpg --extractors claude --model claude-haiku-4-5
+# A read that times out: wait longer to learn the real latency, then decide what to change
+.venv/bin/python -m labelverify.cli bench front.jpg back.jpg --extractors claude --runs 3 --timeout 120
 ```
+
+Both commands print each panel's size after preprocessing and, on a failed read, how long they
+waited. `--timeout` and `--model` apply to that run only and override `.env`.
 
 ### Sample labels
 

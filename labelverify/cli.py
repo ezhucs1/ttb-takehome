@@ -85,16 +85,38 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
 
 def _prepared_panels(paths: list[str]) -> list[tuple[bytes, str]]:
-    """Front, back, neck: every image given, prepared, as one label set."""
+    """Front, back, neck: every image given, prepared, as one label set.
+
+    Prints what each panel became after preprocessing, so a slow read can be told apart
+    from an oversized upload.
+    """
     panels = []
-    for path in paths:
+    for n, path in enumerate(paths, start=1):
         prepared = prepare_image(_read_file(path, "image"))
+        print(
+            f"# panel {n}: {prepared.width}x{prepared.height} px, "
+            f"{len(prepared.data) // 1024} KB sent "
+            f"(original {prepared.original_width}x{prepared.original_height})",
+            file=sys.stderr,
+        )
         panels.append((prepared.data, prepared.media_type))
     return panels
 
 
+def _apply_overrides(args: argparse.Namespace) -> None:
+    """--timeout and --model win over .env for this run only."""
+    import os
+
+    if getattr(args, "timeout", None):
+        os.environ["LABELVERIFY_EXTRACT_TIMEOUT"] = str(args.timeout)
+    if getattr(args, "model", None):
+        os.environ["LABELVERIFY_MODEL"] = args.model
+
+
 def cmd_extract(args: argparse.Namespace) -> int:
+    _apply_overrides(args)
     extractor = get_extractor(args.extractor)
+    started = time.perf_counter()
     try:
         panels = _prepared_panels(args.images)
         started = time.perf_counter()
@@ -104,7 +126,9 @@ def cmd_extract(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     except ExtractionError as exc:
+        waited_ms = int((time.perf_counter() - started) * 1000)
         print(f"error: extraction failed: {exc}", file=sys.stderr)
+        print(f"# {extractor.name}: gave up after {waited_ms} ms", file=sys.stderr)
         return 3
     print(json.dumps(extraction.model_dump(mode="json"), indent=2))
     print(f"\n# {extractor.name}: {elapsed_ms} ms for {len(panels)} image(s)", file=sys.stderr)
@@ -115,6 +139,7 @@ def cmd_bench(args: argparse.Namespace) -> int:
     """Time each extractor on the same image several times; prints per-run and median."""
     import statistics
 
+    _apply_overrides(args)
     try:
         panels = _prepared_panels(args.images)
     except UnreadableImageError as exc:
@@ -135,7 +160,8 @@ def cmd_bench(args: argparse.Namespace) -> int:
                 extractor.extract_panels(panels)
                 times.append(int((time.perf_counter() - started) * 1000))
             except ExtractionError as exc:
-                failures.append(str(exc))
+                waited_ms = int((time.perf_counter() - started) * 1000)
+                failures.append(f"{exc} (gave up after {waited_ms} ms)")
         model = getattr(extractor, "model", "")
         if times:
             print(
@@ -145,6 +171,19 @@ def cmd_bench(args: argparse.Namespace) -> int:
         if failures:
             print(f"{name:<12} {len(failures)} failed run(s): {failures[-1]}")
     return 0
+
+
+def _add_model_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=None,
+        help="Seconds to wait for a one-panel read (LABELVERIFY_EXTRACT_TIMEOUT); "
+        "each extra panel adds half again.",
+    )
+    parser.add_argument(
+        "--model", default=None, help="Model for the claude extractor (LABELVERIFY_MODEL)."
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -175,12 +214,14 @@ def main(argv: list[str] | None = None) -> int:
     extract_p = sub.add_parser("extract", help="Print the raw extraction for a label image.")
     extract_p.add_argument("images", nargs="+", help="Front label, then back and neck if any.")
     extract_p.add_argument("--extractor", default=None)
+    _add_model_options(extract_p)
     extract_p.set_defaults(func=cmd_extract)
 
     bench_p = sub.add_parser("bench", help="Time extractors on one image and print medians.")
     bench_p.add_argument("images", nargs="+", help="Front label, then back and neck if any.")
     bench_p.add_argument("--extractors", default="claude,gemini", help="Comma-separated names.")
     bench_p.add_argument("--runs", type=int, default=3)
+    _add_model_options(bench_p)
     bench_p.set_defaults(func=cmd_bench)
 
     args = parser.parse_args(argv)
