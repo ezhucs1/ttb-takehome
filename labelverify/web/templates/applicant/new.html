@@ -51,6 +51,19 @@
     </div>
   </section>
 
+  <!-- Steps 2 and 3 sit beside the label, which stays in view and zooms, so the
+       applicant can read the artwork while correcting the form and reading the result. -->
+  <div class="wizard-split">
+  <aside class="wizard-viewer" id="wizard-viewer" hidden>
+    <div class="viewer" data-viewer>
+      <img src="" alt="Your label" data-viewer-img>
+      <button type="button" class="viewer-zoom" data-viewer-toggle title="Zoom in or out (click the image, move the mouse to pan)"><svg class="icon" aria-hidden="true"><use href="#i-zoom"></use></svg></button>
+      <span class="viewer-caption" data-viewer-caption>Front</span>
+    </div>
+    <div class="viewer-versions" data-wizard-thumbs hidden></div>
+    <p class="muted small">Click the label to zoom; move the mouse to pan. Compare it with every value in the form.</p>
+  </aside>
+  <div class="wizard-main">
   <!-- Step 2 -->
   <section class="card step step-locked" id="step-2" inert>
     <div class="step-head"><span class="step-num">2</span><h2>Application details</h2><span class="step-hint" id="prefill-hint"></span><a class="small step-ref" href="/rules" target="_blank" rel="noopener" title="What each class must carry, with citations">Reference</a></div>
@@ -75,5 +88,7 @@
       </form>
     </div>
   </section>
+  </div>
+  </div>
 </div>
 {% endblock %}

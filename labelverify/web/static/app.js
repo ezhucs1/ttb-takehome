@@ -389,6 +389,7 @@
           if (el) el.value = value;
         }
         lastRead = data.label_read || {};
+        showWizardViewer(data.image_urls || []);
         renderChecklist((data.prefill || {}).beverage_type ? "label" : "none");
         if (data.prefill && data.prefill.country_of_origin) $("#is_import").checked = true;
         $("#prefill-hint").textContent = data.warning ? data.warning : "Filled from the label. Check every value against your application.";
@@ -403,6 +404,36 @@
         submitBtn.disabled = false;
         $("#step-2").scrollIntoView({ behavior: "smooth", block: "start" });
       }
+    }
+
+    // The uploaded panels beside steps 2 and 3, with the same zoomable viewer the
+    // review page uses. Thumbnails switch panels when there is more than one.
+    function showWizardViewer(urls) {
+      const aside = $("#wizard-viewer");
+      if (!aside || !urls.length) return;
+      const img = $("[data-viewer-img]", aside);
+      img.src = urls[0];
+      $("[data-viewer-caption]", aside).textContent = "Front";
+      $("[data-viewer]", aside).classList.remove("zoomed");
+      const thumbs = $("[data-wizard-thumbs]", aside);
+      thumbs.innerHTML = "";
+      thumbs.hidden = urls.length < 2;
+      urls.forEach((url, i) => {
+        const label = PANEL_NAMES[i] || `Panel ${i + 1}`;
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "viewer-thumb" + (i === 0 ? " active" : "");
+        b.dataset.viewerSrc = url; b.dataset.viewerLabel = label; b.title = label;
+        const t = document.createElement("img"); t.src = url; t.alt = ""; t.loading = "lazy";
+        const span = document.createElement("span"); span.textContent = label[0];
+        b.append(t, span); thumbs.appendChild(b);
+        b.addEventListener("click", () => {  // the viewer itself was wired at page load
+          img.src = url;
+          $("[data-viewer-caption]", aside).textContent = label;
+          $("[data-viewer]", aside).classList.remove("zoomed");
+          $$(".viewer-thumb", thumbs).forEach((x) => x.classList.toggle("active", x === b));
+        });
+      });
+      aside.hidden = false;
     }
 
     detailsForm.addEventListener("async:done", (e) => {

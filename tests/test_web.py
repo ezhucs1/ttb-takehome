@@ -515,6 +515,7 @@ class TestApplicantWorkflow:
         page = applicant.get("/applicant/applications/new").text
         assert "data-form-rules=" in page and "27 CFR" in page and "Detect from the label" in page
         assert 'id="label-read"' in page and 'href="/rules"' in page and ">Reference<" in page
+        assert 'id="wizard-viewer"' in page and "data-viewer-toggle" in page  # zoomable label beside the form
         created = applicant.post(
             "/applicant/applications", data={"sample_id": "stones-throw-wine"}
         ).json()

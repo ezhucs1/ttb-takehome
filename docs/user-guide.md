@@ -40,6 +40,9 @@ filled by hand.
 
 **Step 2, application details.** The form is filled from the read. It is a convenience,
 not the truth: make every field say what your application says, then run the check.
+Your label stays beside the form and the result, in a viewer that follows the page as
+you scroll: click the image or the magnifier to zoom in, move the mouse to pan, click
+again to zoom out. With more than one panel, the thumbnails under it switch panels.
 
 - The type of product is detected from the label ("detected from the label" next to the
   select). Change it if it is wrong; the rules below follow the type.
