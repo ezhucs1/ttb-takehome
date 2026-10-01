@@ -694,7 +694,7 @@ class TestBatch:
         assert csv_resp.status_code == 200 and len(csv_resp.text.strip().splitlines()) == 16  # header + 15 rows
         assert zip_resp.status_code == 200 and zip_resp.headers["content-type"] == "application/zip"
         names = zipfile.ZipFile(io.BytesIO(zip_resp.content)).namelist()
-        assert len(names) == 13 and "not-a-label.jpg" in names and "missing-photo.jpg" not in names
+        assert len(names) == 14 and "not-a-label.jpg" in names and "missing-photo.jpg" not in names
 
         page = applicant.get("/applicant/batches").text
         assert "/applicant/batches/sample.csv" in page and "sample-images.zip" in page
