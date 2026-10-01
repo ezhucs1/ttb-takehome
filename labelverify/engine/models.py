@@ -114,6 +114,29 @@ class LabelExtraction(BaseModel):
         default_factory=ExtractedField,
         description="The sulfite statement as printed, for example 'Contains Sulfites', or null.",
     )
+    qualifying_phrase: ExtractedField = Field(
+        default_factory=ExtractedField,
+        description=(
+            "The words that introduce the producer, as printed: 'Distilled and Bottled by', "
+            "'Produced and Bottled by', 'Brewed by', 'Imported by', or null if none."
+        ),
+    )
+    importer_statement: ExtractedField = Field(
+        default_factory=ExtractedField,
+        description="The 'Imported by ...' statement as printed, naming the U.S. importer, or null.",
+    )
+    age_statement: ExtractedField = Field(
+        default_factory=ExtractedField,
+        description="Any statement of age as printed, for example 'Aged 6 Years', or null.",
+    )
+    bottled_in_bond_claim: ExtractedField = Field(
+        default_factory=ExtractedField,
+        description="'Bottled in Bond' or 'Bonded' as printed if the label makes that claim, else null.",
+    )
+    blend_percentage: ExtractedField = Field(
+        default_factory=ExtractedField,
+        description="A percentage statement for a blend as printed, for example '51% Straight Bourbon Whiskey', or null.",
+    )
     product_category: ExtractedField = Field(
         default_factory=ExtractedField,
         description=(

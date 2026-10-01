@@ -632,14 +632,169 @@ _COMPARATORS = (
     compare_country_of_origin,
 )
 
+# --------------------------------------------------------------------------- class-specific rows
+#
+# These rows appear only when the class's rulebook has the rule and the label gives the
+# engine something to check. All but the bottled-in-bond proof are review items: the engine
+# can see that a statement is missing, not whether an exemption applies.
+
+_WHISKY_RE = re.compile(r"\b(whisk(e)?y|bourbon|rye|scotch|malt)\b")
+
+
+def compare_qualifying_phrase(
+    application: ApplicationData, extraction: LabelExtraction
+) -> FieldResult:
+    """The words before the producer's name (27 CFR 5.66, 4.35, 7.66); imports must also
+    name the importer."""
+    rules = _class_of(application, extraction)
+    extracted = extraction.qualifying_phrase
+    phrase = (extracted.value or "").strip()
+    base = dict(
+        field="qualifying_phrase",
+        label="Qualifying Phrase",
+        application_value=", ".join(rules.qualifying_phrases[:2]) + ", or similar",
+        label_value=phrase or None,
+        confidence=extracted.confidence,
+    )
+    if not phrase:
+        return FieldResult(
+            verdict=Verdict.NEEDS_REVIEW,
+            reason=(
+                "No qualifying phrase such as "
+                f"'{rules.qualifying_phrases[0]}' was read before the producer's name; "
+                f"one is required ({rules.rule('qualifying_phrase').citation})."
+            ),
+            **base,
+        )
+    if application.is_import:
+        importer = (extraction.importer_statement.value or "").strip()
+        if not importer and "import" not in f"{phrase} {extraction.producer_name.value or ''}".lower():
+            return FieldResult(
+                verdict=Verdict.NEEDS_REVIEW,
+                reason=(
+                    f"The label says '{phrase}', but an imported product must also name the "
+                    f"U.S. importer ('Imported by ...'); none was read."
+                ),
+                **base,
+            )
+    return FieldResult(verdict=Verdict.MATCH, reason=f"The label says '{phrase}'.", **base)
+
+
+def _is_whisky(extraction: LabelExtraction) -> bool:
+    return bool(_WHISKY_RE.search(normalize_text(extraction.class_type.value)))
+
+
+def compare_age_statement(
+    application: ApplicationData, extraction: LabelExtraction
+) -> FieldResult | None:
+    """Whisky only: a statement of age is required when the whisky is under four years old,
+    so a whisky label without one goes to review (27 CFR 5.141)."""
+    rules = _class_of(application, extraction)
+    if rules.requirement("age_statement") is Requirement.NOT_APPLICABLE or not _is_whisky(extraction):
+        return None
+    extracted = extraction.age_statement
+    statement = (extracted.value or "").strip()
+    base = dict(
+        field="age_statement",
+        label="Age Statement",
+        application_value="Required if aged under 4 years",
+        label_value=statement or None,
+        confidence=extracted.confidence,
+    )
+    if statement:
+        return FieldResult(verdict=Verdict.MATCH, reason=f"The label states '{statement}'.", **base)
+    return FieldResult(
+        verdict=Verdict.NEEDS_REVIEW,
+        reason=(
+            "No age statement was read. Whisky aged under four years must state its age "
+            f"({rules.rule('age_statement').citation}); confirm the age or add the statement."
+        ),
+        **base,
+    )
+
+
+def compare_bottled_in_bond(
+    application: ApplicationData, extraction: LabelExtraction
+) -> FieldResult | None:
+    """Only when the label claims 'Bottled in Bond': the claim requires 100 proof."""
+    rules = _class_of(application, extraction)
+    claim = (extraction.bottled_in_bond_claim.value or "").strip()
+    if rules.requirement("bottled_in_bond") is Requirement.NOT_APPLICABLE or not claim:
+        return None
+    abv = parse_alcohol_content(extraction.alcohol_content.value)
+    base = dict(
+        field="bottled_in_bond",
+        label="Bottled in Bond",
+        application_value="100 proof (50% alc/vol)",
+        label_value=(
+            f"{claim} · {extraction.alcohol_content.value}" if extraction.alcohol_content.value else claim
+        ),
+        confidence=min(extraction.bottled_in_bond_claim.confidence, extraction.alcohol_content.confidence),
+    )
+    if abv is None:
+        return FieldResult(
+            verdict=Verdict.NEEDS_REVIEW,
+            reason=f"The label claims '{claim}' but its alcohol content could not be read to confirm 100 proof.",
+            **base,
+        )
+    if abs(abv.abv - 50.0) <= ABV_TOLERANCE:
+        return FieldResult(
+            verdict=Verdict.MATCH, reason=f"'{claim}' at {abv.abv:g}% alcohol by volume, as required.", **base
+        )
+    return FieldResult(
+        verdict=Verdict.MISMATCH,
+        reason=(
+            f"The label claims '{claim}' but states {abv.abv:g}% alcohol by volume; bottled-in-bond "
+            f"spirits must be 100 proof ({rules.rule('bottled_in_bond').citation})."
+        ),
+        **base,
+    )
+
+
+def compare_blend_percentage(
+    application: ApplicationData, extraction: LabelExtraction
+) -> FieldResult | None:
+    """Only when the class/type says blended: the percentage of straight whisky must appear."""
+    rules = _class_of(application, extraction)
+    designation = normalize_text(extraction.class_type.value)
+    if rules.requirement("blend_percentage") is Requirement.NOT_APPLICABLE or "blend" not in designation:
+        return None
+    extracted = extraction.blend_percentage
+    statement = (extracted.value or "").strip()
+    base = dict(
+        field="blend_percentage",
+        label="Blend Percentage",
+        application_value="Required for blends",
+        label_value=statement or None,
+        confidence=extracted.confidence,
+    )
+    if statement:
+        return FieldResult(verdict=Verdict.MATCH, reason=f"The label states '{statement}'.", **base)
+    return FieldResult(
+        verdict=Verdict.NEEDS_REVIEW,
+        reason=(
+            f"The class/type is a blend ('{extraction.class_type.value}') but no percentage "
+            f"statement was read; one is required ({rules.rule('blend_percentage').citation})."
+        ),
+        **base,
+    )
+
+
+_CONDITIONAL_COMPARATORS = (compare_age_statement, compare_bottled_in_bond, compare_blend_percentage)
+
 
 def verify(application: ApplicationData, extraction: LabelExtraction) -> VerificationResult:
     """Compare every required field under the class's rules and roll the verdicts up."""
     resolved, source = resolve_beverage_type(application, extraction)
     rules = rules_for(resolved or BeverageType.DISTILLED_SPIRITS)
     fields = [_apply_confidence_gate(fn(application, extraction)) for fn in _COMPARATORS]
+    fields.append(_apply_confidence_gate(compare_qualifying_phrase(application, extraction)))
     if rules.requirement("sulfite_declaration") is not Requirement.NOT_APPLICABLE:
         fields.append(_apply_confidence_gate(compare_sulfite_declaration(application, extraction)))
+    for conditional in _CONDITIONAL_COMPARATORS:
+        row = conditional(application, extraction)
+        if row is not None:
+            fields.append(_apply_confidence_gate(row))
     fields.append(_apply_confidence_gate(check_health_warning(extraction.health_warning)))
     for f in fields:
         rule = rules.fields.get(f.field)

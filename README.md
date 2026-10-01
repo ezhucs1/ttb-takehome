@@ -52,6 +52,10 @@ nothing on any page loads from a CDN.
 | Country of origin | Required for imports only; aliases folded | `Product of Scotland` = `United Kingdom` |
 | Type of product | The class the label implies must be the class filed; if none was filed, the label decides and that class's rules apply | `Straight Bourbon Whiskey` filed as wine is a mismatch |
 | Sulfite declaration | Wine only: "Contains sulfites" is required at 10 ppm or more, so a missing statement goes to review | wine label without the statement |
+| Qualifying phrase | The words before the producer's name ("Distilled by", "Produced and bottled by", "Brewed by"); imports must also name the importer | label with no such phrase |
+| Age statement | Whisky only: required when aged under four years, so a whisky label without one goes to review | bourbon with no "Aged" statement |
+| Bottled in Bond | Only when the label claims it: must be 100 proof, a hard finding | "Bottled in Bond" at 90 proof |
+| Blend percentage | Only when the class/type says blended: the percentage of straight whisky must appear | "Blended Bourbon" with no percentage |
 
 **The rules differ by class**, and the engine applies the class's own (27 CFR part 5 for
 distilled spirits, part 4 for wine, part 7 for malt beverages; part 16 for the warning):
@@ -109,8 +113,8 @@ readable row lands in the specialist's queue. In demo mode it finishes in a seco
 same batch makes ten model reads, which is a fair test of the concurrency and the
 per-label timing.
 
-The database is seeded on first start with ten sample applications in a mix of states so
-every screen has content.
+The database is seeded on first start with twelve sample applications in a mix of states
+so every screen has content.
 
 **Without an API key** the app runs in demo mode: the ten bundled sample labels work end
 to end, and uploading your own image gives a clear message instead of a made-up result.
@@ -144,7 +148,7 @@ LABELVERIFY_MODEL=claude-haiku-4-5 .venv/bin/python -m labelverify.cli bench lab
 
 ### Sample labels
 
-Ten labels rendered in four visual styles, three of them passed through a photo
+Twelve labels rendered in four visual styles, three of them passed through a photo
 simulation (bottle curvature, perspective, glare, grain, blur). Each demonstrates one
 outcome:
 
@@ -160,6 +164,8 @@ outcome:
 | Harbor Light IPA | No warning statement at all | Request correction (seeded as rejected, with notice) |
 | Harbor Light IPA, can photo | 16 fl oz on label vs 12 fl oz on application | Request correction |
 | Copper Ridge Rye | Brand printed `COPPER RIGDE` | Needs review |
+| Old Tom Bourbon, no age statement | Whisky with no statement of age | Needs review |
+| Copper Ridge Rye, bonded at 90 proof | "Bottled in Bond" at 45% alc/vol | Request correction |
 
 Regenerate them with `.venv/bin/python scripts/make_samples.py`.
 
@@ -273,10 +279,11 @@ application. No model is involved in the comparison step.
 - Up to four images per label set (front, back, neck). They are read together in one
   model call and each field is reported once.
 - The seven fields named in the brief are checked under the rules of the product's class,
-  plus the type-of-product consistency check and, for wine, the sulfite declaration.
-  Class-specific rules beyond those (age statements, appellations, vintage, varietal
-  percentages, qualifying phrases, type sizes) are listed on the rules page as the
-  specialist's visual checks and are not applied by the engine.
+  plus: the type-of-product consistency check, the qualifying phrase, and, where the class
+  and the label call for them, the sulfite declaration (wine), the age statement (whisky),
+  the bottled-in-bond proof, and the blend percentage. Rules the engine cannot judge from
+  a read (state of distillation, appellations, vintage, varietal percentages, type sizes)
+  are listed on the rules page as the specialist's checks.
 - Bold detection on the warning heading is a visual judgment and is surfaced for review
   rather than failed automatically.
 - Sample labels are synthetic renders, not real COLA images.

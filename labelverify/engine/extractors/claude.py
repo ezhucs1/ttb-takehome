@@ -36,6 +36,11 @@ Rules:
 - producer_name and producer_address come from the "Distilled by", "Bottled by", "Produced by", "Brewed by", or "Imported by" statement.
 - country_of_origin is the "Product of ..." or "Imported from ..." statement, or null if none.
 - sulfite_declaration is the sulfite statement as printed, for example "Contains Sulfites", or null if none.
+- qualifying_phrase is the wording that introduces the producer's name, exactly as printed: "Distilled and Bottled by", "Produced and Bottled by", "Brewed by", "Imported by", and so on; null if the name has no such phrase.
+- importer_statement is the "Imported by ..." statement naming the U.S. importer, as printed, or null.
+- age_statement is any statement of age as printed, such as "Aged 6 Years" or "12 Years Old"; null if none.
+- bottled_in_bond_claim is "Bottled in Bond" or "Bonded" as printed when the label makes that claim; null otherwise.
+- blend_percentage is a percentage statement about a blend's components as printed, such as "51% Straight Bourbon Whiskey"; null if none.
 - product_category is your judgment of which TTB class the product is, from every cue (the class/type words, "Distilled by" or "Brewed by", proof, vintage, grape variety, "Contains sulfites"): exactly one of "distilled_spirits", "wine", or "malt_beverage", with your confidence; null if the label gives no basis.
 - health_warning.text must be the complete Government Health Warning Statement transcribed verbatim starting at the words "GOVERNMENT WARNING", preserving the capitalization used on the label.
 - health_warning.heading_all_caps is true only if the words GOVERNMENT WARNING are printed entirely in capital letters.

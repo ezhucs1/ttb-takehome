@@ -47,6 +47,8 @@ def extraction() -> LabelExtraction:
         producer_name=make_field("Old Tom Distillery"),
         producer_address=make_field("123 Barrel Ln., Bardstown, KY 40004"),
         country_of_origin=make_field(None),
+        qualifying_phrase=make_field("Distilled and Bottled by"),
+        age_statement=make_field("Aged Six Years"),
         health_warning=HealthWarningExtraction(
             present=True,
             text=STATUTORY_TEXT,

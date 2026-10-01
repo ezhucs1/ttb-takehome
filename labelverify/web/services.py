@@ -66,6 +66,11 @@ FIELD_LABELS = {
     "producer_name": "Producer / Bottler Name",
     "producer_address": "Producer / Bottler Address",
     "country_of_origin": "Country of Origin",
+    "sulfite_declaration": "Sulfite Declaration",
+    "qualifying_phrase": "Qualifying Phrase",
+    "age_statement": "Age Statement",
+    "bottled_in_bond": "Bottled in Bond",
+    "blend_percentage": "Blend Percentage",
     "health_warning": "Government Health Warning",
     "general": "General",
 }

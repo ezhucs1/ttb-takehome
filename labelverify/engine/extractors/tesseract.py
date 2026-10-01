@@ -102,6 +102,15 @@ class TesseractExtractor:
 
 
 _SULFITE_RE = re.compile(r"contains\s+sulf(?:ph)?ites", re.IGNORECASE)
+_QUALIFYING_RE = re.compile(
+    r"\b((?:distilled|bottled|produced|brewed|vinted|cellared|imported|made|canned|blended)"
+    r"(?:,?\s*(?:and|&)\s*\w+)?\s+by)\b",
+    re.IGNORECASE,
+)
+_IMPORTER_RE = re.compile(r"\b(imported\s+by\s+[^\n]{3,80})", re.IGNORECASE)
+_AGE_RE = re.compile(r"\b(aged\s+\w+\s+(?:years?|months?)|\d+\s+years?\s+old)\b", re.IGNORECASE)
+_BOND_RE = re.compile(r"\b(bottled[\s-]+in[\s-]+bond|bonded)\b", re.IGNORECASE)
+_BLEND_PCT_RE = re.compile(r"\b(\d{1,3}\s*%\s+(?:straight\s+)?\w+(?:\s+\w+){0,3}whisk(?:e)?y)\b", re.IGNORECASE)
 _CATEGORY_CUES = (
     ("distilled_spirits", re.compile(r"\b(distilled|proof|whisk(e)?y|bourbon|vodka|gin|rum|tequila)\b", re.I)),
     ("wine", re.compile(r"\b(wine|vint(ed|age)|sulfites|cabernet|chardonnay|merlot|ros[eé])\b", re.I)),
@@ -183,6 +192,11 @@ def classify_text(text: str) -> LabelExtraction:
         producer_address=field(producer_address, 0.4),
         country_of_origin=field(country),
         sulfite_declaration=field(sulfites, 0.6),
+        qualifying_phrase=field(_first_match(_QUALIFYING_RE, text), 0.5),
+        importer_statement=field(_first_match(_IMPORTER_RE, text), 0.5),
+        age_statement=field(_first_match(_AGE_RE, text), 0.5),
+        bottled_in_bond_claim=field(_first_match(_BOND_RE, text), 0.5),
+        blend_percentage=field(_first_match(_BLEND_PCT_RE, text), 0.5),
         product_category=field(category, 0.6 if category else 0.0),
         health_warning=warning,
         image_quality=ImageQuality(

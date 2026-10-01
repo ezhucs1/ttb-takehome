@@ -45,6 +45,14 @@
         "value": null,
         "confidence": 0.0
       },
+      "qualifying_phrase": {
+        "value": "Distilled and Bottled by",
+        "confidence": 0.97
+      },
+      "age_statement": {
+        "value": "Aged Six Years",
+        "confidence": 0.97
+      },
       "health_warning": {
         "present": true,
         "text": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
@@ -61,6 +69,18 @@
         "confidence": 0.97
       },
       "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "bottled_in_bond_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "importer_statement": {
         "value": null,
         "confidence": 0.0
       }
@@ -112,6 +132,14 @@
         "value": null,
         "confidence": 0.0
       },
+      "qualifying_phrase": {
+        "value": "Distilled and Bottled by",
+        "confidence": 0.97
+      },
+      "age_statement": {
+        "value": "Aged Six Years",
+        "confidence": 0.97
+      },
       "health_warning": {
         "present": true,
         "text": "Government Warning: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
@@ -128,6 +156,18 @@
         "confidence": 0.97
       },
       "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "bottled_in_bond_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "importer_statement": {
         "value": null,
         "confidence": 0.0
       }
@@ -179,6 +219,14 @@
         "value": null,
         "confidence": 0.0
       },
+      "qualifying_phrase": {
+        "value": "Distilled and Bottled by",
+        "confidence": 0.97
+      },
+      "age_statement": {
+        "value": "Aged Six Years",
+        "confidence": 0.97
+      },
       "health_warning": {
         "present": true,
         "text": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
@@ -197,6 +245,18 @@
         "confidence": 0.97
       },
       "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "bottled_in_bond_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "importer_statement": {
         "value": null,
         "confidence": 0.0
       }
@@ -248,6 +308,14 @@
         "value": null,
         "confidence": 0.0
       },
+      "qualifying_phrase": {
+        "value": "Distilled and Bottled by",
+        "confidence": 0.97
+      },
+      "age_statement": {
+        "value": "Aged Six Years",
+        "confidence": 0.97
+      },
       "health_warning": {
         "present": true,
         "text": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
@@ -266,6 +334,18 @@
         "confidence": 0.97
       },
       "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "bottled_in_bond_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "importer_statement": {
         "value": null,
         "confidence": 0.0
       }
@@ -335,6 +415,26 @@
       "sulfite_declaration": {
         "value": "CONTAINS SULFITES",
         "confidence": 0.97
+      },
+      "qualifying_phrase": {
+        "value": "Produced and Bottled by",
+        "confidence": 0.97
+      },
+      "age_statement": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "bottled_in_bond_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "importer_statement": {
+        "value": null,
+        "confidence": 0.0
       }
     }
   },
@@ -402,6 +502,26 @@
       "sulfite_declaration": {
         "value": "CONTAINS SULFITES",
         "confidence": 0.97
+      },
+      "qualifying_phrase": {
+        "value": "Vinted and Bottled by",
+        "confidence": 0.97
+      },
+      "age_statement": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "bottled_in_bond_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "importer_statement": {
+        "value": null,
+        "confidence": 0.0
       }
     }
   },
@@ -469,6 +589,26 @@
       "sulfite_declaration": {
         "value": null,
         "confidence": 0.0
+      },
+      "qualifying_phrase": {
+        "value": "Distilled and Bottled by",
+        "confidence": 0.97
+      },
+      "age_statement": {
+        "value": "Aged 12 Years",
+        "confidence": 0.97
+      },
+      "bottled_in_bond_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "importer_statement": {
+        "value": "Imported by Caledonia Imports, Newark, New Jersey",
+        "confidence": 0.97
       }
     }
   },
@@ -534,6 +674,26 @@
         "confidence": 0.97
       },
       "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "qualifying_phrase": {
+        "value": "Brewed and Canned by",
+        "confidence": 0.97
+      },
+      "age_statement": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "bottled_in_bond_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "importer_statement": {
         "value": null,
         "confidence": 0.0
       }
@@ -605,6 +765,200 @@
       "sulfite_declaration": {
         "value": null,
         "confidence": 0.0
+      },
+      "qualifying_phrase": {
+        "value": "Brewed and Canned by",
+        "confidence": 0.97
+      },
+      "age_statement": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "bottled_in_bond_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "importer_statement": {
+        "value": null,
+        "confidence": 0.0
+      }
+    }
+  },
+  {
+    "id": "old-tom-no-age-statement",
+    "title": "Old Tom Bourbon · no age statement",
+    "description": "Same artwork with no statement of age. Whisky under four years must state it, so a specialist confirms the age.",
+    "file": "old-tom-no-age-statement.jpg",
+    "expected": "needs_review",
+    "application": {
+      "beverage_type": "distilled_spirits",
+      "brand_name": "OLD TOM DISTILLERY",
+      "class_type": "Kentucky Straight Bourbon Whiskey",
+      "alcohol_content": "45% Alc./Vol. (90 Proof)",
+      "net_contents": "750 mL",
+      "producer_name": "Old Tom Distillery",
+      "producer_address": "Bardstown, KY 40004",
+      "is_import": false,
+      "country_of_origin": ""
+    },
+    "extraction": {
+      "brand_name": {
+        "value": "OLD TOM DISTILLERY",
+        "confidence": 0.97
+      },
+      "class_type": {
+        "value": "Kentucky Straight Bourbon Whiskey",
+        "confidence": 0.97
+      },
+      "alcohol_content": {
+        "value": "45% Alc./Vol. (90 Proof)",
+        "confidence": 0.97
+      },
+      "net_contents": {
+        "value": "750 mL",
+        "confidence": 0.97
+      },
+      "producer_name": {
+        "value": "Old Tom Distillery",
+        "confidence": 0.97
+      },
+      "producer_address": {
+        "value": "Bardstown, Kentucky 40004",
+        "confidence": 0.97
+      },
+      "country_of_origin": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "qualifying_phrase": {
+        "value": "Distilled and Bottled by",
+        "confidence": 0.97
+      },
+      "age_statement": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "health_warning": {
+        "present": true,
+        "text": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "heading_all_caps": true,
+        "heading_bold": true,
+        "confidence": 0.96
+      },
+      "image_quality": {
+        "readable": true,
+        "issues": []
+      },
+      "product_category": {
+        "value": "distilled_spirits",
+        "confidence": 0.97
+      },
+      "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "bottled_in_bond_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "importer_statement": {
+        "value": null,
+        "confidence": 0.0
+      }
+    }
+  },
+  {
+    "id": "copper-ridge-bond-90-proof",
+    "title": "Copper Ridge Rye · bonded at 90 proof",
+    "description": "Claims 'Bottled in Bond' but states 45% alc/vol. Bonded spirits must be 100 proof.",
+    "file": "copper-ridge-bond-90-proof.jpg",
+    "expected": "request_correction",
+    "application": {
+      "beverage_type": "distilled_spirits",
+      "brand_name": "Copper Ridge",
+      "class_type": "Straight Rye Whiskey",
+      "alcohol_content": "45% (90 proof)",
+      "net_contents": "750 mL",
+      "producer_name": "Copper Ridge Distilling Co.",
+      "producer_address": "Lawrenceburg, IN 47025",
+      "is_import": false,
+      "country_of_origin": ""
+    },
+    "extraction": {
+      "brand_name": {
+        "value": "COPPER RIDGE",
+        "confidence": 0.97
+      },
+      "class_type": {
+        "value": "Straight Rye Whiskey",
+        "confidence": 0.97
+      },
+      "alcohol_content": {
+        "value": "45% Alc./Vol. (90 Proof)",
+        "confidence": 0.97
+      },
+      "net_contents": {
+        "value": "750 mL",
+        "confidence": 0.97
+      },
+      "producer_name": {
+        "value": "Copper Ridge Distilling Co.",
+        "confidence": 0.97
+      },
+      "producer_address": {
+        "value": "Lawrenceburg, Indiana 47025",
+        "confidence": 0.97
+      },
+      "country_of_origin": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "health_warning": {
+        "present": true,
+        "text": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "heading_all_caps": true,
+        "heading_bold": true,
+        "confidence": 0.96
+      },
+      "image_quality": {
+        "readable": true,
+        "issues": []
+      },
+      "product_category": {
+        "value": "distilled_spirits",
+        "confidence": 0.97
+      },
+      "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "qualifying_phrase": {
+        "value": "Distilled and Bottled by",
+        "confidence": 0.97
+      },
+      "age_statement": {
+        "value": "Aged 4 Years",
+        "confidence": 0.97
+      },
+      "bottled_in_bond_claim": {
+        "value": "BOTTLED IN BOND",
+        "confidence": 0.97
+      },
+      "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "importer_statement": {
+        "value": null,
+        "confidence": 0.0
       }
     }
   },
@@ -670,6 +1024,26 @@
         "confidence": 0.97
       },
       "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "qualifying_phrase": {
+        "value": "Distilled and Bottled by",
+        "confidence": 0.97
+      },
+      "age_statement": {
+        "value": "Aged 4 Years",
+        "confidence": 0.97
+      },
+      "bottled_in_bond_claim": {
+        "value": "BOTTLED IN BOND",
+        "confidence": 0.97
+      },
+      "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "importer_statement": {
         "value": null,
         "confidence": 0.0
       }

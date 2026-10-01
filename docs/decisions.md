@@ -271,6 +271,18 @@ alcohol content). A table the UI and the engine share cannot drift. The model is
 only trusted to read: it reports the class it sees as one more field with a confidence,
 and the deterministic rules decide what that class requires.
 
+**Part 5 walked section by section.** After the first version, part 5 was reviewed
+section by section against Excisely's summary and the eCFR table of contents. Standards
+of fill are cited at 5.203 (Excisely says 5.71). Four checks were added as a result, three
+of them review items: the qualifying phrase before the producer's name, with the importer
+named on imports (5.66, and 4.35 and 7.66 for the other classes); an age statement on any
+whisky label, since whisky under four years must state its age (5.141); the percentage
+statement on a blend (5.143); and one hard finding, a "Bottled in Bond" claim at anything
+other than 100 proof (5.63). Rows for the conditional checks appear only when the label
+gives the engine something to check. State of distillation (5.142) and the liqueur
+tolerance in 5.65 were left as listed specialist checks rather than guessed at. Two sample
+labels were added to show the age statement and bottled-in-bond checks.
+
 **Validation:** Excisely's curated regulation list was used as a cross-check for the
 section numbers and the per-class differences; the live eCFR could not be reached from
 the build environment, so the citations are by section number and the rules page says to

@@ -205,6 +205,63 @@ class TestClassResolution:
         assert result.field("alcohol_content").citation == "27 CFR 5.65"
 
 
+class TestSpiritsRules:
+    """Part 5 checks beyond the seven fields: all review items except bottled-in-bond proof."""
+
+    def test_qualifying_phrase_is_required_and_imports_name_the_importer(
+        self, application, extraction
+    ):
+        from labelverify.engine.compare import compare_qualifying_phrase
+
+        assert compare_qualifying_phrase(application, extraction).verdict is Verdict.MATCH
+        extraction.qualifying_phrase = make_field(None)
+        result = compare_qualifying_phrase(application, extraction)
+        assert result.verdict is Verdict.NEEDS_REVIEW and "5.66" in result.reason
+        extraction.qualifying_phrase = make_field("Distilled and Bottled by")
+        application.is_import = True
+        application.country_of_origin = "Scotland"
+        result = compare_qualifying_phrase(application, extraction)
+        assert result.verdict is Verdict.NEEDS_REVIEW and "importer" in result.reason
+        extraction.qualifying_phrase = make_field("Imported by")
+        assert compare_qualifying_phrase(application, extraction).verdict is Verdict.MATCH
+
+    def test_whisky_without_an_age_statement_goes_to_review(self, application, extraction):
+        from labelverify.engine.compare import compare_age_statement
+
+        assert compare_age_statement(application, extraction).verdict is Verdict.MATCH
+        extraction.age_statement = make_field(None)
+        result = compare_age_statement(application, extraction)
+        assert result.verdict is Verdict.NEEDS_REVIEW and "5.141" in result.reason
+        extraction.class_type = make_field("Vodka")  # not a whisky: no row at all
+        assert compare_age_statement(application, extraction) is None
+        application.beverage_type = BeverageType.WINE
+        extraction.class_type = make_field("Cabernet Sauvignon")
+        assert compare_age_statement(application, extraction) is None
+
+    def test_bottled_in_bond_must_be_100_proof(self, application, extraction):
+        from labelverify.engine.compare import compare_bottled_in_bond
+
+        assert compare_bottled_in_bond(application, extraction) is None  # no claim, no row
+        extraction.bottled_in_bond_claim = make_field("BOTTLED IN BOND")
+        result = compare_bottled_in_bond(application, extraction)  # 45%: a hard finding
+        assert result.verdict is Verdict.MISMATCH and "100 proof" in result.reason
+        extraction.alcohol_content = make_field("50% Alc./Vol. (100 Proof)")
+        application.alcohol_content = "50% (100 proof)"
+        assert compare_bottled_in_bond(application, extraction).verdict is Verdict.MATCH
+        assert verify(application, extraction).recommendation is Recommendation.APPROVE
+
+    def test_blended_whisky_needs_a_percentage_statement(self, application, extraction):
+        from labelverify.engine.compare import compare_blend_percentage
+
+        assert compare_blend_percentage(application, extraction) is None
+        application.class_type = "Blended Bourbon Whiskey"
+        extraction.class_type = make_field("Blended Bourbon Whiskey")
+        result = compare_blend_percentage(application, extraction)
+        assert result.verdict is Verdict.NEEDS_REVIEW and "5.143" in result.reason
+        extraction.blend_percentage = make_field("51% Straight Bourbon Whiskey")
+        assert compare_blend_percentage(application, extraction).verdict is Verdict.MATCH
+
+
 class TestClassType:
     def test_whisky_spelling_variant_matches(self, application, extraction):
         extraction.class_type = make_field("Kentucky Straight Bourbon Whisky")
@@ -391,7 +448,9 @@ class TestVerify:
     def test_clean_label_is_approved(self, application, extraction):
         result = verify(application, extraction)
         assert result.recommendation is Recommendation.APPROVE
-        assert len(result.fields) == 9  # seven brief fields, the warning, and the product type
+        # seven brief fields, the warning, the product type, the qualifying phrase, and the
+        # age statement a whisky label carries
+        assert len(result.fields) == 11
         assert result.field("health_warning").verdict is Verdict.MATCH
 
     def test_any_mismatch_requests_correction(self, application, extraction):

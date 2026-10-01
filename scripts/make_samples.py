@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from pathlib import Path
 
 import numpy as np
@@ -514,6 +515,8 @@ def old_tom_extraction(**overrides) -> dict:
         "producer_name": field("Old Tom Distillery"),
         "producer_address": field("Bardstown, Kentucky 40004"),
         "country_of_origin": field(None),
+        "qualifying_phrase": field("Distilled and Bottled by"),
+        "age_statement": field("Aged Six Years"),
         "health_warning": warning("GOVERNMENT WARNING:"),
         "image_quality": clear(),
     }
@@ -823,6 +826,70 @@ SAMPLES: list[dict] = [
         },
     },
     {
+        "id": "old-tom-no-age-statement",
+        "title": "Old Tom Bourbon · no age statement",
+        "description": "Same artwork with no statement of age. Whisky under four years must state it, so a specialist confirms the age.",
+        "expected": "needs_review",
+        "seed": 11,
+        "label": {
+            **OLD_TOM_LABEL,
+            "tagline": "Sour Mash · Non-Chill Filtered",
+            "medal_top": "EST.",
+            "medal_big": "1891",
+            "medal_bottom": "KENTUCKY",
+            "warning_heading": "GOVERNMENT WARNING:",
+        },
+        "application": OLD_TOM_APP,
+        "extraction": old_tom_extraction(age_statement=field(None)),
+    },
+    {
+        "id": "copper-ridge-bond-90-proof",
+        "title": "Copper Ridge Rye · bonded at 90 proof",
+        "description": "Claims 'Bottled in Bond' but states 45% alc/vol. Bonded spirits must be 100 proof.",
+        "expected": "request_correction",
+        "seed": 12,
+        "label": {
+            **OLD_TOM_LABEL,
+            "paper": (236, 226, 204),
+            "kicker": "BOTTLED IN BOND",
+            "brand_lines": ["COPPER", "RIDGE"],
+            "class_line": "Straight Rye Whiskey",
+            "tagline": "95% Rye Mash Bill · Non-Chill Filtered",
+            "medal_top": "AGED",
+            "medal_big": "4",
+            "medal_bottom": "YEARS",
+            "alcohol_line": "45% Alc./Vol. (90 Proof)",
+            "net_line": "750 mL",
+            "producer_lines": [
+                "Distilled and Bottled by Copper Ridge Distilling Co.",
+                "Lawrenceburg, Indiana 47025",
+            ],
+            "warning_heading": "GOVERNMENT WARNING:",
+        },
+        "application": {
+            "beverage_type": "distilled_spirits",
+            "brand_name": "Copper Ridge",
+            "class_type": "Straight Rye Whiskey",
+            "alcohol_content": "45% (90 proof)",
+            "net_contents": "750 mL",
+            "producer_name": "Copper Ridge Distilling Co.",
+            "producer_address": "Lawrenceburg, IN 47025",
+            "is_import": False,
+            "country_of_origin": "",
+        },
+        "extraction": {
+            "brand_name": field("COPPER RIDGE"),
+            "class_type": field("Straight Rye Whiskey"),
+            "alcohol_content": field("45% Alc./Vol. (90 Proof)"),
+            "net_contents": field("750 mL"),
+            "producer_name": field("Copper Ridge Distilling Co."),
+            "producer_address": field("Lawrenceburg, Indiana 47025"),
+            "country_of_origin": field(None),
+            "health_warning": warning("GOVERNMENT WARNING:"),
+            "image_quality": clear(),
+        },
+    },
+    {
         "id": "copper-ridge-rye-typo",
         "title": "Copper Ridge Rye · brand typo",
         "description": "The label prints COPPER RIGDE (transposed letters). Similar, not identical, so a specialist decides.",
@@ -896,6 +963,20 @@ def main() -> None:
             "sulfite_declaration",
             field("CONTAINS SULFITES") if spec["style"] == "wine" else field(None),
         )
+        phrase = re.match(r"^(.*?\bby)\b", spec["producer_lines"][0], re.IGNORECASE)
+        extraction.setdefault("qualifying_phrase", field(phrase.group(1) if phrase else None))
+        if spec["style"] in ("spirits", "scotch") and spec.get("medal_top", "AGED") == "AGED":
+            extraction.setdefault("age_statement", field(f"Aged {spec.get('medal_big', '6')} Years"))
+        extraction.setdefault("age_statement", field(None))
+        extraction.setdefault(
+            "bottled_in_bond_claim",
+            field("BOTTLED IN BOND") if "BOND" in spec.get("kicker", "").upper() else field(None),
+        )
+        extraction.setdefault("blend_percentage", field(None))
+        importer = next(
+            (ln for ln in spec["producer_lines"] if ln.lower().startswith("imported by")), None
+        )
+        extraction.setdefault("importer_statement", field(importer))
         manifest.append(
             {
                 "id": sample["id"],

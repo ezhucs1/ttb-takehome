@@ -100,6 +100,10 @@ FIELD_LABELS = {
     "qualifying_phrase": "Qualifying phrase before the name",
     "country_of_origin": "Country of origin",
     "sulfite_declaration": "Sulfite declaration",
+    "age_statement": "Age statement",
+    "bottled_in_bond": "Bottled in Bond claim",
+    "blend_percentage": "Percentage statement for blends",
+    "state_of_distillation": "State of distillation",
     "health_warning": "Government Health Warning Statement",
 }
 
@@ -148,11 +152,33 @@ RULES: dict[BeverageType, ClassRules] = {
             "qualifying_phrase": FieldRule(
                 Requirement.REQUIRED,
                 "27 CFR 5.66",
-                "'Distilled by', 'Bottled by', or similar, before the name.",
-                checked_by="specialist",
+                "'Distilled by', 'Bottled by', or similar, before the name; imports also name "
+                "the importer.",
             ),
             "country_of_origin": FieldRule(Requirement.CONDITIONAL, "27 CFR 5.74", _COUNTRY_NOTE),
             "sulfite_declaration": FieldRule(Requirement.NOT_APPLICABLE, ""),
+            "age_statement": FieldRule(
+                Requirement.CONDITIONAL,
+                "27 CFR 5.141",
+                "Whisky aged under four years must state its age; a whisky label without a "
+                "statement is checked for one.",
+            ),
+            "bottled_in_bond": FieldRule(
+                Requirement.CONDITIONAL,
+                "27 CFR 5.63",
+                "A 'Bottled in Bond' or 'Bonded' claim requires 100 proof (50% alc/vol).",
+            ),
+            "blend_percentage": FieldRule(
+                Requirement.CONDITIONAL,
+                "27 CFR 5.143",
+                "A blended whisky must state the percentage of straight whisky in the blend.",
+            ),
+            "state_of_distillation": FieldRule(
+                Requirement.CONDITIONAL,
+                "27 CFR 5.142",
+                "Domestic whisky states where it was distilled unless the address already says.",
+                checked_by="specialist",
+            ),
             "health_warning": _HEALTH_WARNING,
         },
     ),
@@ -192,8 +218,8 @@ RULES: dict[BeverageType, ClassRules] = {
             "qualifying_phrase": FieldRule(
                 Requirement.REQUIRED,
                 "27 CFR 4.35",
-                "'Produced and bottled by', 'Vinted and bottled by', or similar.",
-                checked_by="specialist",
+                "'Produced and bottled by', 'Vinted and bottled by', or similar; imports also "
+                "name the importer.",
             ),
             "country_of_origin": FieldRule(
                 Requirement.CONDITIONAL, "27 CFR 4.32; 19 CFR 134", _COUNTRY_NOTE
@@ -236,8 +262,7 @@ RULES: dict[BeverageType, ClassRules] = {
             "qualifying_phrase": FieldRule(
                 Requirement.REQUIRED,
                 "27 CFR 7.66",
-                "'Brewed by', 'Brewed and bottled by', or similar.",
-                checked_by="specialist",
+                "'Brewed by', 'Brewed and bottled by', or similar; imports also name the importer.",
             ),
             "country_of_origin": FieldRule(
                 Requirement.CONDITIONAL, "27 CFR 7.61; 19 CFR 134", _COUNTRY_NOTE
