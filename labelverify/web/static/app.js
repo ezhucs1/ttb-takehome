@@ -395,8 +395,11 @@
         detailsForm.action = `/applicant/applications/${applicationId}/precheck`;
         submitForm.action = `/applicant/applications/${applicationId}/submit`;
         $("#step-1").classList.add("step-done");
-        $("#step-2").classList.remove("step-locked");
-        $("#step-3").classList.remove("step-locked");
+        for (const step of [$("#step-2"), $("#step-3")]) {
+          step.classList.remove("step-locked");
+          step.inert = false; // the template locks the steps with `inert`, which blocks every click and key
+          step.removeAttribute("inert");
+        }
         submitBtn.disabled = false;
         $("#step-2").scrollIntoView({ behavior: "smooth", block: "start" });
       }
