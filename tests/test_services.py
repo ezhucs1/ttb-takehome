@@ -110,7 +110,7 @@ class TestDraftAndPrecheck:
         app = services.create_draft(
             db, applicant, data, [(sample_bytes("old-tom-bourbon"), "a.png")]
         )
-        read = services.extract_for_prefill(reader, app.current_images)
+        read, _, _ = services.extract_for_prefill(reader, app.current_images)
         services.remember_extraction(app, read, reader.name, 4321)
         db.commit()
         assert len(reader.calls) == 1

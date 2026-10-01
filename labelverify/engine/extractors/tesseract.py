@@ -8,6 +8,7 @@ it produces carries a low confidence and lands in the "needs review" band.
 from __future__ import annotations
 
 import re
+import shutil
 from collections.abc import Sequence
 from io import BytesIO
 
@@ -79,6 +80,11 @@ _LOW = 0.45
 
 class TesseractExtractor:
     name = "tesseract"
+
+    @staticmethod
+    def available() -> bool:
+        """True when the tesseract binary can be found on PATH."""
+        return shutil.which("tesseract") is not None
 
     def extract(self, image: bytes, media_type: str) -> LabelExtraction:
         return self.extract_panels([(image, media_type)])

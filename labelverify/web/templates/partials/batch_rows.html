@@ -25,7 +25,7 @@
       <td>{% if item.application %}<a href="/applicant/applications/{{ item.application.id }}">{{ item.application.serial }}</a>{% else %}—{% endif %}</td>
       <td>
         {% if item.status == 'error' %}<span class="pill pill-neutral">Not checked</span> <span class="muted">{{ item.error }}</span>
-        {% elif item.status == 'done' %}{{ m.rec_pill(item.application.recommendation) }}{% if item.application.latest_run and item.application.latest_run.error %} <span class="muted">{{ item.application.latest_run.error }}</span>{% endif %}
+        {% elif item.status == 'done' %}{{ m.rec_pill(item.application.recommendation) }}{% if item.application.latest_run and 'fallback' in item.application.latest_run.extractor %} <span class="pill pill-warning pill-xs" title="{{ item.application.latest_run.extractor }}">local OCR</span>{% endif %}{% if item.application.latest_run and item.application.latest_run.error %} <span class="muted">{{ item.application.latest_run.error }}</span>{% endif %}
         {% else %}<span class="pill pill-neutral">Pending</span>{% endif %}
       </td>
       <td class="right">{% if item.application %}<a class="btn btn-ghost btn-sm" href="/applicant/applications/{{ item.application.id }}">Open</a>{% endif %}</td>

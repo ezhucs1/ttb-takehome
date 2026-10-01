@@ -141,8 +141,38 @@ enough to try it). Set `LABELVERIFY_EXTRACTOR=gemini` to force it when both keys
 present. The free tier allows a small number of requests per minute, so batch uploads
 will pace themselves with retries.
 
-Optional: install `tesseract` (`apt install tesseract-ocr` or `brew install tesseract`)
-and set `LABELVERIFY_EXTRACTOR=tesseract` to run the local OCR fallback.
+### If the model is unavailable
+
+Every read the app makes has a local fallback: when the configured vision model fails
+(timeout, network, rejected key, exhausted daily budget), the label is read with
+Tesseract OCR on the server instead, and the result says so in three places. The step-1
+status and the step-2 hint say "The vision model was unavailable (...), so the label was
+read with local OCR (Tesseract), which is less accurate"; the comparison banner names the
+reader as `tesseract (fallback after claude failed)`; and the same name is stored on the
+run, so the specialist's page and the batch rows show it too. OCR reads carry lower
+confidence, so more rows land in review than with the model, which is the right bias for
+a degraded read.
+
+The fallback needs the `tesseract` binary (`apt install tesseract-ocr` or `brew install
+tesseract`; the Docker image installs it). Without the binary there is no fallback and the
+failure is reported with a "Read again" button.
+
+To try it:
+
+```bash
+# Force local OCR for every read (the sidebar then says "Local OCR (Tesseract)")
+LABELVERIFY_EXTRACTOR=tesseract .venv/bin/uvicorn labelverify.web.app:serve --factory
+
+# Simulate a model outage with the model configured: a rejected key fails fast
+ANTHROPIC_API_KEY=sk-ant-not-a-real-key .venv/bin/uvicorn labelverify.web.app:serve --factory
+
+# Or the same on the command line
+.venv/bin/python -m labelverify.cli extract labelverify/samples/old-tom-bourbon.jpg --extractor tesseract
+.venv/bin/python -m labelverify.cli verify labelverify/samples/old-tom-bourbon.jpg --application app.json --fallback
+```
+
+`LABELVERIFY_FALLBACK=none` turns the automatic fallback off, for a deployment that
+would rather report the outage than show a lower-quality read.
 
 Compare extractors on the same label from the command line:
 
@@ -240,6 +270,7 @@ can set them.
 | `LABELVERIFY_DAILY_READ_LIMIT` | unlimited | Paid model reads allowed per UTC day; after that uploads get a clear message and the sample labels still work. Set it on any public URL |
 | `LABELVERIFY_DEMO_ACCOUNTS` | `true` | Show the demo account list in the sign-in dialog. Set `false` on a public URL; reviewers use the accounts in this README |
 | `LABELVERIFY_REPO_URL` | this repository | GitHub link on the landing page |
+| `LABELVERIFY_FALLBACK` | `tesseract` | Reader used when the configured one fails on a read; `none` turns the fallback off |
 | `LABELVERIFY_SECURE_COOKIES` | `false` | `true` marks the session cookie Secure; set it behind HTTPS (the Fly config does) |
 | `LABELVERIFY_STRUCTURED_OUTPUT` | `false` | `true` asks the API to constrain the reply to the extraction schema. Off by default: the API compiles a new schema into a grammar on first use, and that compile can take longer than a read is allowed to. The default asks for JSON in the prompt and validates it here |
 | `LABELVERIFY_IMAGE_MAX_EDGE` | `1500` | Long edge in pixels after preprocessing; smaller is faster, larger keeps more small-print detail |

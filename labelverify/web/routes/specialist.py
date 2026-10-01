@@ -102,7 +102,14 @@ def rerun(
     app = load_application(db, app_id, user)
     if app.is_decided:
         raise HTTPException(409, "This application has already been decided.")
-    services.record_run(db, app, request.app.state.get_extractor(), "rerun", fresh=True)
+    services.record_run(
+        db,
+        app,
+        request.app.state.get_extractor(),
+        "rerun",
+        fresh=True,
+        fallback=request.app.state.get_fallback(),
+    )
     db.commit()
     return renderer(request).redirect(
         request, f"/specialist/applications/{app.id}", flash=("info", "Label re-checked.")

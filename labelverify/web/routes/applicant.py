@@ -127,20 +127,26 @@ def _read_label(request: Request, db: Session, app) -> dict:
     """Read the stored images once and report form values; a failure is reported, not
     raised, so the applicant can retry the read or fill the form by hand."""
     extractor = request.app.state.get_extractor()
+    fallback = request.app.state.get_fallback()
     started = time.perf_counter()
+    read_by = extractor.name
     prefill: dict[str, str] = {}
     label_read: dict[str, str | None] = {}
     warning = None
     read_failed = False
     try:
-        extraction = services.extract_for_prefill(extractor, app.current_images)
+        extraction, read_by, recovered_from = services.extract_for_prefill(
+            extractor, app.current_images, fallback=fallback
+        )
         prefill = services.prefill_fields(extraction)
         label_read = services.label_carries(extraction)
         services.remember_extraction(
-            app, extraction, extractor.name, int((time.perf_counter() - started) * 1000)
+            app, extraction, read_by, int((time.perf_counter() - started) * 1000)
         )
         db.commit()
-        if not extraction.image_quality.readable:
+        if recovered_from is not None:
+            warning = services.fallback_note(fallback.name, recovered_from)
+        elif not extraction.image_quality.readable:
             warning = "The label is hard to read: " + "; ".join(extraction.image_quality.issues)
     except ExtractionError as exc:
         read_failed = True
@@ -165,7 +171,7 @@ def _read_label(request: Request, db: Session, app) -> dict:
         "label_read": label_read,
         "warning": warning,
         "read_failed": read_failed,
-        "extractor": extractor.name,
+        "extractor": read_by,
         "ms": elapsed_ms,
     }
 
@@ -197,7 +203,13 @@ async def precheck(
         raise HTTPException(409, "This application has already been submitted.")
     form = await request.form()
     services.update_fields(app, application_from_form(dict(form)))
-    run = services.record_run(db, app, request.app.state.get_extractor(), "precheck")
+    run = services.record_run(
+        db,
+        app,
+        request.app.state.get_extractor(),
+        "precheck",
+        fallback=request.app.state.get_fallback(),
+    )
     db.commit()
     return renderer(request).partial(
         request,
@@ -230,7 +242,13 @@ async def submit(
     services.update_fields(app, data)
     stale = app.latest_run is None or app.latest_run.trigger != "precheck" or data != previous
     if stale:  # the stored verdict must describe the values actually submitted
-        services.record_run(db, app, request.app.state.get_extractor(), "submit")
+        services.record_run(
+            db,
+            app,
+            request.app.state.get_extractor(),
+            "submit",
+            fallback=request.app.state.get_fallback(),
+        )
     services.submit(db, app, user)
     db.commit()
     return renderer(request).redirect(
@@ -294,6 +312,7 @@ async def resubmit(
             request.app.state.get_extractor(),
             uploads=uploads,
             message=message,
+            fallback=request.app.state.get_fallback(),
         )
     except (services.WorkflowError, UnreadableImageError) as exc:
         raise HTTPException(422, str(exc)) from exc
@@ -388,6 +407,7 @@ async def create_batch(
         batch.id,
         parsed,
         request.app.state.get_extractor(),
+        request.app.state.get_fallback(),
     )
     return renderer(request).redirect(
         request,

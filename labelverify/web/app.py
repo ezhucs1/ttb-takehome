@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from ..engine.extractors import Extractor, get_extractor
+from ..engine.extractors import Extractor, fallback_extractor, get_extractor
 from ..engine.extractors.demo import load_manifest
 from . import services
 from .auth import LoginRequired, read_session, secret_key
@@ -51,6 +51,7 @@ def create_app(
     database_url: str | None = None,
     seed_data: bool = True,
     secret: str | None = None,
+    fallback: Extractor | None | str = "auto",
 ) -> FastAPI:
     app = FastAPI(title="LabelVerify", docs_url="/api/docs", redoc_url=None)
     app.mount("/static", CachedStaticFiles(directory=HERE / "static"), name="static")
@@ -74,6 +75,14 @@ def create_app(
         return app.state.extractor
 
     app.state.get_extractor = resolve_extractor
+
+    def resolve_fallback() -> Extractor | None:
+        """The reader used when the configured one fails; "auto" means the registry's."""
+        if fallback == "auto":
+            return fallback_extractor(resolve_extractor().name)
+        return fallback  # a test's fixture, or None
+
+    app.state.get_fallback = resolve_fallback
 
     if seed_data:
         with app.state.session_factory() as db:

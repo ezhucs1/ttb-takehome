@@ -438,3 +438,16 @@ The ones that changed behaviour:
 Left as documented limits rather than changed now: the unread count is computed in
 Python over the user's items (fine at this scale, a single grouped query at larger ones),
 and opening a review page claims the application on a GET.
+
+## 19. The local OCR fallback is automatic in the app, and it says so
+
+The engine and the CLI had a Tesseract fallback from the start, but the web app only
+reported a model failure and offered "Read again". Now every read the app makes (the
+upload read, the pre-check, the submission, the specialist's re-check, every batch row)
+falls back to local OCR when the configured model fails, and the fact is visible: the
+applicant's hint names the failure and the reader, the comparison banner and the stored
+run carry `tesseract (fallback after claude failed)`, and the batch rows show the same.
+OCR reads have low confidence by design, so the confidence gate sends more rows to
+review, which is the right bias for a degraded read. The fallback is never the same
+backend as the primary, the demo reader has none, and `LABELVERIFY_FALLBACK=none` turns
+it off. Without the binary there is no fallback and the failure is reported as before.

@@ -236,9 +236,35 @@ def panels_of(images: Sequence[LabelImage]) -> list[tuple[bytes, str]]:
     return [(img.data, img.media_type) for img in images]
 
 
-def extract_for_prefill(extractor: Extractor, images: Sequence[LabelImage]) -> LabelExtraction:
-    """Read fields from stored (already prepared) label images."""
-    return extractor.extract_panels(panels_of(images))
+def extract_for_prefill(
+    extractor: Extractor, images: Sequence[LabelImage], *, fallback: Extractor | None = None
+) -> tuple[LabelExtraction, str, str | None]:
+    """Read fields from stored (already prepared) label images.
+
+    Returns the read, the name of the reader that produced it, and, when the configured
+    reader failed and the fallback read instead, the failure it recovered from.
+    """
+    panels = panels_of(images)
+    try:
+        return extractor.extract_panels(panels), extractor.name, None
+    except ExtractionError as exc:
+        if fallback is None:
+            raise
+        log.warning("%s failed (%s); reading with %s", extractor.name, exc, fallback.name)
+        extraction = fallback.extract_panels(panels)
+        return extraction, f"{fallback.name} (fallback after {extractor.name} failed)", str(exc)
+
+
+def fallback_note(fallback_name: str, failure: str) -> str:
+    """What the applicant is told when a read came from the fallback reader."""
+    return (
+        f"The vision model was unavailable ({failure}), so the label was read with "
+        f"{EXTRACTOR_NOTE_NAMES.get(fallback_name, fallback_name)}, which is less accurate. "
+        "Check every value before submitting, or use Read again once the model is back."
+    )
+
+
+EXTRACTOR_NOTE_NAMES = {"tesseract": "local OCR (Tesseract)"}
 
 
 def prefill_fields(extraction: LabelExtraction) -> dict[str, str]:
@@ -341,7 +367,7 @@ def label_set_of(app: Application, *, reuse: bool = True) -> LabelSet:
 
 
 def verify_label_set(
-    label_set: LabelSet, extractor: Extractor
+    label_set: LabelSet, extractor: Extractor, *, fallback: Extractor | None = None
 ) -> tuple[VerificationResult | None, str | None]:
     """The comparison, with a model call only when no earlier read of these images exists.
     Returns (result, None) or (None, error message)."""
@@ -360,6 +386,7 @@ def verify_label_set(
                 list(label_set.panels),
                 label_set.data,
                 extractor=extractor,
+                fallback=fallback,
                 prepare=False,
                 media_type=label_set.media_type,
             ),
@@ -429,6 +456,7 @@ def record_run(
     trigger: str,
     *,
     fresh: bool = False,
+    fallback: Extractor | None = None,
 ) -> VerificationRun:
     """Compare the application against its current label set and store the result.
 
@@ -439,7 +467,7 @@ def record_run(
     database's write lock.
     """
     label_set = label_set_of(app, reuse=not fresh)
-    result, error = verify_label_set(label_set, extractor)
+    result, error = verify_label_set(label_set, extractor, fallback=fallback)
     return store_run(db, app, label_set, extractor.name, trigger, result, error)
 
 
@@ -496,13 +524,14 @@ def resubmit(
     *,
     uploads: Sequence[Upload] = (),
     message: str = "",
+    fallback: Extractor | None = None,
 ) -> VerificationRun:
     if ApplicationStatus(app.status) is not ApplicationStatus.CORRECTION_REQUESTED:
         raise WorkflowError("Only applications with a correction request can be resubmitted.")
     update_fields(app, data)
     if uploads:
         attach_images(db, app, uploads)
-    run = record_run(db, app, extractor, "resubmit")
+    run = record_run(db, app, extractor, "resubmit", fallback=fallback)
     if message.strip():
         add_comment(db, app, actor, "general", message)
     transition(db, app, ApplicationStatus.RESUBMITTED, actor, "Resubmitted with corrections")
@@ -1299,7 +1328,11 @@ def create_batch(db: Session, applicant: User, filename: str, parsed: ParsedBatc
 
 
 def process_batch(
-    session_factory: sessionmaker, batch_id: str, parsed: ParsedBatch, extractor: Extractor
+    session_factory: sessionmaker,
+    batch_id: str,
+    parsed: ParsedBatch,
+    extractor: Extractor,
+    fallback: Extractor | None = None,
 ) -> None:
     """Verify every row with bounded concurrency. Each row uses its own session."""
     with session_factory() as db:
@@ -1355,7 +1388,7 @@ def process_batch(
                 label_set = label_set_of(app)
                 app_id = app.id
                 db.commit()
-            result, error = verify_label_set(label_set, extractor)  # 2. no transaction open
+            result, error = verify_label_set(label_set, extractor, fallback=fallback)  # 2.
             with session_factory() as db:  # 3. the result, then into the queue
                 app = db.get(Application, app_id)
                 store_run(db, app, label_set, extractor.name, "batch", result, error)

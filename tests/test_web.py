@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from labelverify.engine.extractors import DemoExtractor, FixtureExtractor
+from labelverify.engine.extractors.base import ExtractionError
 from labelverify.engine.extractors.demo import SAMPLES_DIR, load_manifest
 from labelverify.web.app import create_app
 
@@ -613,7 +614,9 @@ class TestApplicantWorkflow:
                 return extraction.model_copy(deep=True)
 
         reader = FlakyReader()
-        app = create_app(extractor=reader, database_url=f"sqlite:///{tmp_path}/r.db", secret="s")
+        app = create_app(
+            extractor=reader, database_url=f"sqlite:///{tmp_path}/r.db", secret="s", fallback=None
+        )
         client = login(app, APPLICANT)
         created = client.post(
             "/applicant/applications",
@@ -920,3 +923,94 @@ def test_batches_left_processing_are_closed_at_startup(tmp_path):
         batch = db.scalars(select(Batch).where(Batch.filename == "crashed.csv")).one()
         assert batch.status == "done" and batch.finished_at is not None
     assert services.finish_stale_batches(second.state.session_factory) == 0
+
+
+class TestLocalFallback:
+    """When the vision model fails, the local reader takes over and says so."""
+
+    class BrokenModel:
+        name = "claude"
+
+        def extract(self, image, media_type):
+            return self.extract_panels([(image, media_type)])
+
+        def extract_panels(self, panels):
+            raise ExtractionError("The API key was rejected. Check ANTHROPIC_API_KEY.")
+
+    def test_read_falls_back_and_the_applicant_is_told(self, tmp_path, extraction, label_png):
+        local = FixtureExtractor(extraction)  # stands in for Tesseract
+        local.name = "tesseract"
+        app = create_app(
+            extractor=self.BrokenModel(),
+            database_url=f"sqlite:///{tmp_path}/fb.db",
+            secret="s",
+            fallback=local,
+        )
+        client = login(app, APPLICANT)
+        created = client.post(
+            "/applicant/applications",
+            files={"images": ("mine.png", label_png, "image/png")},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert not created["read_failed"]
+        assert created["prefill"]["brand_name"] == "OLD TOM DISTILLERY"
+        assert created["extractor"] == "tesseract (fallback after claude failed)"
+        assert "local OCR (Tesseract)" in created["warning"] and "rejected" in created["warning"]
+        # The verification carries the same reader name, so the specialist sees it too.
+        resp = client.post(
+            f"/applicant/applications/{created['id']}/precheck",
+            data=FORM,
+            headers={"X-Partial": "1"},
+        )
+        assert resp.status_code == 200 and "tesseract (fallback after claude failed)" in resp.text
+
+    def test_batch_rows_use_the_fallback_too(self, tmp_path, extraction):
+        local = FixtureExtractor(extraction)
+        local.name = "tesseract"
+        app = create_app(
+            extractor=self.BrokenModel(),
+            database_url=f"sqlite:///{tmp_path}/fbb.db",
+            secret="s",
+            fallback=local,
+        )
+        client = login(app, APPLICANT)
+        csv = client.get("/applicant/batches/sample.csv").content
+        zip_bytes = client.get("/applicant/batches/sample-images.zip").content
+        resp = client.post(
+            "/applicant/batches",
+            files={
+                "csv_file": ("s.csv", csv, "text/csv"),
+                "zip_file": ("z.zip", zip_bytes, "application/zip"),
+            },
+            follow_redirects=False,
+        )
+        rows = client.get(resp.headers["location"] + "/rows").text
+        assert "local OCR" in rows and "fallback after claude failed" in rows
+
+    def test_no_fallback_means_the_failure_is_reported(self, tmp_path, label_png):
+        app = create_app(
+            extractor=self.BrokenModel(),
+            database_url=f"sqlite:///{tmp_path}/nf.db",
+            secret="s",
+            fallback=None,
+        )
+        client = login(app, APPLICANT)
+        created = client.post(
+            "/applicant/applications",
+            files={"images": ("mine.png", label_png, "image/png")},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert created["read_failed"] and "rejected" in created["warning"]
+
+    def test_registry_switch(self, monkeypatch):
+        from labelverify.engine.extractors import TesseractExtractor, fallback_extractor
+
+        monkeypatch.setenv("LABELVERIFY_FALLBACK", "none")
+        assert fallback_extractor("claude") is None
+        monkeypatch.setenv("LABELVERIFY_FALLBACK", "tesseract")
+        assert fallback_extractor("tesseract") is None  # never the same backend
+        assert fallback_extractor("demo") is None  # the demo reader has nothing to recover from
+        monkeypatch.setattr(TesseractExtractor, "available", staticmethod(lambda: True))
+        assert fallback_extractor("claude").name == "tesseract"
+        monkeypatch.setattr(TesseractExtractor, "available", staticmethod(lambda: False))
+        assert fallback_extractor("claude") is None
