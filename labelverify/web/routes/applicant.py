@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import time
 
 from fastapi import (
@@ -33,6 +34,8 @@ from .common import (
     renderer,
     sample_image,
 )
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/applicant", dependencies=[Depends(require_applicant)])
 
@@ -118,10 +121,17 @@ async def create_application(
         raise HTTPException(400, str(exc)) from exc
     db.commit()
 
+    return JSONResponse(_read_label(request, db, app))
+
+
+def _read_label(request: Request, db: Session, app) -> dict:
+    """Read the stored images once and report form values; a failure is reported, not
+    raised, so the applicant can retry the read or fill the form by hand."""
     extractor = request.app.state.get_extractor()
     started = time.perf_counter()
     prefill: dict[str, str] = {}
     warning = None
+    read_failed = False
     try:
         extraction = services.extract_for_prefill(extractor, app.current_images)
         prefill = services.prefill_fields(extraction)
@@ -132,22 +142,38 @@ async def create_application(
         if not extraction.image_quality.readable:
             warning = "The label is hard to read: " + "; ".join(extraction.image_quality.issues)
     except ExtractionError as exc:
-        warning = f"Could not read the label automatically ({exc}). Fill in the form by hand."
+        read_failed = True
+        warning = f"Could not read the label automatically ({exc})"
+        log.warning("read failed for %s (%d panels): %s", app.serial, len(app.current_images), exc)
     elapsed_ms = int((time.perf_counter() - started) * 1000)
+    log.info("read %s: %d panel(s), %d ms, %s", app.serial, len(app.current_images), elapsed_ms, extractor.name)
 
     image_urls = [f"/applications/{app.id}/images/{img.id}" for img in app.current_images]
-    return JSONResponse(
-        {
+    return {
             "id": app.id,
             "serial": app.serial,
             "image_url": image_urls[0],
             "image_urls": image_urls,
             "prefill": prefill,
             "warning": warning,
+            "read_failed": read_failed,
             "extractor": extractor.name,
             "ms": elapsed_ms,
-        }
-    )
+    }
+
+
+@router.post("/applications/{app_id}/read")
+def reread(
+    request: Request,
+    app_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_applicant),
+):
+    """Read the stored images again, after a timeout or a poor read."""
+    app = load_application(db, app_id, user)
+    if app.status != ApplicationStatus.DRAFT:
+        raise HTTPException(409, "This application has already been submitted.")
+    return JSONResponse(_read_label(request, db, app))
 
 
 @router.post("/applications/{app_id}/precheck")

@@ -140,6 +140,7 @@ Compare extractors on the same label from the command line:
 .venv/bin/python -m labelverify.cli extract labelverify/samples/old-tom-angled-photo.jpg --extractor claude
 .venv/bin/python -m labelverify.cli extract labelverify/samples/old-tom-angled-photo.jpg --extractor gemini
 .venv/bin/python -m labelverify.cli extract ~/Pictures/my-bottle.jpg --extractor gemini   # any photo of yours
+.venv/bin/python -m labelverify.cli extract front.jpg back.jpg --extractor claude            # a front-and-back set, read as one
 
 # Median latency per extractor on one image (what the five-second budget is measured against)
 .venv/bin/python -m labelverify.cli bench labelverify/samples/old-tom-angled-photo.jpg --extractors claude,gemini --runs 3
@@ -220,7 +221,7 @@ can set them.
 | `LABELVERIFY_EXTRACTOR` | `claude`, else `gemini`, else `demo`, by which key is set | `claude`, `gemini`, `tesseract`, or `demo` |
 | `LABELVERIFY_MODEL` | `claude-sonnet-5-5` | Extraction model. Measured: Sonnet 5.5 4.1 s, Opus 5.5 6.0 s on the hardest sample; `claude-haiku-4-5` is faster if its reads hold up |
 | `LABELVERIFY_NOTICE_MODEL` | `claude-opus-5-5` | Claude model for the notice rewrite when the provider is `claude` |
-| `LABELVERIFY_EXTRACT_TIMEOUT` | `20` | Seconds before an extraction call is abandoned |
+| `LABELVERIFY_EXTRACT_TIMEOUT` | `20` | Seconds before a one-image read is abandoned; each extra panel adds half again (a front-and-back set gets 30 s). A failed read in the wizard offers "Read again" on the stored images |
 | `LABELVERIFY_DAILY_READ_LIMIT` | unlimited | Paid model reads allowed per UTC day; after that uploads get a clear message and the sample labels still work. Set it on any public URL |
 | `LABELVERIFY_DEMO_ACCOUNTS` | `true` | Show the demo account list in the sign-in dialog. Set `false` on a public URL; reviewers use the accounts in this README |
 | `LABELVERIFY_REPO_URL` | this repository | GitHub link on the landing page |

@@ -39,6 +39,23 @@ def fake_client(response=None, error=None):
 
 
 class TestClaudeExtractor:
+    def test_each_extra_panel_gets_more_time(self, extraction: LabelExtraction):
+        """A front-and-back set is one call with two images; it is given 1.5x the base
+        timeout, and a timeout message says how long it waited and for how many images."""
+        response = SimpleNamespace(stop_reason="end_turn", parsed_output=extraction)
+        client, messages = fake_client(response)
+        extractor = ClaudeExtractor(client, model="claude-sonnet-5-5", timeout=20)
+        extractor.extract(b"a", "image/jpeg")
+        extractor.extract_panels([(b"a", "image/jpeg"), (b"b", "image/jpeg")])
+        extractor.extract_panels([(b"a", "image/jpeg")] * 3)
+        assert [c["timeout"] for c in messages.calls] == [20, 30, 40]
+
+        client, _ = fake_client(error=anthropic.APITimeoutError(request=None))
+        with pytest.raises(ExtractionError, match="within 30 s for 2 images"):
+            ClaudeExtractor(client, timeout=20).extract_panels(
+                [(b"a", "image/jpeg"), (b"b", "image/jpeg")]
+            )
+
     def test_request_shape_and_parsed_output(self, extraction: LabelExtraction):
         response = SimpleNamespace(stop_reason="end_turn", parsed_output=extraction)
         client, messages = fake_client(response)
@@ -93,7 +110,7 @@ class TestClaudeExtractor:
 
     def test_timeout_is_wrapped(self):
         client, _ = fake_client(error=anthropic.APITimeoutError(request=None))
-        with pytest.raises(ExtractionError, match="time limit"):
+        with pytest.raises(ExtractionError, match="did not respond within 20 s"):
             ClaudeExtractor(client).extract(b"x", "image/png")
 
     def test_missing_api_key_is_a_clear_error(self, monkeypatch):

@@ -84,13 +84,21 @@ def cmd_verify(args: argparse.Namespace) -> int:
     return 0
 
 
+def _prepared_panels(paths: list[str]) -> list[tuple[bytes, str]]:
+    """Front, back, neck: every image given, prepared, as one label set."""
+    panels = []
+    for path in paths:
+        prepared = prepare_image(_read_file(path, "image"))
+        panels.append((prepared.data, prepared.media_type))
+    return panels
+
+
 def cmd_extract(args: argparse.Namespace) -> int:
-    image = _read_file(args.image, "image")
     extractor = get_extractor(args.extractor)
     try:
-        prepared = prepare_image(image)
+        panels = _prepared_panels(args.images)
         started = time.perf_counter()
-        extraction = extractor.extract(prepared.data, prepared.media_type)
+        extraction = extractor.extract_panels(panels)
         elapsed_ms = int((time.perf_counter() - started) * 1000)
     except UnreadableImageError as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -99,7 +107,7 @@ def cmd_extract(args: argparse.Namespace) -> int:
         print(f"error: extraction failed: {exc}", file=sys.stderr)
         return 3
     print(json.dumps(extraction.model_dump(mode="json"), indent=2))
-    print(f"\n# {extractor.name}: {elapsed_ms} ms", file=sys.stderr)
+    print(f"\n# {extractor.name}: {elapsed_ms} ms for {len(panels)} image(s)", file=sys.stderr)
     return 0
 
 
@@ -107,10 +115,13 @@ def cmd_bench(args: argparse.Namespace) -> int:
     """Time each extractor on the same image several times; prints per-run and median."""
     import statistics
 
-    image = _read_file(args.image, "image")
-    prepared = prepare_image(image)
+    try:
+        panels = _prepared_panels(args.images)
+    except UnreadableImageError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     names = [n.strip() for n in args.extractors.split(",") if n.strip()]
-    print(f"image: {args.image} ({prepared.width}x{prepared.height} after preprocessing)")
+    print(f"images: {', '.join(args.images)} ({len(panels)} panel(s) after preprocessing)")
     print(
         f"{'extractor':<12} {'model':<24} {'runs':>4} {'median ms':>10} {'min ms':>8} {'max ms':>8}"
     )
@@ -121,7 +132,7 @@ def cmd_bench(args: argparse.Namespace) -> int:
         for _ in range(args.runs):
             started = time.perf_counter()
             try:
-                extractor.extract(prepared.data, prepared.media_type)
+                extractor.extract_panels(panels)
                 times.append(int((time.perf_counter() - started) * 1000))
             except ExtractionError as exc:
                 failures.append(str(exc))
@@ -162,12 +173,12 @@ def main(argv: list[str] | None = None) -> int:
     verify_p.set_defaults(func=cmd_verify)
 
     extract_p = sub.add_parser("extract", help="Print the raw extraction for a label image.")
-    extract_p.add_argument("image")
+    extract_p.add_argument("images", nargs="+", help="Front label, then back and neck if any.")
     extract_p.add_argument("--extractor", default=None)
     extract_p.set_defaults(func=cmd_extract)
 
     bench_p = sub.add_parser("bench", help="Time extractors on one image and print medians.")
-    bench_p.add_argument("image")
+    bench_p.add_argument("images", nargs="+", help="Front label, then back and neck if any.")
     bench_p.add_argument("--extractors", default="claude,gemini", help="Comma-separated names.")
     bench_p.add_argument("--runs", type=int, default=3)
     bench_p.set_defaults(func=cmd_bench)

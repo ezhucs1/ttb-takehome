@@ -331,9 +331,41 @@
         const data = await resp.json();
         if (!resp.ok) { status.textContent = data.detail || "Upload failed."; return; }
         applicationId = data.id;
-        const secs = ((performance.now() - started) / 1000).toFixed(1);
-        const n = (data.image_urls || []).length;
+        applyRead(data, started);
+      } catch (err) {
+        status.textContent = `Upload failed: ${err}`;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // Fill step 2 from a read; after a timeout, offer to read the stored images again
+    // rather than making the applicant upload them a second time.
+    function applyRead(data, started) {
+      const secs = ((performance.now() - started) / 1000).toFixed(1);
+      const n = (data.image_urls || []).length;
+      if (data.read_failed) {
+        status.innerHTML = "";
+        const note = document.createElement("span");
+        note.textContent = `${data.warning}. `;
+        const again = document.createElement("button");
+        again.type = "button"; again.className = "link-btn"; again.textContent = "Read again";
+        again.addEventListener("click", async () => {
+          again.disabled = true;
+          status.innerHTML = '<span class="spinner"></span> Reading the label again…';
+          const t0 = performance.now();
+          try {
+            const resp = await fetch(`/applicant/applications/${applicationId}/read`, { method: "post", headers: { Accept: "application/json" } });
+            applyRead(await resp.json(), t0);
+          } catch (err) { status.textContent = `Read failed: ${err}`; }
+        });
+        const orHand = document.createElement("span");
+        orHand.className = "muted"; orHand.textContent = " or fill in the form by hand.";
+        status.append(note, again, orHand);
+      } else {
         status.textContent = `Read ${n > 1 ? n + " images" : "the label"} in ${secs} s · ${data.serial}`;
+      }
+      {
         for (const [key, value] of Object.entries(data.prefill || {})) {
           const el = detailsForm.elements[key];
           if (el) el.value = value;
@@ -348,12 +380,8 @@
         $("#step-3").classList.remove("step-locked");
         submitBtn.disabled = false;
         $("#step-2").scrollIntoView({ behavior: "smooth", block: "start" });
-      } catch (err) {
-        status.textContent = `Upload failed: ${err}`;
-      } finally {
-        btn.disabled = false;
       }
-    });
+    }
 
     detailsForm.addEventListener("async:done", (e) => {
       if (e.detail.ok) {

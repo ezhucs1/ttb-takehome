@@ -103,12 +103,18 @@ class ClaudeExtractor:
     def extract(self, image: bytes, media_type: str) -> LabelExtraction:
         return self.extract_panels([(image, media_type)])
 
+    def timeout_for(self, panel_count: int) -> float:
+        """Each extra panel adds half the base time: a front-and-back read gets 1.5x."""
+        return self.timeout * (1 + 0.5 * max(panel_count - 1, 0))
+
     def extract_panels(self, panels: Sequence[Panel]) -> LabelExtraction:
         if not panels:
             raise ExtractionError("No label images were provided.")
+        timeout = self.timeout_for(len(panels))
         request: dict = dict(
             model=self.model,
             max_tokens=8192,
+            timeout=timeout,
             system=SYSTEM_PROMPT,
             messages=self.build_messages(panels),
             output_format=LabelExtraction,
@@ -118,7 +124,11 @@ class ClaudeExtractor:
         try:
             response = self.client.messages.parse(**request)
         except anthropic.APITimeoutError as exc:
-            raise ExtractionError("The model did not respond within the time limit.") from exc
+            raise ExtractionError(
+                f"The model did not respond within {timeout:.0f} s for {len(panels)} "
+                f"image{'s' if len(panels) != 1 else ''}. Try again, or raise "
+                "LABELVERIFY_EXTRACT_TIMEOUT."
+            ) from exc
         except anthropic.APIConnectionError as exc:
             raise ExtractionError("Could not reach the model API.") from exc
         except anthropic.AuthenticationError as exc:

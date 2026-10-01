@@ -564,6 +564,46 @@ class TestApplicantWorkflow:
         payload = created.json()
         assert payload["prefill"] == {} and "ANTHROPIC_API_KEY" in payload["warning"]
 
+    def test_a_failed_read_can_be_retried_on_the_stored_images(self, tmp_path, extraction, label_png):
+        """A timeout at upload leaves the draft and its images in place; 'Read again' reads
+        them once more without a second upload."""
+        from labelverify.engine.extractors.base import ExtractionError
+
+        class FlakyReader:
+            name = "flaky"
+
+            def __init__(self):
+                self.calls = 0
+
+            def extract(self, image, media_type):
+                return self.extract_panels([(image, media_type)])
+
+            def extract_panels(self, panels):
+                self.calls += 1
+                if self.calls == 1:
+                    raise ExtractionError("The model did not respond within 20 s for 1 image.")
+                return extraction.model_copy(deep=True)
+
+        reader = FlakyReader()
+        app = create_app(extractor=reader, database_url=f"sqlite:///{tmp_path}/r.db", secret="s")
+        client = login(app, APPLICANT)
+        created = client.post(
+            "/applicant/applications",
+            files={"images": ("mine.png", label_png, "image/png")},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert created["read_failed"] and created["prefill"] == {}
+        assert "did not respond" in created["warning"]
+        again = client.post(f"/applicant/applications/{created['id']}/read").json()
+        assert not again["read_failed"] and again["prefill"]["brand_name"] == "OLD TOM DISTILLERY"
+        assert again["prefill"]["beverage_type"] == "distilled_spirits"
+        assert reader.calls == 2
+        # The retried read is kept, so the pre-check needs no third call.
+        resp = client.post(
+            f"/applicant/applications/{created['id']}/precheck", data=FORM, headers={"X-Partial": "1"}
+        )
+        assert resp.status_code == 200 and "reused from upload" in resp.text and reader.calls == 2
+
     def test_garbage_upload_is_rejected(self, applicant):
         resp = applicant.post(
             "/applicant/applications",
