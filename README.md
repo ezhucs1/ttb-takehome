@@ -71,9 +71,11 @@ Open the landing page, choose Sign in, and use one of the demo accounts (passwor
 
 | Role | Account | What to try |
 | --- | --- | --- |
-| Labeling specialist | sarah.chen@ttb.gov | Open the queue, review a "needs a look" item, draft a correction notice |
-| Applicant | labels@oldtomdistillery.com | Start a new application from a sample label, run the pre-check, submit; fix the one awaiting correction |
-| Applicant | imports@caledonia-imports.com | Batch upload with the template CSV and the sample images |
+| Labeling specialist | sarah.chen@ttb.gov | Open the queue, review a "needs a look" item, draft a correction notice, answer the reply waiting in the inbox |
+| Applicant | maria@alvarezlabels.com | Start a new application from a sample label, run the pre-check, submit; fix the one awaiting correction; batch upload with the template CSV and the sample images |
+
+Maria is a label-compliance agent filing for several producers, so her one account holds
+all ten sample cases.
 
 The database is seeded on first start with ten sample applications in a mix of states so
 every screen has content.

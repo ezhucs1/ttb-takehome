@@ -15,7 +15,7 @@ from labelverify.engine.extractors.demo import SAMPLES_DIR, load_manifest
 from labelverify.web.app import create_app
 
 SPECIALIST = {"email": "sarah.chen@ttb.gov", "password": "labelverify"}
-APPLICANT = {"email": "labels@oldtomdistillery.com", "password": "labelverify"}
+APPLICANT = {"email": "maria@alvarezlabels.com", "password": "labelverify"}
 
 FORM = {
     "beverage_type": "distilled_spirits",
@@ -63,6 +63,22 @@ def specialist(app):
 @pytest.fixture
 def applicant(app):
     return login(app, APPLICANT)
+
+
+def other_applicant(app) -> dict:
+    """A second applicant account, created on demand: the demo seeds only one."""
+    from labelverify.web.seed import ensure_user
+
+    with app.state.session_factory() as db:
+        ensure_user(
+            db,
+            email="compliance@stonesthrow.wine",
+            name="Devin Okafor",
+            role="applicant",
+            organization="Stone's Throw Vineyards",
+        )
+        db.commit()
+    return {"email": "compliance@stonesthrow.wine", "password": "labelverify"}
 
 
 def ids_in(html: str, prefix: str) -> list[str]:
@@ -337,7 +353,7 @@ class TestComments:
         assert applicant.get("/me/unread").json()["count"] == before + 2
         assert applicant.get("/inbox").text.count('pill-xs">New</span>') == pills - 1
         # A cross-tenant item id is a 404, not a leak.
-        other = login(specialist.app, {"email": "compliance@stonesthrow.wine", "password": "labelverify"})
+        other = login(specialist.app, other_applicant(specialist.app))
         assert other.get(links[1], follow_redirects=False).status_code == 404
 
     def test_inbox_mark_all_read(self, specialist, applicant):
@@ -378,7 +394,7 @@ class TestComments:
         )
 
     def test_applicant_cannot_see_other_applicants_application(self, app, applicant):
-        other = login(app, {"email": "compliance@stonesthrow.wine", "password": "labelverify"})
+        other = login(app, other_applicant(app))
         mine = ids_in(applicant.get("/applicant").text, "/applicant/applications")[0]
         assert other.get(f"/applicant/applications/{mine}").status_code == 404
         assert (
@@ -570,7 +586,7 @@ class TestBatch:
         )
         assert applicant.get(batch_url).status_code == 200
         assert "peak.csv" in applicant.get("/applicant/batches").text
-        assert "Old Tom" in specialist.get("/specialist").text
+        assert "OLD TOM DISTILLERY" in specialist.get("/specialist").text  # the batch rows are queued
 
     def test_batch_validation_errors_render(self, applicant):
         resp = applicant.post(

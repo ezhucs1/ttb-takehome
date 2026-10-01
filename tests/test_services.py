@@ -47,7 +47,7 @@ def sample_bytes(sample_id: str) -> bytes:
 
 
 def make_app(db, users, sample_id="old-tom-bourbon", extractor=None):
-    applicant = users["labels@oldtomdistillery.com"]
+    applicant = users["maria@alvarezlabels.com"]
     data = ApplicationData.model_validate(sample(sample_id)["application"])
     app = services.create_draft(db, applicant, data, [(sample_bytes(sample_id), "label.png")])
     services.record_run(db, app, extractor or DemoExtractor(), "precheck")
@@ -58,7 +58,7 @@ def make_app(db, users, sample_id="old-tom-bourbon", extractor=None):
 class TestUsersAndSerials:
     def test_seed_users_have_roles_and_passwords(self, users):
         assert users["sarah.chen@ttb.gov"].role == Role.SPECIALIST
-        assert users["labels@oldtomdistillery.com"].role == Role.APPLICANT
+        assert users["maria@alvarezlabels.com"].role == Role.APPLICANT
         assert verify_password(DEMO_PASSWORD, users["sarah.chen@ttb.gov"].password_hash)
         assert not verify_password("wrong", users["sarah.chen@ttb.gov"].password_hash)
 
@@ -86,7 +86,7 @@ class TestDraftAndPrecheck:
         assert app.risk_score >= 10
 
     def test_extraction_failure_is_recorded_not_raised(self, db, users):
-        applicant = users["labels@oldtomdistillery.com"]
+        applicant = users["maria@alvarezlabels.com"]
         data = ApplicationData.model_validate(sample("old-tom-bourbon")["application"])
         # A valid image that the demo extractor does not recognize:
         from PIL import Image
@@ -303,7 +303,7 @@ class TestUnreadActivity:
 
 class TestLabelSets:
     def test_front_and_back_panels_are_one_version(self, db, users):
-        applicant = users["labels@oldtomdistillery.com"]
+        applicant = users["maria@alvarezlabels.com"]
         data = ApplicationData.model_validate(sample("old-tom-bourbon")["application"])
         app = services.create_draft(
             db,
@@ -349,7 +349,7 @@ class TestLabelSets:
         assert app.latest_run.image_version == 2
 
     def test_too_many_panels_is_rejected(self, db, users):
-        applicant = users["labels@oldtomdistillery.com"]
+        applicant = users["maria@alvarezlabels.com"]
         data = ApplicationData.model_validate(sample("old-tom-bourbon")["application"])
         with pytest.raises(UnreadableImageError, match="at most 4"):
             services.create_draft(
@@ -430,7 +430,7 @@ class TestBatch:
         )
         assert parsed.errors == [] and len(parsed.rows) == 3 and len(parsed.images) == 2
 
-        batch = services.create_batch(db, users["labels@oldtomdistillery.com"], "peak.csv", parsed)
+        batch = services.create_batch(db, users["maria@alvarezlabels.com"], "peak.csv", parsed)
         db.commit()
         services.process_batch(session_factory, batch.id, parsed, DemoExtractor())
 

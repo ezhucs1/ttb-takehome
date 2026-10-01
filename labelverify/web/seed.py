@@ -20,6 +20,9 @@ log = logging.getLogger(__name__)
 
 DEMO_PASSWORD = "labelverify"
 
+# Two demo accounts, one per role. The applicant is a label-compliance agent who files
+# COLAs on behalf of several producers, which is why one account holds labels from Old
+# Tom Distillery, Stone's Throw Vineyards, and Caledonia Imports.
 USERS = [
     {
         "email": "sarah.chen@ttb.gov",
@@ -28,30 +31,14 @@ USERS = [
         "organization": "TTB Label Compliance",
     },
     {
-        "email": "jenny.park@ttb.gov",
-        "name": "Jenny Park",
-        "role": Role.SPECIALIST,
-        "organization": "TTB Label Compliance",
-    },
-    {
-        "email": "labels@oldtomdistillery.com",
+        "email": "maria@alvarezlabels.com",
         "name": "Maria Alvarez",
         "role": Role.APPLICANT,
-        "organization": "Old Tom Distillery",
-    },
-    {
-        "email": "compliance@stonesthrow.wine",
-        "name": "Devin Okafor",
-        "role": Role.APPLICANT,
-        "organization": "Stone's Throw Vineyards",
-    },
-    {
-        "email": "imports@caledonia-imports.com",
-        "name": "Priya Natarajan",
-        "role": Role.APPLICANT,
-        "organization": "Caledonia Imports",
+        "organization": "Alvarez Label Services",
     },
 ]
+SPECIALIST_EMAIL = USERS[0]["email"]
+APPLICANT_EMAIL = USERS[1]["email"]
 
 
 # Applicant replies seeded on the correction-requested samples, so the specialist's queue
@@ -65,24 +52,32 @@ SEED_REPLIES = {
 }
 
 
+def ensure_user(
+    db: Session, *, email: str, name: str, role: str, organization: str = ""
+) -> User:
+    """Create an account with the demo password if it does not exist yet."""
+    user = db.scalar(select(User).where(User.email == email))
+    if user is None:
+        user = User(
+            email=email,
+            name=name,
+            role=role,
+            organization=organization,
+            password_hash=hash_password(DEMO_PASSWORD),
+        )
+        db.add(user)
+        db.flush()
+    return user
+
+
 def seed_users(db: Session) -> dict[str, User]:
-    users: dict[str, User] = {}
-    for spec in USERS:
-        user = db.scalar(select(User).where(User.email == spec["email"]))
-        if user is None:
-            user = User(password_hash=hash_password(DEMO_PASSWORD), **spec)
-            db.add(user)
-        users[spec["email"]] = user
+    users = {spec["email"]: ensure_user(db, **spec) for spec in USERS}
     db.flush()
     return users
 
 
 def _applicant_for(sample_id: str, users: dict[str, User]) -> User:
-    if sample_id.startswith("stones-throw") or sample_id.startswith("sunset"):
-        return users["compliance@stonesthrow.wine"]
-    if sample_id.startswith("glen") or sample_id.startswith("harbor"):
-        return users["imports@caledonia-imports.com"]
-    return users["labels@oldtomdistillery.com"]
+    return users[APPLICANT_EMAIL]
 
 
 def _default_state(expected: str, seen: dict[str, int]) -> str:

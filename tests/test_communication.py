@@ -19,12 +19,13 @@ from fastapi.testclient import TestClient
 from labelverify.engine.extractors import DemoExtractor
 from labelverify.engine.extractors.demo import load_manifest
 from labelverify.web.app import create_app
-from labelverify.web.seed import DEMO_PASSWORD, seed_users
+from labelverify.web.seed import DEMO_PASSWORD, ensure_user, seed_users
 
 SARAH = "sarah.chen@ttb.gov"  # specialist
-JENNY = "jenny.park@ttb.gov"  # second specialist
-MARIA = "labels@oldtomdistillery.com"  # applicant, Old Tom Distillery
-DEVIN = "compliance@stonesthrow.wine"  # another applicant
+MARIA = "maria@alvarezlabels.com"  # applicant, Alvarez Label Services
+# Extra accounts the scenarios create on demand; the demo itself seeds only the two above.
+JENNY = ("jenny.park@ttb.gov", "Jenny Park", "specialist", "TTB Label Compliance")
+DEVIN = ("compliance@stonesthrow.wine", "Devin Okafor", "applicant", "Stone's Throw Vineyards")
 
 NEW_PILL = 'pill-xs">New</span>'
 
@@ -54,7 +55,13 @@ def app(tmp_path):
 class Party:
     """One logged-in person, with the handful of actions the scenarios need."""
 
-    def __init__(self, app, email: str):
+    def __init__(self, app, email: str | tuple):
+        if isinstance(email, tuple):  # an extra account: create it first
+            spec = dict(zip(("email", "name", "role", "organization"), email, strict=True))
+            with app.state.session_factory() as db:
+                ensure_user(db, **spec)
+                db.commit()
+            email = spec["email"]
         self.app = app
         self.email = email
         self.role = "specialist" if email.endswith("@ttb.gov") else "applicant"
@@ -389,7 +396,7 @@ class TestResolutionAndIsolation:
         devin.comment(b, "general", "From Stone's Throw")
         assert sarah.unread() == 2
         inbox = text_of(sarah.inbox())
-        assert "Old Tom Distillery" in inbox and "Stone's Throw Vineyards" in inbox
+        assert "Alvarez Label Services" in inbox and "Stone's Throw Vineyards" in inbox
 
 
 class TestLiveness:
