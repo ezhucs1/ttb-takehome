@@ -199,7 +199,9 @@ class TestSpecialistWorkflow:
             == 303
         )
         approved = specialist.get("/specialist?tab=approved").text
-        assert ready[0] in approved and ready[1] in approved
+        assert ready[0] in approved and ready[1] not in approved  # rejections are not listed
+        rejected = specialist.get(f"/specialist/applications/{ready[1]}")
+        assert rejected.status_code == 200 and "Rejected" in rejected.text
         assert (
             specialist.post(
                 f"/specialist/applications/{ready[0]}/rerun", follow_redirects=False
