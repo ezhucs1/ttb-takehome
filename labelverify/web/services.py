@@ -11,6 +11,7 @@ import json
 import logging
 import re
 import secrets
+import time
 import zipfile
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
@@ -20,6 +21,7 @@ from datetime import datetime
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, selectinload, sessionmaker
 
+from ..engine.compare import verify as compare_verify
 from ..engine.extractors import ExtractionError, Extractor
 from ..engine.models import (
     ApplicationData,
@@ -57,6 +59,7 @@ BATCH_MAX_ROWS = 300
 FIELD_LABELS = {
     "brand_name": "Brand Name",
     "class_type": "Class / Type",
+    "beverage_type": "Type of Product",
     "alcohol_content": "Alcohol Content",
     "net_contents": "Net Contents",
     "producer_name": "Producer / Bottler Name",
@@ -230,13 +233,37 @@ class LabelSet:
     media_type: str
     panels: tuple[bytes, ...]
     data: ApplicationData
+    cached_extraction: LabelExtraction | None = None  # an earlier read of these images
+    cached_ms: int = 0
+    cached_extractor: str = ""
 
 
-def label_set_of(app: Application) -> LabelSet:
+def cached_extraction(app: Application) -> LabelExtraction | None:
+    """The stored read of the current label set, if one exists for this image version."""
+    if not app.extraction_json or app.extraction_version != app.current_version:
+        return None
+    try:
+        return LabelExtraction.model_validate_json(app.extraction_json)
+    except ValueError:
+        return None
+
+
+def remember_extraction(
+    app: Application, extraction: LabelExtraction, extractor_name: str, elapsed_ms: int
+) -> None:
+    """Keep a read of the current images so later comparisons need no second model call."""
+    app.extraction_json = extraction.model_dump_json()
+    app.extraction_version = app.current_version
+    app.extraction_ms = elapsed_ms
+    app.extraction_extractor = extractor_name
+
+
+def label_set_of(app: Application, *, reuse: bool = True) -> LabelSet:
     images = app.current_images
     if not images:
         raise WorkflowError("This application has no label image.")
     first = images[0]
+    cached = cached_extraction(app) if reuse else None
     return LabelSet(
         application_id=app.id,
         image_id=first.id,
@@ -244,13 +271,26 @@ def label_set_of(app: Application) -> LabelSet:
         media_type=first.media_type,
         panels=tuple(img.data for img in images),
         data=to_application_data(app),
+        cached_extraction=cached,
+        cached_ms=app.extraction_ms if cached else 0,
+        cached_extractor=app.extraction_extractor if cached else "",
     )
 
 
 def verify_label_set(
     label_set: LabelSet, extractor: Extractor
 ) -> tuple[VerificationResult | None, str | None]:
-    """The model call. Returns (result, None) or (None, error message)."""
+    """The comparison, with a model call only when no earlier read of these images exists.
+    Returns (result, None) or (None, error message)."""
+    if label_set.cached_extraction is not None:
+        started = time.perf_counter()
+        result = compare_verify(label_set.data, label_set.cached_extraction)
+        result.extraction = label_set.cached_extraction
+        result.extractor = label_set.cached_extractor or extractor.name
+        result.extraction_ms = label_set.cached_ms
+        result.reused_read = True
+        result.total_ms = int((time.perf_counter() - started) * 1000)
+        return result, None
     try:
         return (
             run_verification(
@@ -306,6 +346,8 @@ def store_run(
     app.latest_run_id = run.id
     app.recommendation = run.recommendation
     app.risk_score = risk_score(result)
+    if result.extraction is not None and not result.reused_read:
+        remember_extraction(app, result.extraction, result.extractor, result.extraction_ms)
     return run
 
 
@@ -314,13 +356,18 @@ def record_run(
     app: Application,
     extractor: Extractor,
     trigger: str,
+    *,
+    fresh: bool = False,
 ) -> VerificationRun:
-    """Run verification on the application's current label set and store the result.
+    """Compare the application against its current label set and store the result.
 
-    Single-request paths use this. The batch worker splits the same three steps across
-    two short transactions so the model call never holds the database's write lock.
+    The images are read by the model once per upload: the read made when the applicant
+    uploaded them is reused by the pre-check and the submission. ``fresh`` forces a new
+    read, which is what the specialist's "Re-check label" does. The batch worker splits
+    the same steps across two short transactions so a model call never holds the
+    database's write lock.
     """
-    label_set = label_set_of(app)
+    label_set = label_set_of(app, reuse=not fresh)
     result, error = verify_label_set(label_set, extractor)
     return store_run(db, app, label_set, extractor.name, trigger, result, error)
 

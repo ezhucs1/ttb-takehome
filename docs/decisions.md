@@ -55,6 +55,13 @@ Gemini's free tier also produced 503 "high demand" errors and a timeout during t
 session, and it reports full confidence on every field, which would disable the workflow's
 low-confidence review gate. It stays as the zero-cost evaluation path, not the default.
 
+Two-panel sets (front and back read in one call) measured 5.5 s on Sonnet, against about
+4.1 s for one panel. Before this entry the applicant flow paid that twice: once to fill
+the form at upload, and again for the pre-check. The read is now stored with the
+application and reused by the pre-check and the submission, so the applicant waits for one
+read, the comparison takes milliseconds, and the model bill per application halves. A
+specialist's "Re-check label" always reads afresh; a new upload always reads afresh.
+
 ## 2. One vision-model call, then deterministic comparison
 
 **Chose:** a single Claude request that returns every required field as structured JSON

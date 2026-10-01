@@ -46,6 +46,7 @@ def run_verification(
     extraction_ms = int((time.perf_counter() - extraction_started) * 1000)
 
     result = verify(application, extraction)
+    result.extraction = extraction
     result.extractor = used
     result.extraction_ms = extraction_ms
     result.total_ms = int((time.perf_counter() - started) * 1000)

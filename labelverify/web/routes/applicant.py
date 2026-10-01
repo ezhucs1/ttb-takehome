@@ -122,6 +122,10 @@ async def create_application(
     try:
         extraction = services.extract_for_prefill(extractor, app.current_images)
         prefill = services.prefill_fields(extraction)
+        services.remember_extraction(
+            app, extraction, extractor.name, int((time.perf_counter() - started) * 1000)
+        )
+        db.commit()
         if not extraction.image_quality.readable:
             warning = "The label is hard to read: " + "; ".join(extraction.image_quality.issues)
     except ExtractionError as exc:

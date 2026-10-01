@@ -27,7 +27,7 @@
   </div>
   <div class="banner-meta">
     <span title="Extractor">{{ result.extractor }}</span>
-    <span title="Extraction time">{{ result.extraction_ms }} ms read · {{ result.total_ms }} ms total</span>
+    <span title="Extraction time">{{ result.extraction_ms }} ms read{% if result.reused_read %} (reused from upload){% endif %} · {{ result.total_ms }} ms compare</span>
   </div>
 </div>
 

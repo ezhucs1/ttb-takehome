@@ -99,6 +99,34 @@ class TestDraftAndPrecheck:
         assert "ANTHROPIC_API_KEY" in run.error
         assert app.latest_run_id is None
 
+    def test_the_upload_read_is_reused_until_the_images_change(self, db, users, extraction):
+        """One model call per upload: the pre-check and the submission compare against the
+        read made at upload time. A fresh read is only made on request or after a new
+        label set is attached."""
+        reader = FixtureExtractor(extraction)
+        reader.name = "fixture"
+        applicant = users["maria@alvarezlabels.com"]
+        data = ApplicationData.model_validate(sample("old-tom-bourbon")["application"])
+        app = services.create_draft(db, applicant, data, [(sample_bytes("old-tom-bourbon"), "a.png")])
+        read = services.extract_for_prefill(reader, app.current_images)
+        services.remember_extraction(app, read, reader.name, 4321)
+        db.commit()
+        assert len(reader.calls) == 1
+
+        run = services.record_run(db, app, reader, "precheck")
+        result = services.result_of(run)
+        assert len(reader.calls) == 1 and result.reused_read and result.extraction_ms == 4321
+        services.record_run(db, app, reader, "submit")
+        assert len(reader.calls) == 1
+
+        fresh = services.record_run(db, app, reader, "rerun", fresh=True)
+        assert len(reader.calls) == 2 and not services.result_of(fresh).reused_read
+        assert app.extraction_version == app.current_version  # the fresh read is kept too
+
+        services.attach_images(db, app, [(sample_bytes("old-tom-abv-mismatch"), "b.png")])
+        services.record_run(db, app, reader, "resubmit")
+        assert len(reader.calls) == 3  # new images, new read
+
     def test_prefill_fields_come_from_extraction(self):
         extraction = DemoExtractor().extract(sample_bytes("old-tom-bourbon"), "image/png")
         fields = services.prefill_fields(extraction)
@@ -561,6 +589,8 @@ def test_init_db_adds_columns_to_a_database_from_the_previous_release(tmp_path):
         con.execute("ALTER TABLE label_images DROP COLUMN version")
         con.execute("ALTER TABLE label_images DROP COLUMN panel")
         con.execute("ALTER TABLE verification_runs DROP COLUMN image_version")
+        for column in ("extraction_json", "extraction_version", "extraction_ms", "extraction_extractor"):
+            con.execute(f"ALTER TABLE applications DROP COLUMN {column}")
         assert "version" not in [r[1] for r in con.execute("PRAGMA table_info(label_images)")]
 
     engine = make_engine(f"sqlite:///{path}")
@@ -568,6 +598,8 @@ def test_init_db_adds_columns_to_a_database_from_the_previous_release(tmp_path):
     with engine.connect() as conn:
         cols = [r[1] for r in conn.execute(text("PRAGMA table_info(label_images)"))]
         assert "version" in cols and "panel" in cols
+        app_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(applications)"))]
+        assert "extraction_json" in app_cols and "extraction_version" in app_cols
     with make_session_factory(engine)() as db:
         app = db.query(Application).first()
         assert [(i.version, i.panel) for i in app.current_images] == [(1, 1)]

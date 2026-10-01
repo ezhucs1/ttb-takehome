@@ -49,6 +49,7 @@ nothing on any page loads from a CDN.
 | Alcohol content | Parsed to % ABV; proof converted; label proof must equal 2 × ABV | `45% Alc./Vol. (90 Proof)` = `45` = `90 proof` |
 | Net contents | Parsed to mL; standard-of-fill sizes noted | `750 mL` = `0.75 L` = `75 cL` |
 | Country of origin | Required for imports only; aliases folded | `Product of Scotland` = `United Kingdom` |
+| Type of product | The category the class/type implies must be the category filed | `Straight Bourbon Whiskey` filed as wine is a mismatch |
 | Health warning | Word for word against 27 CFR 16.21; `GOVERNMENT WARNING` must be all caps; bold is a visual judgment that goes to review when uncertain | exact statutory text |
 
 Per-field verdicts are match, needs review, mismatch, or not applicable. A match read at
@@ -94,7 +95,10 @@ to end, and uploading your own image gives a clear message instead of a made-up 
 
 **With `ANTHROPIC_API_KEY` in `.env`** (or the environment) the vision extractor reads any label you upload, and the
 correction notice is rewritten by the model before the specialist edits it. Every result
-shows extraction time so you can check it against the five-second budget.
+shows the read time so you can check it against the five-second budget. A label set is
+read once, when it is uploaded; the pre-check and the submission compare against that
+read in milliseconds, and a new read happens only when the images change or a specialist
+asks for a re-check.
 
 **With `GEMINI_API_KEY` instead** the same flow runs on Google Gemini (the free tier is
 enough to try it). Set `LABELVERIFY_EXTRACTOR=gemini` to force it when both keys are
@@ -246,7 +250,9 @@ application. No model is involved in the comparison step.
   the Azure-hosted path.
 - Up to four images per label set (front, back, neck). They are read together in one
   model call and each field is reported once.
-- Only the seven fields named in the brief are checked; beverage-specific rules are not.
+- The seven fields named in the brief are checked, plus one consistency check: the
+  category the class/type implies (spirits, wine, malt beverage) must be the category
+  filed. Beverage-specific labeling rules beyond that are not applied.
 - Bold detection on the warning heading is a visual judgment and is surfaced for review
   rather than failed automatically.
 - Sample labels are synthetic renders, not real COLA images.

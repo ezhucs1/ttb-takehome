@@ -91,6 +91,13 @@ class Application(Base):
     is_import: Mapped[bool] = mapped_column(Boolean, default=False)
     country_of_origin: Mapped[str] = mapped_column(String(100), default="")
 
+    # The most recent read of the current label set, kept so the pre-check and the
+    # submission compare against it instead of paying for a second model call.
+    extraction_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    extraction_version: Mapped[int] = mapped_column(Integer, default=0)
+    extraction_ms: Mapped[int] = mapped_column(Integer, default=0)
+    extraction_extractor: Mapped[str] = mapped_column(String(80), default="")
+
     latest_run_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     recommendation: Mapped[str | None] = mapped_column(String(30), nullable=True, index=True)
     risk_score: Mapped[int] = mapped_column(Integer, default=0)

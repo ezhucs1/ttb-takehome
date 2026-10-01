@@ -1,3 +1,5 @@
+import pytest
+
 from labelverify.engine.compare import (
     compare_alcohol_content,
     compare_brand_name,
@@ -46,6 +48,51 @@ class TestBrandName:
 
     def test_exact_text_has_plain_reason(self, application, extraction):
         assert compare_brand_name(application, extraction).reason == "Matches the application."
+
+
+class TestBeverageType:
+    """The product type the applicant filed against what the label's class/type implies."""
+
+    def test_bourbon_filed_as_wine_is_a_mismatch(self, application, extraction):
+        from labelverify.engine.compare import compare_beverage_type
+
+        application.beverage_type = "wine"
+        extraction.class_type = make_field("Straight Bourbon Whiskey")
+        result = compare_beverage_type(application, extraction)
+        assert result.verdict is Verdict.MISMATCH
+        assert "reads as distilled spirits" in result.reason and "filed as wine" in result.reason
+        assert verify(application, extraction).recommendation is Recommendation.REQUEST_CORRECTION
+
+    @pytest.mark.parametrize(
+        ("class_type", "filed"),
+        [
+            ("Kentucky Straight Bourbon Whiskey", "distilled_spirits"),
+            ("Single Malt Scotch Whisky", "distilled_spirits"),  # malt, but a whisky
+            ("Straight Rye Whiskey", "distilled_spirits"),
+            ("Cabernet Sauvignon", "wine"),
+            ("Rosé Wine", "wine"),
+            ("Hard Cider", "wine"),
+            ("India Pale Ale", "malt_beverage"),
+            ("Rye Ale", "malt_beverage"),  # rye alone is not a spirit
+            ("Malt Beverage with Natural Flavors", "malt_beverage"),
+        ],
+    )
+    def test_each_category_is_recognised(self, application, extraction, class_type, filed):
+        from labelverify.engine.compare import compare_beverage_type
+
+        application.beverage_type = filed
+        application.class_type = class_type
+        extraction.class_type = make_field(class_type)
+        assert compare_beverage_type(application, extraction).verdict is Verdict.MATCH
+
+    def test_a_designation_naming_no_category_is_left_to_the_specialist(
+        self, application, extraction
+    ):
+        from labelverify.engine.compare import compare_beverage_type
+
+        application.class_type = "Special Reserve"
+        extraction.class_type = make_field("Special Reserve")
+        assert compare_beverage_type(application, extraction).verdict is Verdict.NOT_APPLICABLE
 
 
 class TestClassType:
@@ -183,7 +230,7 @@ class TestVerify:
     def test_clean_label_is_approved(self, application, extraction):
         result = verify(application, extraction)
         assert result.recommendation is Recommendation.APPROVE
-        assert len(result.fields) == 8
+        assert len(result.fields) == 9  # seven brief fields, the warning, and the product type
         assert result.field("health_warning").verdict is Verdict.MATCH
 
     def test_any_mismatch_requests_correction(self, application, extraction):

@@ -61,6 +61,12 @@ _ADDED_COLUMNS: dict[str, dict[str, str]] = {
         "panel": "INTEGER NOT NULL DEFAULT 1",
     },
     "verification_runs": {"image_version": "INTEGER NOT NULL DEFAULT 1"},
+    "applications": {
+        "extraction_json": "TEXT",
+        "extraction_version": "INTEGER NOT NULL DEFAULT 0",
+        "extraction_ms": "INTEGER NOT NULL DEFAULT 0",
+        "extraction_extractor": "VARCHAR(80) NOT NULL DEFAULT ''",
+    },
 }
 
 

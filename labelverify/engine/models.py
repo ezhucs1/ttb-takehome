@@ -154,6 +154,13 @@ class VerificationResult(BaseModel):
     extractor: str = ""
     extraction_ms: int = 0
     total_ms: int = 0
+    reused_read: bool = Field(
+        default=False,
+        description="The comparison reused a read of the same images made earlier.",
+    )
+    extraction: LabelExtraction | None = Field(
+        default=None, exclude=True, description="The read this result was computed from."
+    )
 
     def field(self, name: str) -> FieldResult:
         for result in self.fields:

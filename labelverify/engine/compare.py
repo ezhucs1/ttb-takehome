@@ -14,6 +14,8 @@ Nothing here calls a model. All judgment calls are thresholds that can be tuned 
 
 from __future__ import annotations
 
+import re
+
 from rapidfuzz import fuzz
 
 from .models import (
@@ -144,6 +146,91 @@ def compare_class_type(application: ApplicationData, extraction: LabelExtraction
         extracted=extraction.class_type,
         review_at=CLASS_REVIEW,
         normalizer=lambda s: _apply_synonyms(normalize_text(s)),
+    )
+
+
+# Words in a class/type designation that settle which TTB category the product is in.
+# Spirits are checked first so "Single Malt Scotch Whisky" is not read as a malt beverage,
+# and "rye" counts as a spirit only next to "whiskey"; "Rye Ale" is beer.
+_CATEGORY_PATTERNS: tuple[tuple[BeverageType, re.Pattern[str]], ...] = (
+    (
+        BeverageType.DISTILLED_SPIRITS,
+        re.compile(
+            r"\b(whisk(e)?y|bourbon|scotch|vodka|gin|rum|tequila|mezcal|brandy|cognac|"
+            r"armagnac|liqueur|cordial|absinthe|schnapps|moonshine|grappa|pisco|"
+            r"distilled spirits?|spirits?|rye whisk(e)?y|straight rye)\b"
+        ),
+    ),
+    (
+        BeverageType.WINE,
+        re.compile(
+            r"\b(wine|cabernet|chardonnay|merlot|pinot|sauvignon|riesling|ros[eé]|champagne|"
+            r"sparkling|prosecco|zinfandel|syrah|shiraz|malbec|sangria|vermouth|port|sherry|"
+            r"cider|mead|moscato|tempranillo|grenache|sangiovese)\b"
+        ),
+    ),
+    (
+        BeverageType.MALT_BEVERAGE,
+        re.compile(
+            r"\b(beer|ale|lager|ipa|india pale|stout|porter|pilsner|pils|hefeweizen|witbier|"
+            r"saison|lambic|k[oö]lsch|bock|malt beverage|malt liquor|hard seltzer)\b"
+        ),
+    ),
+)
+
+CATEGORY_LABELS = {
+    BeverageType.DISTILLED_SPIRITS: "distilled spirits",
+    BeverageType.WINE: "wine",
+    BeverageType.MALT_BEVERAGE: "a malt beverage",
+}
+
+
+def infer_beverage_category(class_type: str | None) -> BeverageType | None:
+    """Which category a class/type designation belongs to, or None when it does not say."""
+    text = normalize_text(class_type)
+    if not text:
+        return None
+    for category, pattern in _CATEGORY_PATTERNS:
+        if pattern.search(text):
+            return category
+    return None
+
+
+def compare_beverage_type(application: ApplicationData, extraction: LabelExtraction) -> FieldResult:
+    """The type of product on the application against what the label's class/type implies.
+
+    Filing a bourbon as wine is an application error the other fields cannot catch, since
+    the class/type text itself may match perfectly. Only unambiguous words decide; a
+    designation that names no category is left to the specialist as not applicable.
+    """
+    filed = BeverageType(application.beverage_type)
+    implied = infer_beverage_category(extraction.class_type.value)
+    base = dict(
+        field="beverage_type",
+        label="Type of Product",
+        application_value=CATEGORY_LABELS[filed].removeprefix("a "),
+        label_value=(extraction.class_type.value or "").strip() or None,
+        confidence=extraction.class_type.confidence,
+    )
+    if implied is None:
+        return FieldResult(
+            verdict=Verdict.NOT_APPLICABLE,
+            reason="The class/type on the label does not say which category the product is in.",
+            **base,
+        )
+    if implied is filed:
+        return FieldResult(
+            verdict=Verdict.MATCH,
+            reason=f"The label reads as {CATEGORY_LABELS[implied]}, as filed.",
+            **base,
+        )
+    return FieldResult(
+        verdict=Verdict.MISMATCH,
+        reason=(
+            f"The label reads as {CATEGORY_LABELS[implied]} ('{extraction.class_type.value}') "
+            f"but the application is filed as {CATEGORY_LABELS[filed]}."
+        ),
+        **base,
     )
 
 
@@ -373,6 +460,7 @@ def _apply_confidence_gate(result: FieldResult) -> FieldResult:
 _COMPARATORS = (
     compare_brand_name,
     compare_class_type,
+    compare_beverage_type,
     compare_alcohol_content,
     compare_net_contents,
     compare_producer_name,

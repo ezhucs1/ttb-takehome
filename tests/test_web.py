@@ -481,6 +481,33 @@ class TestApplicantWorkflow:
         page = specialist.get(f"/specialist/applications/{app_id}").text
         assert 'data-viewer-label="Front"' in page and 'data-viewer-label="Back"' in page
 
+    def test_precheck_reuses_the_upload_read(self, applicant):
+        created = applicant.post(
+            "/applicant/applications",
+            data={"sample_id": "old-tom-bourbon", "beverage_type": "distilled_spirits"},
+        ).json()
+        resp = applicant.post(
+            f"/applicant/applications/{created['id']}/precheck",
+            data=FORM,
+            headers={"X-Partial": "1"},
+        )
+        assert resp.status_code == 200 and "reused from upload" in resp.text
+
+    def test_wrong_product_type_is_caught(self, applicant):
+        """A bourbon filed as wine: every text field can match and it is still wrong."""
+        created = applicant.post(
+            "/applicant/applications",
+            data={"sample_id": "old-tom-bourbon", "beverage_type": "wine"},
+        ).json()
+        resp = applicant.post(
+            f"/applicant/applications/{created['id']}/precheck",
+            data={**FORM, "beverage_type": "wine"},
+            headers={"X-Partial": "1"},
+        )
+        assert resp.status_code == 200
+        assert "Type of Product" in resp.text and "filed as wine" in resp.text
+        assert "needs corrections" in resp.text
+
     def test_submit_requires_brand_and_class(self, applicant):
         app_id = applicant.post(
             "/applicant/applications",
