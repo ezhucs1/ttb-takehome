@@ -515,6 +515,7 @@
     if (!badges.length) return;
     const baseTitle = document.title;
     const tick = async () => {
+      if (document.hidden) return; // a background tab polls again when it is shown
       try {
         const resp = await fetch("/me/unread", { headers: { Accept: "application/json" } });
         if (!resp.ok) return;

@@ -1036,31 +1036,28 @@ def queue(db: Session, tab: str = "open") -> list[Application]:
 
 
 def queue_stats(db: Session) -> QueueStats:
-    open_statuses = [
-        s.value
-        for s in (
-            ApplicationStatus.SUBMITTED,
-            ApplicationStatus.UNDER_REVIEW,
-            ApplicationStatus.RESUBMITTED,
+    """The four stat cards, from one grouped count instead of one query per card."""
+    open_statuses = {
+        ApplicationStatus.SUBMITTED.value,
+        ApplicationStatus.UNDER_REVIEW.value,
+        ApplicationStatus.RESUBMITTED.value,
+    }
+    rows = db.execute(
+        select(Application.status, Application.recommendation, func.count()).group_by(
+            Application.status, Application.recommendation
         )
-    ]
-
-    def count(*conditions) -> int:
-        return db.scalar(select(func.count()).select_from(Application).where(*conditions)) or 0
-
-    return QueueStats(
-        open=count(Application.status.in_(open_statuses)),
-        ready=count(
-            Application.status.in_(open_statuses),
-            Application.recommendation == Recommendation.APPROVE.value,
-        ),
-        review=count(
-            Application.status.in_(open_statuses),
-            Application.recommendation != Recommendation.APPROVE.value,
-        ),
-        corrections=count(Application.status == ApplicationStatus.CORRECTION_REQUESTED.value),
-        approved=count(Application.status == ApplicationStatus.APPROVED.value),
-    )
+    ).all()
+    totals = {"open": 0, "ready": 0, "review": 0, "corrections": 0, "approved": 0}
+    for status, recommendation, n in rows:
+        if status in open_statuses:
+            totals["open"] += n
+            key = "ready" if recommendation == Recommendation.APPROVE.value else "review"
+            totals[key] += n
+        elif status == ApplicationStatus.CORRECTION_REQUESTED.value:
+            totals["corrections"] += n
+        elif status == ApplicationStatus.APPROVED.value:
+            totals["approved"] += n
+    return QueueStats(**totals)
 
 
 def applicant_applications(db: Session, applicant: User) -> list[Application]:

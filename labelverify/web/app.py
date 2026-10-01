@@ -49,7 +49,7 @@ def create_app(
     secret: str | None = None,
 ) -> FastAPI:
     app = FastAPI(title="LabelVerify", docs_url="/api/docs", redoc_url=None)
-    app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
+    app.mount("/static", CachedStaticFiles(directory=HERE / "static"), name="static")
 
     engine = make_engine(database_url)
     init_db(engine)
@@ -101,6 +101,21 @@ def create_app(
     app.include_router(specialist.router)
     app.include_router(api.router)
     return app
+
+
+class CachedStaticFiles(StaticFiles):
+    """Static files with cache headers. A URL that carries the content hash (``?v=``)
+    can be cached for a year, since any change to the file changes the URL; the fonts
+    and anything requested without a version get a day."""
+
+    def file_response(self, *args, **kwargs):  # type: ignore[override]
+        response = super().file_response(*args, **kwargs)
+        scope = kwargs.get("scope") or (args[2] if len(args) > 2 else {})
+        versioned = b"v=" in (scope.get("query_string") or b"")
+        response.headers["Cache-Control"] = (
+            "public, max-age=31536000, immutable" if versioned else "public, max-age=86400"
+        )
+        return response
 
 
 def _asset_version() -> str:

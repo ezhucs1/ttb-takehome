@@ -117,6 +117,10 @@ class TestAuth:
         assert '<dialog id="signin"' in page and "data-open-signin" in page
         assert "Not an official" in page  # the prototype disclaimer next to the seal
         assert re.search(r'/static/app\.css\?v=[0-9a-f]{10}', page)
+        version = re.search(r'/static/app\.css\?v=([0-9a-f]{10})', page).group(1)
+        versioned = anon.get(f"/static/app.css?v={version}")
+        assert versioned.status_code == 200 and "immutable" in versioned.headers["cache-control"]
+        assert anon.get("/static/app.css").headers["cache-control"] == "public, max-age=86400"
         assert "Sarah Chen" in page and 'data-open' not in page.split("<dialog")[1].split(">")[0]
 
     def test_failed_login_reopens_the_dialog(self, anon):
