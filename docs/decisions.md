@@ -219,7 +219,8 @@ server and browser check from before it still applies.
 removes the credential list from the sign-in dialog, and ``LABELVERIFY_DAILY_READ_LIMIT``
 caps paid model reads per UTC day, after which uploads return a clear message while the
 bundled samples keep working. The landing page also says it is a prototype and not an
-official TTB system, because it carries the agency's seal.
+official TTB system; an earlier backdrop carried the agency's seal, which federal rules
+restrict, and was replaced by a night photograph of the Lincoln Memorial.
 
 **Considered:** a captcha; per-account quotas; keeping the account list and trusting the
 URL to stay private.
