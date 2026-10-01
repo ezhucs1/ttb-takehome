@@ -468,6 +468,10 @@ def test_seed_populates_a_realistic_queue(db):
     assert stats.open >= 3
     assert stats.corrections >= 1
     assert len(services.queue(db, "approved")) >= 1
+    from labelverify.web.models import Application, ApplicationStatus
+
+    rejected = [a for a in db.query(Application) if a.status == ApplicationStatus.REJECTED]
+    assert len(rejected) == 1 and rejected[0].notices and "rejected" in rejected[0].notices[-1].body
     seed(db)  # idempotent
     assert services.queue_stats(db) == stats
 

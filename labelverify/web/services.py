@@ -956,11 +956,37 @@ def batch_template_csv() -> str:
     return buffer.getvalue()
 
 
+# Two deliberately broken rows in the sample batch, so the demo shows what the pipeline
+# does with bad input: a photo that is not a label, and a row whose image is not in the zip.
+NOT_A_LABEL = "not-a-label.jpg"
+MISSING_IMAGE = "missing-photo.jpg"
+SAMPLE_BATCH_EXTRA_ROWS = [
+    [NOT_A_LABEL, "wine", "Harbor Mist", "Red Wine", "13%", "750 mL", "", "", "false", ""],
+    [MISSING_IMAGE, "malt_beverage", "Night Shift", "Lager", "5%", "12 fl oz", "", "", "false", ""],
+]
+
+
+def not_a_label_image() -> bytes:
+    """A dark, noisy photograph of nothing: readable as an image, useless as a label."""
+    from PIL import Image, ImageFilter
+
+    noise = Image.effect_noise((900, 1200), 48).convert("RGB")
+    shade = Image.linear_gradient("L").resize((900, 1200)).convert("RGB")
+    image = Image.blend(noise, shade, 0.6).point(lambda v: int(v * 0.35)).filter(
+        ImageFilter.GaussianBlur(3)
+    )
+    out = io.BytesIO()
+    image.save(out, format="JPEG", quality=80)
+    return out.getvalue()
+
+
 def sample_batch_csv(samples) -> str:
-    """One row per bundled sample label, in the batch template's columns."""
+    """One row per bundled sample label plus two broken rows, in the template's columns."""
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(BATCH_COLUMNS)
+    for row in SAMPLE_BATCH_EXTRA_ROWS:
+        writer.writerow(row)
     for s in samples:
         a = s["application"]
         writer.writerow(
@@ -984,6 +1010,7 @@ def sample_batch_zip(samples, samples_dir) -> bytes:
     """The bundled sample images, zipped under the names the sample CSV refers to."""
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(NOT_A_LABEL, not_a_label_image())
         for s in samples:
             archive.write(samples_dir / s["file"], arcname=s["file"])
     return buffer.getvalue()

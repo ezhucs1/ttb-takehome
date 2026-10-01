@@ -41,6 +41,17 @@ SPECIALIST_EMAIL = USERS[0]["email"]
 APPLICANT_EMAIL = USERS[1]["email"]
 
 
+# Samples whose seeded state is fixed rather than spread by _default_state. The beer with
+# no Government Warning at all is rejected outright, so the demo shows a rejection as well
+# as corrections and approvals.
+SEED_STATES = {"harbor-light-ipa-missing-warning": "rejected"}
+REJECTION_NOTICE = (
+    "Re: COLA application for Harbor Light IPA\n\n"
+    "The label carries no Government Warning Statement. 27 CFR 16.21 requires the full "
+    "statement on every container, so this application is rejected rather than returned "
+    "for correction. Please file a new application with corrected artwork."
+)
+
 # Applicant replies seeded on the correction-requested samples, so the specialist's queue
 # shows unread activity on first login. Keyed by sample id: (field, message).
 SEED_REPLIES = {
@@ -111,12 +122,15 @@ def seed_applications(db: Session, users: dict[str, User], samples_dir: Path = S
         data = ApplicationData.model_validate(sample["application"])
         app = services.create_draft(db, applicant, data, [(image, sample["file"])])
         services.record_run(db, app, extractor, "precheck")
-        state = sample.get("seed_state") or _default_state(sample.get("expected", ""), seen)
+        state = SEED_STATES.get(sample["id"]) or _default_state(sample.get("expected", ""), seen)
         if state == "draft":
             continue
         services.submit(db, app, applicant)
         if state == "approved":
             services.decide(db, app, sarah, "approve")
+        elif state == "rejected":
+            services.claim_for_review(db, app, sarah)
+            services.decide(db, app, sarah, "reject", notice_body=REJECTION_NOTICE)
         elif state == "correction_requested":
             draft = services.draft_correction(app, use_ai=False)
             services.decide(

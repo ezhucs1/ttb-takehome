@@ -78,9 +78,11 @@ Maria is a label-compliance agent filing for several producers, so her one accou
 all ten sample cases.
 
 **Trying the batch upload** needs a CSV and a zip of images. The batch page offers both
-ready-made: a ten-row CSV and a zip of the ten sample labels. Download them, choose them
-in the form, and start the batch; the page shows progress and every row lands in the
-specialist's queue. In demo mode it finishes in a second or two. With a real API key the
+ready-made: a twelve-row CSV and a zip of the sample labels. Ten rows are the bundled
+samples; two are deliberately broken, a photo that is not a label and a row whose image is
+missing from the zip, so the summary shows failures next to the AI's findings. Download
+them, choose them in the form, and start the batch; the page shows progress and every
+readable row lands in the specialist's queue. In demo mode it finishes in a second or two. With a real API key the
 same batch makes ten model reads, which is a fair test of the concurrency and the
 per-label timing.
 
@@ -129,7 +131,7 @@ outcome:
 | Stone's Throw Cabernet | `STONE'S THROW` vs `Stone's Throw` | Approve |
 | Sunset Ridge Rosé | Warning reworded ("can cause health issues") | Request correction |
 | Glen Aldie Scotch | Import, `Product of Scotland` vs `United Kingdom` | Approve |
-| Harbor Light IPA | No warning statement at all | Request correction |
+| Harbor Light IPA | No warning statement at all | Request correction (seeded as rejected, with notice) |
 | Harbor Light IPA, can photo | 16 fl oz on label vs 12 fl oz on application | Request correction |
 | Copper Ridge Rye | Brand printed `COPPER RIGDE` | Needs review |
 

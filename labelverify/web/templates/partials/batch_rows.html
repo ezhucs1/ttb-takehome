@@ -7,10 +7,10 @@
     {% if batch.status == 'done' %}· done{% else %}· working…{% endif %}
   </div>
   <div class="batch-summary">
-    <span class="pill pill-success">{{ summary.approve }} match</span>
+    <span class="pill pill-success">{{ summary.approve }} all fields match</span>
     <span class="pill pill-warning">{{ summary.needs_review }} need a look</span>
-    <span class="pill pill-danger">{{ summary.request_correction }} need fixes</span>
-    {% if summary.error %}<span class="pill pill-neutral">{{ summary.error }} failed</span>{% endif %}
+    <span class="pill pill-danger">{{ summary.request_correction }} corrections needed</span>
+    {% if summary.error %}<span class="pill pill-neutral">{{ summary.error }} could not be checked</span>{% endif %}
   </div>
 </div>
 <div class="table-wrap">
@@ -24,8 +24,8 @@
       <td>{{ item.brand_name }}</td>
       <td>{% if item.application %}<a href="/applicant/applications/{{ item.application.id }}">{{ item.application.serial }}</a>{% else %}—{% endif %}</td>
       <td>
-        {% if item.status == 'error' %}<span class="pill pill-neutral">Failed</span> <span class="muted">{{ item.error }}</span>
-        {% elif item.status == 'done' %}{{ m.rec_pill(item.application.recommendation) }}
+        {% if item.status == 'error' %}<span class="pill pill-neutral">Not checked</span> <span class="muted">{{ item.error }}</span>
+        {% elif item.status == 'done' %}{{ m.rec_pill(item.application.recommendation) }}{% if item.application.latest_run and item.application.latest_run.error %} <span class="muted">{{ item.application.latest_run.error }}</span>{% endif %}
         {% else %}<span class="pill pill-neutral">Pending</span>{% endif %}
       </td>
       <td class="right">{% if item.application %}<a class="btn btn-ghost btn-sm" href="/applicant/applications/{{ item.application.id }}">Open</a>{% endif %}</td>

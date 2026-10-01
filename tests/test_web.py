@@ -580,9 +580,9 @@ class TestBatch:
         rows_resp = applicant.get(batch_url + "/rows")
         assert rows_resp.headers["X-Batch-Status"] == "done"
         assert (
-            "1 match" in rows_resp.text
-            and "1 need fixes" in rows_resp.text
-            and "1 failed" in rows_resp.text
+            "1 all fields match" in rows_resp.text
+            and "1 corrections needed" in rows_resp.text
+            and "1 could not be checked" in rows_resp.text
         )
         assert applicant.get(batch_url).status_code == 200
         assert "peak.csv" in applicant.get("/applicant/batches").text
@@ -592,10 +592,10 @@ class TestBatch:
         """The two downloads on the batch page are enough to exercise the whole flow."""
         csv_resp = applicant.get("/applicant/batches/sample.csv")
         zip_resp = applicant.get("/applicant/batches/sample-images.zip")
-        assert csv_resp.status_code == 200 and len(csv_resp.text.strip().splitlines()) == 11
+        assert csv_resp.status_code == 200 and len(csv_resp.text.strip().splitlines()) == 13
         assert zip_resp.status_code == 200 and zip_resp.headers["content-type"] == "application/zip"
         names = zipfile.ZipFile(io.BytesIO(zip_resp.content)).namelist()
-        assert len(names) == 10 and all(n.endswith(".jpg") for n in names)
+        assert len(names) == 11 and "not-a-label.jpg" in names and "missing-photo.jpg" not in names
 
         page = applicant.get("/applicant/batches").text
         assert "/applicant/batches/sample.csv" in page and "sample-images.zip" in page
@@ -611,8 +611,12 @@ class TestBatch:
         assert resp.status_code == 303
         rows = applicant.get(resp.headers["location"] + "/rows")
         assert rows.headers["X-Batch-Status"] == "done"
-        assert "10 of 10 checked" in rows.text and "failed" not in rows.text
-        assert "3 match" in rows.text and "2 need a look" in rows.text and "5 need fixes" in rows.text
+        assert "12 of 12 checked" in rows.text
+        assert "3 all fields match" in rows.text and "2 need a look" in rows.text
+        assert "5 corrections needed" in rows.text and "2 could not be checked" in rows.text
+        assert "missing-photo.jpg" in rows.text and "Not checked" in rows.text
+        assert "was not found in the zip" in rows.text  # the missing image, explained
+        assert "Demo mode can only read" in rows.text  # the non-label photo, explained (demo reader)
         assert "Sunset Ridge" in specialist.get("/specialist").text
 
     def test_batch_validation_errors_render(self, applicant):
