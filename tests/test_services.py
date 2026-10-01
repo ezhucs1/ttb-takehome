@@ -529,9 +529,12 @@ class TestBatch:
                 with counter_lock:
                     calls["n"] += 1
                     n = calls["n"]
-                time.sleep(0.25)
+                # Probe while this row's read is in progress. A worker that kept its
+                # transaction open across the read (the original bug) holds the write lock
+                # for the whole 0.25 s, so a 0.2 s probe fails; another worker's bookkeeping
+                # commit lasts milliseconds and the probe outwaits it.
                 path = str(session_factory.kw["bind"].url).removeprefix("sqlite:///")
-                conn = sqlite3.connect(path, timeout=0.05)  # 50 ms: fails fast if locked
+                conn = sqlite3.connect(path, timeout=0.2)
                 try:
                     conn.execute("UPDATE users SET organization = organization WHERE 1 = 0")
                     conn.commit()
@@ -539,6 +542,7 @@ class TestBatch:
                     lock_errors.append(str(exc))
                 finally:
                     conn.close()
+                time.sleep(0.25)
                 if n == 7:
                     raise RuntimeError("reader crashed on this row")
                 return extraction.model_copy(deep=True)
