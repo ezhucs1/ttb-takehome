@@ -560,6 +560,12 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--acce
 .rule-foot { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); }
 
 /* Try-it batch box ------------------------------------------------------------ */
+.column-guide { margin-top: 8px; }
+.column-guide summary { cursor: pointer; color: var(--muted); font-size: 0.84rem; }
+.column-guide summary:hover { color: var(--text); }
+.column-guide .table { margin-top: 8px; }
+.table-compact th, .table-compact td { padding: 6px 8px; font-size: 0.82rem; vertical-align: top; }
+.column-guide p { margin: 8px 0 0; }
 .try-batch { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--line-strong); }
 .try-batch .card-title { margin-bottom: 6px; }
 .try-batch-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }

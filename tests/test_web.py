@@ -657,6 +657,12 @@ class TestBatch:
         assert applicant.get("/applicant/batches").status_code == 200
         csv = applicant.get("/applicant/batches/template.csv")
         assert csv.status_code == 200 and csv.text.startswith("image,beverage_type")
+        lines = csv.text.strip().splitlines()
+        assert len(lines) == 5  # header + one row per class + one that leaves the type blank
+        assert lines[3].split(",")[1] == "malt_beverage" and lines[3].split(",")[4] == ""
+        assert lines[4].split(",")[1] == "" and "true" in lines[4]
+        page = applicant.get("/applicant/batches").text
+        assert "What each column means" in page and "Optional for malt beverages" in page
 
     def test_batch_upload_processes_rows(self, applicant, specialist):
         rows = [

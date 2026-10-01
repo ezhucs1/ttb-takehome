@@ -17,7 +17,26 @@
       <div class="field">
         <label for="csv_file">Applications CSV</label>
         <input type="file" name="csv_file" id="csv_file" accept=".csv,text/csv" required>
-        <div class="help">One row per application. <a href="/applicant/batches/template.csv">Download the template</a>. Columns: <code>{{ columns | join(', ') }}</code></div>
+        <div class="help">One row per application, the same columns for every class. <a href="/applicant/batches/template.csv">Download the template</a>: it has one example row per class and one that leaves the type to the label.</div>
+        <details class="column-guide">
+          <summary>What each column means</summary>
+          <table class="table table-compact">
+            <thead><tr><th>Column</th><th>Needed</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td><code>image</code></td><td>Always. File name in the zip; <code>front.jpg;back.jpg</code> for a label set</td><td><code>old-tom.jpg</code></td></tr>
+              <tr><td><code>beverage_type</code></td><td><code>distilled_spirits</code>, <code>wine</code>, or <code>malt_beverage</code>; blank lets the label decide</td><td><code>wine</code></td></tr>
+              <tr><td><code>brand_name</code></td><td>Always</td><td><code>OLD TOM DISTILLERY</code></td></tr>
+              <tr><td><code>class_type</code></td><td>Always. A grape variety works for wine; beer, ale, lager, stout, porter for malt</td><td><code>Cabernet Sauvignon</code></td></tr>
+              <tr><td><code>alcohol_content</code></td><td>Spirits and wine. Optional for malt beverages</td><td><code>45% Alc./Vol.</code> or <code>14.5</code></td></tr>
+              <tr><td><code>net_contents</code></td><td>Always. Metric for spirits and wine; fl oz or metric for malt</td><td><code>750 mL</code>, <code>12 fl oz</code></td></tr>
+              <tr><td><code>producer_name</code></td><td>Always. The bottler, producer, or importer</td><td><code>Old Tom Distillery</code></td></tr>
+              <tr><td><code>producer_address</code></td><td>Always. City and state</td><td><code>Bardstown, KY</code></td></tr>
+              <tr><td><code>is_import</code></td><td><code>true</code> or <code>false</code></td><td><code>false</code></td></tr>
+              <tr><td><code>country_of_origin</code></td><td>When <code>is_import</code> is true</td><td><code>Scotland</code></td></tr>
+            </tbody>
+          </table>
+          <p class="muted small">Everything else a class requires (the qualifying phrase, sulfites, appellation and vintage, age statement, strength claims, the warning) is read from the label image and checked against the rules; no column is needed. See <a href="/rules" target="_blank" rel="noopener">Reference</a>.</p>
+        </details>
       </div>
       <div class="field">
         <label for="zip_file">Label images (.zip)</label>
@@ -33,7 +52,7 @@
         <a class="btn btn-secondary btn-sm" href="/applicant/batches/sample.csv" download><svg class="icon"><use href="#i-file"></use></svg> Sample CSV (16 rows)</a>
         <a class="btn btn-secondary btn-sm" href="/applicant/batches/sample-images.zip" download><svg class="icon"><use href="#i-layers"></use></svg> Sample images (.zip)</a>
       </div>
-      {% if not demo_mode %}<p class="muted small try-batch-note">The reader is live, so this batch makes ten model calls.</p>{% endif %}
+      {% if not demo_mode %}<p class="muted small try-batch-note">The reader is live, so this batch makes fourteen model calls.</p>{% endif %}
     </div>
   </div>
 

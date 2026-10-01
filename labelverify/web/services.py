@@ -1095,21 +1095,32 @@ def split_image_names(cell: str) -> list[str]:
 
 
 def batch_template_csv() -> str:
+    """The header plus one example row per class, and one that leaves the type blank so the
+    label decides. The columns are the same for every class; what differs is which ones
+    the class requires, and that is explained next to the download."""
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(BATCH_COLUMNS)
-    writer.writerow(
+    writer.writerows(
         [
-            "old-tom-bourbon.png",
-            "distilled_spirits",
-            "OLD TOM DISTILLERY",
-            "Kentucky Straight Bourbon Whiskey",
-            "45% Alc./Vol. (90 Proof)",
-            "750 mL",
-            "Old Tom Distillery",
-            "Bardstown, KY 40004",
-            "false",
-            "",
+            [
+                "old-tom-bourbon.jpg", "distilled_spirits", "OLD TOM DISTILLERY",
+                "Kentucky Straight Bourbon Whiskey", "45% Alc./Vol. (90 Proof)", "750 mL",
+                "Old Tom Distillery", "Bardstown, KY 40004", "false", "",
+            ],
+            [
+                "stones-throw-wine.jpg", "wine", "Stone's Throw", "Cabernet Sauvignon", "14.5",
+                "750 mL", "Stone's Throw Vineyards", "St. Helena, CA", "false", "",
+            ],
+            [
+                "harbor-light-ipa.jpg", "malt_beverage", "Harbor Light", "India Pale Ale", "",
+                "12 fl oz", "Harbor Light Brewing Co.", "Portland, ME 04101", "false", "",
+            ],
+            [
+                "glen-aldie-front.jpg;glen-aldie-back.jpg", "", "Glen Aldie",
+                "Single Malt Scotch Whisky", "43%", "700 mL", "Glen Aldie Distillers",
+                "Speyside, Scotland", "true", "United Kingdom",
+            ],
         ]
     )
     return buffer.getvalue()
