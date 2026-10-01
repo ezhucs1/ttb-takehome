@@ -11,10 +11,10 @@
 
 <div class="stat-grid stat-grid-5">
   {{ m.stat('Open', stats.open, 'info', '/specialist?tab=open', tab == 'open') }}
-  {{ m.stat('Ready to approve', stats.ready, 'success', '/specialist?tab=ready', tab == 'ready') }}
+  {{ m.stat('Ready', stats.ready, 'success', '/specialist?tab=ready', tab == 'ready') }}
   {{ m.stat('Needs a look', stats.review, 'warning', '/specialist?tab=review', tab == 'review') }}
   {{ m.stat('Awaiting applicant', stats.corrections, 'neutral', '/specialist?tab=corrections', tab == 'corrections') }}
-  {{ m.stat('Approved', stats.approved, 'success', '/specialist?tab=decided', tab == 'decided') }}
+  {{ m.stat('Approved', stats.approved, 'success', '/specialist?tab=approved', tab == 'approved') }}
 </div>
 
 <div class="card card-flush">
@@ -31,7 +31,7 @@
     <thead>
       <tr>
         {% if tab == 'ready' %}<th class="check-col"><input type="checkbox" data-check-all aria-label="Select all"></th>{% endif %}
-        <th>Application</th><th>Brand</th><th>Applicant</th><th>Type</th><th>Status</th><th>AI check</th><th>{{ 'Decided' if tab == 'decided' else 'Waiting' }}</th><th></th>
+        <th>Application</th><th>Brand</th><th>Applicant</th><th>Type</th><th>Status</th><th>AI check</th><th>{{ 'Approved' if tab == 'approved' else 'Waiting' }}</th><th></th>
       </tr>
     </thead>
     <tbody>
@@ -47,8 +47,8 @@
           {{ m.rec_pill(app.recommendation) }}
           {% if app.risk_score %}<span class="muted small" title="Risk score">· risk {{ app.risk_score }}</span>{% endif %}
         </td>
-        <td class="muted">{{ (app.decided_at if tab == 'decided' else app.submitted_at) | ago }}{% if app.specialist and tab != 'decided' %}<div class="small">{{ app.specialist.name }}</div>{% endif %}</td>
-        <td class="right"><a class="btn btn-ghost btn-sm" href="/specialist/applications/{{ app.id }}">{{ 'View' if tab == 'decided' else 'Review' }}</a></td>
+        <td class="muted">{{ (app.decided_at if tab == 'approved' else app.submitted_at) | ago }}{% if app.specialist and tab != 'approved' %}<div class="small">{{ app.specialist.name }}</div>{% endif %}</td>
+        <td class="right"><a class="btn btn-ghost btn-sm" href="/specialist/applications/{{ app.id }}">{{ 'View' if tab == 'approved' else 'Review' }}</a></td>
       </tr>
     {% endfor %}
     </tbody>

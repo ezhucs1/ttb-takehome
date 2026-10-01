@@ -29,7 +29,7 @@ recommends; a person decides.
 **For labeling specialists**
 
 - A queue sorted so applications where every field matched come first, with tabs for
-  "ready to approve", "needs a look", and "awaiting applicant".
+  "ready", "needs a look", "awaiting applicant", and "approved".
 - A review screen with the label image, a field-by-field comparison with confidence per
   field, a word-level diff of the Government Health Warning, and a comment thread on
   every field.

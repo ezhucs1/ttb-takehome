@@ -467,7 +467,7 @@ def test_seed_populates_a_realistic_queue(db):
     stats = services.queue_stats(db)
     assert stats.open >= 3
     assert stats.corrections >= 1
-    assert len(services.queue(db, "decided")) >= 1
+    assert len(services.queue(db, "approved")) >= 1
     seed(db)  # idempotent
     assert services.queue_stats(db) == stats
 

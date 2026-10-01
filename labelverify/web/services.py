@@ -814,10 +814,10 @@ class QueueStats:
 
 QUEUE_TABS = {
     "open": "All open",
-    "ready": "Ready to approve",
+    "ready": "Ready",
     "review": "Needs a look",
     "corrections": "Awaiting applicant",
-    "decided": "Decided",
+    "approved": "Approved",
 }
 
 
@@ -853,12 +853,8 @@ def queue(db: Session, tab: str = "open") -> list[Application]:
         )
     elif tab == "corrections":
         stmt = stmt.where(Application.status == ApplicationStatus.CORRECTION_REQUESTED.value)
-    elif tab == "decided":
-        stmt = stmt.where(
-            Application.status.in_(
-                [ApplicationStatus.APPROVED.value, ApplicationStatus.REJECTED.value]
-            )
-        )
+    elif tab == "approved":
+        stmt = stmt.where(Application.status == ApplicationStatus.APPROVED.value)
         return list(db.scalars(stmt.order_by(Application.decided_at.desc())).unique())
     else:
         stmt = stmt.where(

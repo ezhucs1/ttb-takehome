@@ -120,8 +120,8 @@ class TestSpecialistWorkflow:
     def test_queue_renders_seeded_applications_and_stats(self, specialist):
         resp = specialist.get("/specialist")
         assert resp.status_code == 200
-        assert "Ready to approve" in resp.text and "COLA-" in resp.text
-        for tab in ("ready", "review", "corrections", "decided", "bogus"):
+        assert "Ready" in resp.text and "COLA-" in resp.text
+        for tab in ("ready", "review", "corrections", "approved", "bogus"):
             assert specialist.get(f"/specialist?tab={tab}").status_code == 200
 
     def test_opening_a_submitted_application_claims_it(self, specialist):
@@ -198,8 +198,8 @@ class TestSpecialistWorkflow:
             ).status_code
             == 303
         )
-        decided = specialist.get("/specialist?tab=decided").text
-        assert ready[0] in decided and ready[1] in decided
+        approved = specialist.get("/specialist?tab=approved").text
+        assert ready[0] in approved and ready[1] in approved
         assert (
             specialist.post(
                 f"/specialist/applications/{ready[0]}/rerun", follow_redirects=False
