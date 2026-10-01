@@ -35,11 +35,11 @@ def test_missing_file_is_a_friendly_error(monkeypatch):
 
 
 def test_extract_reports_panel_sizes_and_honours_timeout_flag(capsys, monkeypatch):
-    monkeypatch.delenv("LABELVERIFY_EXTRACT_TIMEOUT", raising=False)
+    import os
+
+    monkeypatch.setenv("LABELVERIFY_EXTRACT_TIMEOUT", "20")  # restored after the test
     front = str(SAMPLES_DIR / "old-tom-bourbon.jpg")
     assert main(["extract", front, "--extractor", "demo", "--timeout", "90"]) == 0
     err = capsys.readouterr().err
     assert "# panel 1:" in err and "KB sent" in err
-    import os
-
     assert os.environ["LABELVERIFY_EXTRACT_TIMEOUT"] == "90.0"
