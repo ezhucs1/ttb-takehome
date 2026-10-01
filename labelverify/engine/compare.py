@@ -183,6 +183,12 @@ CATEGORY_LABELS = {
     BeverageType.WINE: "wine",
     BeverageType.MALT_BEVERAGE: "a malt beverage",
 }
+# The three commodity classes as they appear on the form and in the comparison table.
+CATEGORY_NAMES = {
+    BeverageType.DISTILLED_SPIRITS: "Distilled spirits",
+    BeverageType.WINE: "Wine",
+    BeverageType.MALT_BEVERAGE: "Malt beverage",
+}
 
 
 def infer_beverage_category(class_type: str | None) -> BeverageType | None:
@@ -204,30 +210,36 @@ def compare_beverage_type(application: ApplicationData, extraction: LabelExtract
     designation that names no category is left to the specialist as not applicable.
     """
     filed = BeverageType(application.beverage_type)
-    implied = infer_beverage_category(extraction.class_type.value)
+    designation = (extraction.class_type.value or "").strip()
+    implied = infer_beverage_category(designation)
     base = dict(
         field="beverage_type",
         label="Type of Product",
-        application_value=CATEGORY_LABELS[filed].removeprefix("a "),
-        label_value=(extraction.class_type.value or "").strip() or None,
+        application_value=CATEGORY_NAMES[filed],
+        label_value=CATEGORY_NAMES[implied] if implied else "Not stated on the label",
         confidence=extraction.class_type.confidence,
     )
     if implied is None:
         return FieldResult(
             verdict=Verdict.NOT_APPLICABLE,
-            reason="The class/type on the label does not say which category the product is in.",
+            reason=(
+                f"The class/type on the label ('{designation}') does not say which of the "
+                "three categories the product is in."
+                if designation
+                else "No class/type was read from the label, so the category cannot be checked."
+            ),
             **base,
         )
     if implied is filed:
         return FieldResult(
             verdict=Verdict.MATCH,
-            reason=f"The label reads as {CATEGORY_LABELS[implied]}, as filed.",
+            reason=f"The label reads as {CATEGORY_LABELS[implied]} ('{designation}'), as filed.",
             **base,
         )
     return FieldResult(
         verdict=Verdict.MISMATCH,
         reason=(
-            f"The label reads as {CATEGORY_LABELS[implied]} ('{extraction.class_type.value}') "
+            f"The label reads as {CATEGORY_LABELS[implied]} ('{designation}') "
             f"but the application is filed as {CATEGORY_LABELS[filed]}."
         ),
         **base,

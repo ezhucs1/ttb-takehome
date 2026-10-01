@@ -61,6 +61,8 @@ class TestBeverageType:
         result = compare_beverage_type(application, extraction)
         assert result.verdict is Verdict.MISMATCH
         assert "reads as distilled spirits" in result.reason and "filed as wine" in result.reason
+        # Both columns speak in the three commodity classes, not in the designation text.
+        assert (result.application_value, result.label_value) == ("Wine", "Distilled spirits")
         assert verify(application, extraction).recommendation is Recommendation.REQUEST_CORRECTION
 
     @pytest.mark.parametrize(
@@ -92,7 +94,9 @@ class TestBeverageType:
 
         application.class_type = "Special Reserve"
         extraction.class_type = make_field("Special Reserve")
-        assert compare_beverage_type(application, extraction).verdict is Verdict.NOT_APPLICABLE
+        result = compare_beverage_type(application, extraction)
+        assert result.verdict is Verdict.NOT_APPLICABLE
+        assert result.label_value == "Not stated on the label"
 
 
 class TestClassType:
