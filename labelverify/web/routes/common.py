@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ...engine.models import ApplicationData
 from ...engine.preprocess import UnreadableImageError
-from ..models import Application, Role, User
+from ..models import Application, ApplicationStatus, Role, User
 from ..render import Renderer
 
 
@@ -18,7 +18,12 @@ def renderer(request: Request) -> Renderer:
 def load_application(db: Session, app_id: str, user: User) -> Application:
     """Fetch an application the user may see: specialists see all, applicants their own."""
     app = db.get(Application, app_id)
-    if app is None or (user.role == Role.APPLICANT and app.applicant_id != user.id):
+    hidden = (
+        app is None
+        or (user.role == Role.APPLICANT and app.applicant_id != user.id)
+        or (user.role == Role.SPECIALIST and app.status == ApplicationStatus.DRAFT)
+    )
+    if hidden:
         raise HTTPException(404, "Application not found.")
     return app
 

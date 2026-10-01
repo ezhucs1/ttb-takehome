@@ -12,7 +12,7 @@ from collections.abc import Sequence
 from io import BytesIO
 
 from ..models import ExtractedField, HealthWarningExtraction, ImageQuality, LabelExtraction
-from ..normalize import _VOLUME_RE
+from ..normalize import VOLUME_RE
 from .base import ExtractionError, Panel
 
 _WARNING_RE = re.compile(
@@ -110,7 +110,9 @@ _QUALIFYING_RE = re.compile(
 _IMPORTER_RE = re.compile(r"\b(imported\s+by\s+[^\n]{3,80})", re.IGNORECASE)
 _AGE_RE = re.compile(r"\b(aged\s+\w+\s+(?:years?|months?)|\d+\s+years?\s+old)\b", re.IGNORECASE)
 _BOND_RE = re.compile(r"\b(bottled[\s-]+in[\s-]+bond|bonded)\b", re.IGNORECASE)
-_BLEND_PCT_RE = re.compile(r"\b(\d{1,3}\s*%\s+(?:straight\s+)?\w+(?:\s+\w+){0,3}whisk(?:e)?y)\b", re.IGNORECASE)
+_BLEND_PCT_RE = re.compile(
+    r"\b(\d{1,3}\s*%\s+(?:straight\s+)?\w+(?:\s+\w+){0,3}\s+whisk(?:e)?y)\b", re.IGNORECASE
+)
 _VINTAGE_RE = re.compile(r"(?im)^\s*(?:vintage\s+)?((?:19|20)\d{2})\s*$")  # a year on its own line
 _ESTATE_RE = re.compile(r"\b(estate\s+bottled)\b", re.IGNORECASE)
 # A short list of well-known appellations; OCR cannot tell a place name from any other
@@ -126,8 +128,14 @@ _STRENGTH_RE = re.compile(
     re.IGNORECASE,
 )
 _CATEGORY_CUES = (
-    ("distilled_spirits", re.compile(r"\b(distilled|proof|whisk(e)?y|bourbon|vodka|gin|rum|tequila)\b", re.I)),
-    ("wine", re.compile(r"\b(wine|vint(ed|age)|sulfites|cabernet|chardonnay|merlot|ros[eé])\b", re.I)),
+    (
+        "distilled_spirits",
+        re.compile(r"\b(distilled|proof|whisk(e)?y|bourbon|vodka|gin|rum|tequila)\b", re.I),
+    ),
+    (
+        "wine",
+        re.compile(r"\b(wine|vint(ed|age)|sulfites|cabernet|chardonnay|merlot|ros[eé])\b", re.I),
+    ),
     ("malt_beverage", re.compile(r"\b(brewed|beer|ale|lager|ipa|stout|porter|malt)\b", re.I)),
 )
 
@@ -152,7 +160,7 @@ def classify_text(text: str) -> LabelExtraction:
 
     alcohol = _first_match(_ALCOHOL_RE, text)
     net = None
-    for m in _VOLUME_RE.finditer(text):
+    for m in VOLUME_RE.finditer(text):
         net = m.group(0)
         break
 
@@ -186,7 +194,7 @@ def classify_text(text: str) -> LabelExtraction:
             if ln not in consumed
             and re.search(r"[A-Za-z]{2,}", ln)
             and not _ALCOHOL_RE.search(ln)
-            and not _VOLUME_RE.search(ln)
+            and not VOLUME_RE.search(ln)
             and "warning" not in ln.lower()
         ),
         None,

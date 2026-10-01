@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from pathlib import Path
 
@@ -101,7 +100,6 @@ def build_templates() -> Jinja2Templates:
     env = templates.env
     env.filters["dt"] = format_dt
     env.filters["ago"] = relative_time
-    env.filters["tojson_attr"] = lambda v: json.dumps(v)
     env.globals.update(
         STATUS_LABELS=STATUS_LABELS,
         STATUS_TONES=STATUS_TONES,
@@ -145,8 +143,9 @@ class Renderer:
         flash = self.pop_flash(request)
         context.setdefault("user", getattr(request.state, "user", None))
         context.setdefault("flash", flash)
-        context.setdefault("extractor_label", self.extractor_label(request))
-        context.setdefault("demo_mode", self.extractor_label(request) == "Demo mode")
+        extractor_label = self.extractor_label(request)
+        context.setdefault("extractor_label", extractor_label)
+        context.setdefault("demo_mode", extractor_label == "Demo mode")
         context.setdefault("path", request.url.path)
         context.setdefault("asset_version", getattr(request.app.state, "asset_version", ""))
         if context["user"] is not None and "unread_total" not in context:

@@ -97,7 +97,7 @@ class TestDraftAndPrecheck:
         run = services.record_run(db, app, DemoExtractor(), "precheck")
         assert run.recommendation == "error"
         assert "ANTHROPIC_API_KEY" in run.error
-        assert app.latest_run_id is None
+        assert app.latest_run_id == app.latest_run.id and app.recommendation == "error"
 
     def test_the_upload_read_is_reused_until_the_images_change(self, db, users, extraction):
         """One model call per upload: the pre-check and the submission compare against the
@@ -107,7 +107,9 @@ class TestDraftAndPrecheck:
         reader.name = "fixture"
         applicant = users["maria@alvarezlabels.com"]
         data = ApplicationData.model_validate(sample("old-tom-bourbon")["application"])
-        app = services.create_draft(db, applicant, data, [(sample_bytes("old-tom-bourbon"), "a.png")])
+        app = services.create_draft(
+            db, applicant, data, [(sample_bytes("old-tom-bourbon"), "a.png")]
+        )
         read = services.extract_for_prefill(reader, app.current_images)
         services.remember_extraction(app, read, reader.name, 4321)
         db.commit()
@@ -148,7 +150,10 @@ class TestDraftAndPrecheck:
         assert result.beverage_type == "malt_beverage" and result.beverage_type_inferred
         assert app.beverage_type == "malt_beverage" and app.beverage_type_inferred
         # The applicant later states it explicitly: the inference flag clears.
-        services.update_fields(db and app, ApplicationData.model_validate(sample("harbor-light-ipa-net-contents")["application"]))
+        services.update_fields(
+            db and app,
+            ApplicationData.model_validate(sample("harbor-light-ipa-net-contents")["application"]),
+        )
         assert not app.beverage_type_inferred
 
 
@@ -652,8 +657,15 @@ def test_label_carries_covers_every_label_only_checklist_item():
     from labelverify.engine.models import LabelExtraction
     from labelverify.engine.rules import all_rules
 
-    form_items = {"brand_name", "class_type", "alcohol_content", "net_contents",
-                  "producer_name", "producer_address", "country_of_origin"}
+    form_items = {
+        "brand_name",
+        "class_type",
+        "alcohol_content",
+        "net_contents",
+        "producer_name",
+        "producer_address",
+        "country_of_origin",
+    }
     label_only = {
         i["field"]
         for entry in all_rules()

@@ -20,7 +20,7 @@
 <div class="card card-flush">
   <div class="tabs">
     {% for key, label in tabs.items() %}
-    <a class="tab {% if key == tab %}active{% endif %}" href="/specialist?tab={{ key }}">{{ label }}</a>
+    <a class="tab {% if key == tab %}active{% endif %}" href="/specialist?tab={{ key }}" {% if key == tab %}aria-current="page"{% endif %}>{{ label }}</a>
     {% endfor %}
   </div>
 
@@ -58,7 +58,7 @@
   <div class="bulk-bar">
     <span class="muted"><span data-check-count>0</span> selected</span>
     <button class="btn btn-primary" type="submit" data-confirm="Approve every selected application? Each one had all fields match." disabled data-needs-selection>
-      <svg class="icon"><use href="#i-check"></use></svg> Approve selected
+      <svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg> Approve selected
     </button>
   </div>
   {% endif %}

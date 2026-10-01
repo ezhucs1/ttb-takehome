@@ -63,9 +63,7 @@ SEED_REPLIES = {
 }
 
 
-def ensure_user(
-    db: Session, *, email: str, name: str, role: str, organization: str = ""
-) -> User:
+def ensure_user(db: Session, *, email: str, name: str, role: str, organization: str = "") -> User:
     """Create an account with the demo password if it does not exist yet."""
     user = db.scalar(select(User).where(User.email == email))
     if user is None:

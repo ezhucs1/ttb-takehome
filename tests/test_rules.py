@@ -14,7 +14,12 @@ def test_class_differences_the_engine_relies_on():
     assert spirits.requirement("alcohol_content") is Requirement.REQUIRED
     assert wine.requirement("alcohol_content") is Requirement.REQUIRED and wine.table_wine_exemption
     assert malt.requirement("alcohol_content") is Requirement.OPTIONAL
-    assert (spirits.abv_tolerance(45), wine.abv_tolerance(13), wine.abv_tolerance(15), malt.abv_tolerance(5)) == (
+    assert (
+        spirits.abv_tolerance(45),
+        wine.abv_tolerance(13),
+        wine.abv_tolerance(15),
+        malt.abv_tolerance(5),
+    ) == (
         0.15,
         1.5,
         1.0,
@@ -45,7 +50,11 @@ def test_checklists_are_plain_data_with_citations():
 
 def test_wine_carries_the_part_4_statements_the_other_classes_do_not():
     wine = {i["field"]: i for i in rules_for("wine").checklist()}
-    for field, section in (("appellation", "4.25"), ("vintage_year", "4.27"), ("estate_bottled", "4.26")):
+    for field, section in (
+        ("appellation", "4.25"),
+        ("vintage_year", "4.27"),
+        ("estate_bottled", "4.26"),
+    ):
         assert wine[field]["requirement"] == "conditional" and section in wine[field]["citation"]
     for other in ("distilled_spirits", "malt_beverage"):
         assert not {"appellation", "vintage_year", "estate_bottled"} & {
@@ -55,7 +64,10 @@ def test_wine_carries_the_part_4_statements_the_other_classes_do_not():
 
 def test_malt_beverages_carry_the_strength_rule_and_nothing_wine_or_spirits_specific():
     malt = {i["field"]: i for i in rules_for("malt_beverage").checklist()}
-    assert malt["strength_claim"]["requirement"] == "conditional" and "7.65" in malt["strength_claim"]["citation"]
+    assert (
+        malt["strength_claim"]["requirement"] == "conditional"
+        and "7.65" in malt["strength_claim"]["citation"]
+    )
     assert "blown into the glass" in malt["net_contents"]["note"]
     assert "strength_claim" not in {i["field"] for i in rules_for("wine").checklist()}
     assert "strength_claim" not in {i["field"] for i in rules_for("distilled_spirits").checklist()}

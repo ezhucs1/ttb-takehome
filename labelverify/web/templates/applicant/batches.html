@@ -12,7 +12,7 @@
 <div class="grid-2 grid-2-wide">
   <div class="card">
     <div class="card-title">Upload a batch</div>
-    {% for e in errors %}<div class="alert alert-danger"><svg class="icon"><use href="#i-alert"></use></svg><span>{{ e }}</span></div>{% endfor %}
+    {% for e in errors %}<div class="alert alert-danger"><svg class="icon" aria-hidden="true"><use href="#i-alert"></use></svg><span>{{ e }}</span></div>{% endfor %}
     <form method="post" action="/applicant/batches" enctype="multipart/form-data" class="stack">
       <div class="field">
         <label for="csv_file">Applications CSV</label>
@@ -43,14 +43,14 @@
         <input type="file" name="zip_file" id="zip_file" accept=".zip,application/zip" required>
         <div class="help">File names must match the <code>image</code> column. For front and back labels, separate the names with <code>;</code>, for example <code>front.jpg;back.jpg</code>.</div>
       </div>
-      <div><button class="btn btn-primary" type="submit"><svg class="icon"><use href="#i-upload"></use></svg> Start batch</button></div>
+      <div><button class="btn btn-primary" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg> Start batch</button></div>
     </form>
     <div class="try-batch">
       <div class="card-title">No data of your own yet?</div>
       <p class="small">Download both files, pick them in the form above, and start the batch. It covers the fourteen bundled sample labels plus two broken rows, so every outcome appears: clean matches, items for review, corrections the AI found, a photo that is not a label, and a missing image.</p>
       <div class="try-batch-links">
-        <a class="btn btn-secondary btn-sm" href="/applicant/batches/sample.csv" download><svg class="icon"><use href="#i-file"></use></svg> Sample CSV (16 rows)</a>
-        <a class="btn btn-secondary btn-sm" href="/applicant/batches/sample-images.zip" download><svg class="icon"><use href="#i-layers"></use></svg> Sample images (.zip)</a>
+        <a class="btn btn-secondary btn-sm" href="/applicant/batches/sample.csv" download><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg> Sample CSV (16 rows)</a>
+        <a class="btn btn-secondary btn-sm" href="/applicant/batches/sample-images.zip" download><svg class="icon" aria-hidden="true"><use href="#i-layers"></use></svg> Sample images (.zip)</a>
       </div>
       {% if not demo_mode %}<p class="muted small try-batch-note">The reader is live, so this batch makes fourteen model calls.</p>{% endif %}
     </div>

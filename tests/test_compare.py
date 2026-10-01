@@ -125,7 +125,9 @@ class TestNetContentsByClass:
         application.net_contents = "600 mL"
         extraction.net_contents = make_field("600 mL")
         spirits = compare_net_contents(application, extraction)
-        assert spirits.verdict is Verdict.MATCH and any("standard of fill" in n for n in spirits.notes)
+        assert spirits.verdict is Verdict.MATCH and any(
+            "standard of fill" in n for n in spirits.notes
+        )
         application.beverage_type = BeverageType.WINE
         application.class_type = "Red Wine"
         extraction.class_type = make_field("Red Wine")
@@ -139,7 +141,9 @@ class TestSulfiteDeclaration:
     ):
         from labelverify.engine.compare import compare_sulfite_declaration
 
-        assert "sulfite_declaration" not in [f.field for f in verify(application, extraction).fields]
+        assert "sulfite_declaration" not in [
+            f.field for f in verify(application, extraction).fields
+        ]
         application.beverage_type = BeverageType.WINE
         application.class_type = "Cabernet Sauvignon"
         extraction.class_type = make_field("Cabernet Sauvignon")

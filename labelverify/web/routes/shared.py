@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from .. import services
 from ..auth import (
+    SECURE_COOKIES,
     SESSION_COOKIE,
     SESSION_MAX_AGE,
     current_user,
@@ -19,7 +20,7 @@ from ..auth import (
     verify_password,
 )
 from ..db import get_db
-from ..models import Comment, Role, User
+from ..models import Comment, LabelImage, Role, User
 from ..seed import DEMO_PASSWORD, USERS
 from .common import load_application, renderer
 
@@ -39,7 +40,9 @@ def _login_context() -> dict:
     return {
         "demo_users": USERS if show_demo else [],
         "demo_password": DEMO_PASSWORD if show_demo else "",
-        "repo_url": os.environ.get("LABELVERIFY_REPO_URL", "https://github.com/ezhucs1/ttb-takehome"),
+        "repo_url": os.environ.get(
+            "LABELVERIFY_REPO_URL", "https://github.com/ezhucs1/ttb-takehome"
+        ),
     }
 
 
@@ -97,7 +100,9 @@ def inbox_open(
     except services.WorkflowError as exc:
         raise HTTPException(404, str(exc)) from exc
     db.commit()
-    base = "/specialist/applications/" if user.role == Role.SPECIALIST else "/applicant/applications/"
+    base = (
+        "/specialist/applications/" if user.role == Role.SPECIALIST else "/applicant/applications/"
+    )
     return RedirectResponse(f"{base}{app.id}?via=inbox#{anchor}", status_code=303)
 
 
@@ -154,6 +159,7 @@ def login(
         max_age=SESSION_MAX_AGE,
         httponly=True,
         samesite="lax",
+        secure=SECURE_COOKIES,
     )
     return response
 
@@ -170,11 +176,13 @@ def label_image(
     app_id: str, image_id: str, db: Session = Depends(get_db), user: User = Depends(current_user)
 ):
     app = load_application(db, app_id, user)
-    image = next((i for i in app.images if i.id == image_id), None)
-    if image is None:
+    image = db.get(LabelImage, image_id)  # one row, not every version's bytes
+    if image is None or image.application_id != app.id:
         raise HTTPException(404, "Image not found.")
-    return Response(
-        image.data, media_type=image.media_type, headers={"Cache-Control": "private, max-age=3600"}
+    return Response(  # an image id never changes content, so the browser may keep it
+        image.data,
+        media_type=image.media_type,
+        headers={"Cache-Control": "private, max-age=31536000, immutable"},
     )
 
 
@@ -219,7 +227,6 @@ def resolve_comment(
         raise HTTPException(404, "Comment not found.")
     services.resolve_comment(db, comment, resolved.lower() == "true")
     db.commit()
-    db.refresh(app)
     return renderer(request).partial(
         request,
         "partials/thread.html",

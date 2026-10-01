@@ -8,8 +8,8 @@
     <p class="subtitle">{{ user.organization }}</p>
   </div>
   <div class="page-actions">
-    <a class="btn btn-secondary" href="/applicant/batches"><svg class="icon"><use href="#i-upload"></use></svg> Batch upload</a>
-    <a class="btn btn-primary" href="/applicant/applications/new"><svg class="icon"><use href="#i-plus"></use></svg> New application</a>
+    <a class="btn btn-secondary" href="/applicant/batches"><svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg> Batch upload</a>
+    <a class="btn btn-primary" href="/applicant/applications/new"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg> New application</a>
   </div>
 </div>
 
@@ -22,7 +22,7 @@
 
 {% if needs_action %}
 <div class="card card-attention">
-  <div class="card-title"><svg class="icon"><use href="#i-alert"></use></svg> Corrections requested</div>
+  <div class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-alert"></use></svg> Corrections requested</div>
   <ul class="attention-list">
     {% for app in needs_action %}
     <li>

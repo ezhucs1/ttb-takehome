@@ -2,16 +2,16 @@
 <div class="notice-editor">
   <div class="notice-editor-head">
     <span class="pill pill-{{ 'neutral' if draft.source == 'template' else 'info' }}">
-      <svg class="icon"><use href="#i-sparkle"></use></svg>
+      <svg class="icon" aria-hidden="true"><use href="#i-sparkle"></use></svg>
       {% if draft.source == 'gemini' %}Drafted from the findings, worded by Gemini
       {% elif draft.source == 'claude' %}Drafted from the findings, worded by Claude
       {% else %}Drafted from the findings{% endif %}
     </span>
-    <span class="muted">Edit freely. Nothing is sent until you choose Request correction.</span>
+    <span class="muted">Edit freely. Nothing is sent until you choose Send correction request.</span>
     <button type="button" class="link-btn notice-discard" data-notice-discard title="Remove this draft and go back to the state before it was generated">
-      <svg class="icon"><use href="#i-x"></use></svg> Discard draft
+      <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg> Discard draft
     </button>
   </div>
   <input type="hidden" name="notice_source" value="{{ draft.source }}">
-  <textarea name="notice_body" rows="16" required>{{ draft.body }}</textarea>
+  <textarea name="notice_body" rows="16" required aria-label="Correction notice">{{ draft.body }}</textarea>
 </div>

@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}LabelVerify{% endblock %} · LabelVerify</title>
+  <link rel="preload" href="/static/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/app.css?v={{ asset_version }}">
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <meta name="color-scheme" content="dark light">
@@ -43,35 +44,29 @@
       <span class="logo-text">LabelVerify<small>TTB Label Compliance</small></span>
     </a>
     <nav class="nav">
+      {% macro nav_item(href, icon, label, active) -%}
+      <a class="nav-item {% if active %}active{% endif %}" href="{{ href }}" {% if active %}aria-current="page"{% endif %}>
+        <svg class="icon" aria-hidden="true"><use href="#i-{{ icon }}"></use></svg> {{ label }}{{ caller() if caller else '' }}
+      </a>
+      {%- endmacro %}
       {% if user.role == 'specialist' %}
-      <a class="nav-item {% if path == '/specialist' or path.startswith('/specialist/applications') %}active{% endif %}" href="/specialist">
-        <svg class="icon"><use href="#i-inbox"></use></svg> Review queue
-      </a>
-      <a class="nav-item {% if path == '/inbox' %}active{% endif %}" href="/inbox">
-        <svg class="icon"><use href="#i-bell"></use></svg> Inbox
-        <span class="nav-badge" data-unread-badge title="Inbox items you have not read" {% if not unread_total %}hidden{% endif %}>{{ unread_total or 0 }}</span>
-      </a>
+      {{ nav_item('/specialist', 'inbox', 'Review queue', path == '/specialist' or path.startswith('/specialist/applications')) }}
       {% else %}
-      <a class="nav-item {% if path == '/applicant' or path.startswith('/applicant/applications/') and not path.endswith('/new') %}active{% endif %}" href="/applicant">
-        <svg class="icon"><use href="#i-layers"></use></svg> My applications
-      </a>
-      <a class="nav-item {% if path == '/inbox' %}active{% endif %}" href="/inbox">
-        <svg class="icon"><use href="#i-bell"></use></svg> Inbox
+      {{ nav_item('/applicant', 'layers', 'My applications', path == '/applicant' or (path.startswith('/applicant/applications/') and not path.endswith('/new'))) }}
+      {% endif %}
+      {% call nav_item('/inbox', 'bell', 'Inbox', path == '/inbox') %}
         <span class="nav-badge" data-unread-badge title="Inbox items you have not read" {% if not unread_total %}hidden{% endif %}>{{ unread_total or 0 }}</span>
-      </a>
-      <a class="nav-item {% if path.endswith('/new') %}active{% endif %}" href="/applicant/applications/new">
-        <svg class="icon"><use href="#i-plus"></use></svg> New application
-      </a>
-      <a class="nav-item {% if path.startswith('/applicant/batches') %}active{% endif %}" href="/applicant/batches">
-        <svg class="icon"><use href="#i-upload"></use></svg> Batch upload
-      </a>
+      {% endcall %}
+      {% if user.role != 'specialist' %}
+      {{ nav_item('/applicant/applications/new', 'plus', 'New application', path.endswith('/new')) }}
+      {{ nav_item('/applicant/batches', 'upload', 'Batch upload', path.startswith('/applicant/batches')) }}
       {% endif %}
     </nav>
     <div class="sidebar-foot">
       <div class="mode">
         <span class="mode-dot {% if demo_mode %}mode-demo{% endif %}"></span>
         <span>{{ extractor_label }}</span>
-        <button type="button" class="theme-toggle" data-theme-toggle title="Switch between light and dark" aria-label="Switch theme"><svg class="icon i-sun"><use href="#i-sun"></use></svg><svg class="icon i-moon"><use href="#i-moon"></use></svg></button>
+        <button type="button" class="theme-toggle" data-theme-toggle title="Switch between light and dark" aria-label="Switch theme"><svg class="icon i-sun" aria-hidden="true"><use href="#i-sun"></use></svg><svg class="icon i-moon" aria-hidden="true"><use href="#i-moon"></use></svg></button>
       </div>
       <div class="me">
         <span class="avatar">{{ user.initials }}</span>
@@ -79,7 +74,7 @@
           <strong>{{ user.name }}</strong>
           <small>{{ user.organization }}</small>
         </div>
-        <form method="post" action="/logout"><button class="icon-btn" title="Sign out" aria-label="Sign out"><svg class="icon"><use href="#i-logout"></use></svg></button></form>
+        <form method="post" action="/logout"><button class="icon-btn" title="Sign out" aria-label="Sign out"><svg class="icon" aria-hidden="true"><use href="#i-logout"></use></svg></button></form>
       </div>
     </div>
   </aside>
@@ -87,9 +82,9 @@
   <main class="main">
     {% if flash %}
     <div class="flash flash-{{ flash.tone }}" role="status">
-      <svg class="icon"><use href="#i-{{ 'check' if flash.tone == 'success' else 'alert' }}"></use></svg>
+      <svg class="icon" aria-hidden="true"><use href="#i-{{ 'check' if flash.tone == 'success' else 'alert' }}"></use></svg>
       <span>{{ flash.message }}</span>
-      <button class="icon-btn" data-dismiss aria-label="Dismiss"><svg class="icon"><use href="#i-x"></use></svg></button>
+      <button class="icon-btn" data-dismiss aria-label="Dismiss"><svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg></button>
     </div>
     {% endif %}
     {% block content %}{% endblock %}

@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Sequence
+from functools import lru_cache
 from pathlib import Path
 
 from ..models import LabelExtraction
@@ -27,17 +28,26 @@ def load_manifest(samples_dir: Path = SAMPLES_DIR) -> list[dict]:
     return json.loads(path.read_text())
 
 
+@lru_cache(maxsize=4)
+def _hash_table(samples_dir: Path) -> dict[str, LabelExtraction]:
+    """Digest -> extraction for every bundled sample, as uploaded and as preprocessed.
+    Hashing and re-encoding the samples takes about half a second, so it happens once
+    per process rather than once per extractor."""
+    table: dict[str, LabelExtraction] = {}
+    for entry in load_manifest(samples_dir):
+        raw = (samples_dir / entry["file"]).read_bytes()
+        extraction = LabelExtraction.model_validate(entry["extraction"])
+        table[_digest(raw)] = extraction
+        table[_digest(prepare_image(raw).data)] = extraction
+    return table
+
+
 class DemoExtractor:
     name = "demo"
 
     def __init__(self, samples_dir: Path = SAMPLES_DIR):
         self.samples_dir = samples_dir
-        self._by_hash: dict[str, LabelExtraction] = {}
-        for entry in load_manifest(samples_dir):
-            raw = (samples_dir / entry["file"]).read_bytes()
-            extraction = LabelExtraction.model_validate(entry["extraction"])
-            self._by_hash[_digest(raw)] = extraction
-            self._by_hash[_digest(prepare_image(raw).data)] = extraction
+        self._by_hash = _hash_table(Path(samples_dir))
 
     def extract(self, image: bytes, media_type: str) -> LabelExtraction:
         return self.extract_panels([(image, media_type)])

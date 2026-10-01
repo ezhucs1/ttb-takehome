@@ -64,10 +64,6 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     @property
-    def is_specialist(self) -> bool:
-        return self.role == Role.SPECIALIST
-
-    @property
     def initials(self) -> str:
         return "".join(part[0] for part in self.name.split()[:2]).upper()
 
@@ -186,7 +182,7 @@ class LabelImage(Base):
     application_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
     filename: Mapped[str] = mapped_column(String(300))
     media_type: Mapped[str] = mapped_column(String(60))
-    data: Mapped[bytes] = mapped_column(LargeBinary)
+    data: Mapped[bytes] = mapped_column(LargeBinary, deferred=True)  # loaded only when read
     width: Mapped[int] = mapped_column(Integer, default=0)
     height: Mapped[int] = mapped_column(Integer, default=0)
     version: Mapped[int] = mapped_column(Integer, default=1)  # upload set (1 = original)

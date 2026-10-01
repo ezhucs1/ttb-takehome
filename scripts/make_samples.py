@@ -1059,7 +1059,9 @@ def main() -> None:
         phrase = re.match(r"^(.*?\bby)\b", spec["producer_lines"][0], re.IGNORECASE)
         extraction.setdefault("qualifying_phrase", field(phrase.group(1) if phrase else None))
         if spec["style"] in ("spirits", "scotch") and spec.get("medal_top", "AGED") == "AGED":
-            extraction.setdefault("age_statement", field(f"Aged {spec.get('medal_big', '6')} Years"))
+            extraction.setdefault(
+                "age_statement", field(f"Aged {spec.get('medal_big', '6')} Years")
+            )
         extraction.setdefault("age_statement", field(None))
         extraction.setdefault(
             "bottled_in_bond_claim",
@@ -1070,10 +1072,14 @@ def main() -> None:
         # Wine: the kicker above the brand is the appellation, the big number the vintage.
         is_wine = spec["style"] == "wine"
         extraction.setdefault("appellation", field(spec.get("kicker") if is_wine else None))
-        extraction.setdefault("vintage_year", field(spec.get("vintage", "2021") if is_wine else None))
+        extraction.setdefault(
+            "vintage_year", field(spec.get("vintage", "2021") if is_wine else None)
+        )
         extraction.setdefault(
             "estate_bottled_claim",
-            field("ESTATE BOTTLED") if is_wine and "ESTATE BOTTLED" in spec.get("tagline", "").upper() else field(None),
+            field("ESTATE BOTTLED")
+            if is_wine and "ESTATE BOTTLED" in spec.get("tagline", "").upper()
+            else field(None),
         )
         importer = next(
             (ln for ln in spec["producer_lines"] if ln.lower().startswith("imported by")), None

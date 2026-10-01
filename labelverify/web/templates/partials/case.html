@@ -5,7 +5,7 @@
     <div class="viewer" data-viewer>
       {% if app.current_image %}
       <img src="/applications/{{ app.id }}/images/{{ app.current_image.id }}" alt="Label for {{ app.brand_name }}" data-viewer-img>
-      <button type="button" class="viewer-zoom" data-viewer-toggle title="Toggle zoom"><svg class="icon"><use href="#i-zoom"></use></svg></button>
+      <button type="button" class="viewer-zoom" data-viewer-toggle title="Toggle zoom"><svg class="icon" aria-hidden="true"><use href="#i-zoom"></use></svg></button>
       <span class="viewer-caption" data-viewer-caption>{{ app.current_image.panel_label }}{% if app.current_version > 1 %} · v{{ app.current_version }}{% endif %}</span>
       {% else %}
       {{ m.empty('No label image') }}
@@ -19,7 +19,7 @@
                 data-viewer-src="/applications/{{ app.id }}/images/{{ img.id }}"
                 data-viewer-label="{{ img.panel_label }}{% if app.current_version > 1 %} · v{{ version }}{% endif %}"
                 title="{{ img.panel_label }}, version {{ version }} · {{ img.filename }} · {{ img.created_at | dt }}">
-          <img src="/applications/{{ app.id }}/images/{{ img.id }}" alt=""><span>{{ img.panel_label[:1] }}{% if app.current_version > 1 %}{{ version }}{% endif %}</span>
+          <img src="/applications/{{ app.id }}/images/{{ img.id }}" alt="" loading="lazy"><span>{{ img.panel_label[:1] }}{% if app.current_version > 1 %}{{ version }}{% endif %}</span>
         </button>
         {% endfor %}
       {% endfor %}
@@ -45,7 +45,7 @@
 
     <div class="card">
       <div class="card-title">
-        AI comparison
+        AI check
         {% if run %}<span class="muted">{{ run.trigger }} · {{ run.created_at | dt }}</span>{% endif %}
       </div>
       <div id="verification">

@@ -6,7 +6,7 @@
 </div>
 {% elif app.status == 'correction_requested' %}
 <div class="card" id="decision">
-  <div class="card-title"><svg class="icon"><use href="#i-clock"></use></svg> Waiting on the applicant</div>
+  <div class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg> Awaiting applicant</div>
   <p>Your correction request{% if latest_notice %} went out on {{ latest_notice.created_at | dt }}{% endif %}. The next decision is theirs: they fix the label and resubmit, and the case comes back to the queue with a fresh AI check. Until then you can answer questions in the threads, and nothing else is needed from you.</p>
 </div>
 {% else %}
@@ -16,7 +16,7 @@
     <form method="post" action="/specialist/applications/{{ app.id }}/decision" class="decision-approve">
       <input type="hidden" name="action" value="approve">
       <button class="btn btn-success btn-lg btn-block" type="submit" {% if app.recommendation != 'approve' %}data-confirm="The AI check flagged items on this label. Approve anyway?"{% endif %}>
-        <svg class="icon"><use href="#i-check"></use></svg> Approve label
+        <svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg> Approve label
       </button>
       <p class="muted small">{% if app.recommendation == 'approve' %}All fields matched the application.{% else %}Use when you have confirmed the flagged items yourself.{% endif %}</p>
     </form>
@@ -27,7 +27,7 @@
         <div class="decision-correct-head">
           <strong>Request corrections</strong>
           <button type="button" class="btn btn-secondary btn-sm" data-fetch="/specialist/applications/{{ app.id }}/notice" data-target="#notice-host" data-busy="Drafting…">
-            <svg class="icon"><use href="#i-sparkle"></use></svg> Draft the notice
+            <svg class="icon" aria-hidden="true"><use href="#i-sparkle"></use></svg> Draft the notice
           </button>
         </div>
         <div id="notice-host">

@@ -23,7 +23,6 @@ def configured_max_edge() -> int:
 
 
 JPEG_QUALITY = 85
-SUPPORTED_MEDIA_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 
 
 class UnreadableImageError(ValueError):
@@ -40,9 +39,7 @@ class PreparedImage:
     original_height: int
 
 
-def prepare_image(
-    data: bytes, *, max_long_edge: int | None = None, autocontrast: bool = False
-) -> PreparedImage:
+def prepare_image(data: bytes, *, max_long_edge: int | None = None) -> PreparedImage:
     """Apply EXIF rotation, downscale to ``max_long_edge``, and re-encode as JPEG."""
     try:
         image = Image.open(BytesIO(data))
@@ -52,10 +49,15 @@ def prepare_image(
 
     original_width, original_height = image.size
     image = ImageOps.exif_transpose(image) or image
-    if image.mode not in ("RGB", "L"):
+    if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
+        # Artwork is often exported on a transparent background; flatten onto white, or
+        # black text on a transparent ground becomes black on black.
+        rgba = image.convert("RGBA")
+        flat = Image.new("RGB", rgba.size, (255, 255, 255))
+        flat.paste(rgba, mask=rgba.getchannel("A"))
+        image = flat
+    elif image.mode not in ("RGB", "L"):
         image = image.convert("RGB")
-    if autocontrast:
-        image = ImageOps.autocontrast(image, cutoff=1)
 
     max_long_edge = max_long_edge or configured_max_edge()
     longest = max(image.size)

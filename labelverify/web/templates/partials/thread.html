@@ -31,7 +31,7 @@
   {% if user and not app.is_decided and (can_comment is not defined or can_comment) %}
   <form class="comment-form" method="post" action="/applications/{{ app.id }}/comments" data-async data-target="#thread-host-{{ field }}">
     <input type="hidden" name="field" value="{{ field }}">
-    <textarea name="body" rows="2" required placeholder="{{ 'Ask the applicant a question or note what you checked…' if user.role == 'specialist' else 'Reply to the specialist…' }}"></textarea>
+    <textarea name="body" rows="2" required aria-label="Comment" placeholder="{{ 'Ask the applicant a question or note what you checked…' if user.role == 'specialist' else 'Reply to the specialist…' }}"></textarea>
     <button class="btn btn-secondary btn-sm" type="submit">Post</button>
   </form>
   {% endif %}

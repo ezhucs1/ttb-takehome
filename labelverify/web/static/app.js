@@ -45,7 +45,9 @@
     if (target && form.dataset.busy) busy(target, form.dataset.busy);
     try {
       const resp = await fetch(form.action, { method: form.method || "post", body: new FormData(form), headers: { "X-Partial": "1" } });
-      if (target) await swap(target, resp);
+      if (resp.redirected) { location.href = resp.url; return; } // signed out: go where the server sent us
+      if (target && !resp.ok) { target.innerHTML = (await resp.text()) + previous; wire(target); } // keep the form so the user can retry
+      else if (target) await swap(target, resp);
       form.dispatchEvent(new CustomEvent("async:done", { bubbles: true, detail: { ok: resp.ok, status: resp.status } }));
       if (resp.ok && form.matches(".comment-form")) form.reset();
     } catch (err) {
@@ -88,7 +90,7 @@
           `<img alt="">` +
           `<div class="file-move"><button type="button" title="Move earlier" ${i === 0 ? "disabled" : ""} data-move="-1">&larr;</button>` +
           `<button type="button" title="Move later" ${i === files.length - 1 ? "disabled" : ""} data-move="1">&rarr;</button></div>` +
-          `<button type="button" class="file-remove" title="Remove this image"><svg class="icon"><use href="#i-x"></use></svg></button>` +
+          `<button type="button" class="file-remove" title="Remove this image"><svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg></button>` +
           `<figcaption><strong></strong> · <span></span></figcaption>`;
         fig.querySelector(".file-remove").setAttribute("aria-label", `Remove ${file.name}`);
         fig.querySelector("figcaption strong").textContent = PANEL_NAMES[i] || `Panel ${i + 1}`;
@@ -176,10 +178,14 @@
         const target = $(btn.dataset.target);
         btn.disabled = true;
         if (target && btn.dataset.busy) busy(target, btn.dataset.busy);
+        const previous = target ? target.innerHTML : "";
         try {
           const resp = await fetch(btn.dataset.fetch, { method: "post", headers: { "X-Partial": "1" } });
+          if (resp.redirected) { location.href = resp.url; return; }
           if (target) await swap(target, resp);
           btn.dispatchEvent(new CustomEvent("fetch:done", { bubbles: true, detail: { ok: resp.ok } }));
+        } catch (err) {
+          if (target) target.innerHTML = `<div class="alert alert-danger">Request failed: ${err}</div>` + previous;
         } finally {
           btn.disabled = false;
         }
@@ -217,9 +223,15 @@
       });
     });
 
-    $$("[data-dismiss]", root).forEach((btn) => btn.addEventListener("click", () => btn.parentElement.remove()));
+    $$("[data-dismiss]", root).forEach((btn) => {
+      if (btn.dataset.wired) return;
+      btn.dataset.wired = "1";
+      btn.addEventListener("click", () => btn.parentElement.remove());
+    });
 
     $$("[data-check-all]", root).forEach((all) => {
+      if (all.dataset.wired) return;
+      all.dataset.wired = "1";
       const form = all.closest("form");
       const boxes = () => $$('input[name="ids"]', form);
       const update = () => {
@@ -265,9 +277,11 @@
       const tick = async () => {
         try {
           const resp = await fetch(el.dataset.poll, { headers: { "X-Partial": "1" } });
+          if (resp.redirected) { location.href = resp.url; return; }
           const html = await resp.text();
           el.innerHTML = html;
           wire(el);
+          if (!resp.ok) return; // the error partial is shown once; nothing to keep polling for
           if (header && resp.headers.get(header) === value) return;
         } catch (err) { /* keep polling */ }
         setTimeout(tick, interval);
@@ -275,13 +289,15 @@
       setTimeout(tick, interval);
     });
 
-    $$(".demo-user", root).forEach((btn) =>
+    $$(".demo-user", root).forEach((btn) => {
+      if (btn.dataset.wired) return;
+      btn.dataset.wired = "1";
       btn.addEventListener("click", () => {
         $("#email").value = btn.dataset.email;
         $("#password").value = $(".auth-demo-title code").textContent;
         $("#password").focus();
-      })
-    );
+      });
+    });
   }
 
   // ---------------------------------------------------------------- wizard
@@ -302,7 +318,7 @@
     function pickSample(btn) {
       sampleInput.value = btn.dataset.sampleId;
       picker.clear();
-      $$(".sample").forEach((b) => b.classList.toggle("selected", b === btn));
+      $$(".sample").forEach((b) => { b.classList.toggle("selected", b === btn); b.setAttribute("aria-pressed", b === btn ? "true" : "false"); });
       samplePreview.hidden = false;
       $("img", samplePreview).src = btn.querySelector("img").src;
       $("span", samplePreview).textContent = `Sample: ${btn.textContent.trim()}`;
@@ -314,7 +330,7 @@
       if (e.detail.count > 0) {
         sampleInput.value = "";
         samplePreview.hidden = true;
-        $$(".sample").forEach((b) => b.classList.remove("selected"));
+        $$(".sample").forEach((b) => { b.classList.remove("selected"); b.setAttribute("aria-pressed", "false"); });
       }
       status.textContent = "";
     });
@@ -356,7 +372,9 @@
           const t0 = performance.now();
           try {
             const resp = await fetch(`/applicant/applications/${applicationId}/read`, { method: "post", headers: { Accept: "application/json" } });
-            applyRead(await resp.json(), t0);
+            const data = await resp.json();
+            if (!resp.ok) { status.textContent = data.detail || "Read failed."; return; }
+            applyRead(data, t0);
           } catch (err) { status.textContent = `Read failed: ${err}`; }
         });
         const orHand = document.createElement("span");
@@ -412,10 +430,13 @@
   let typeSource = "none";
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+  let rulesCache; // parsed once; the attribute never changes after the page loads
   function formRules() {
+    if (rulesCache !== undefined) return rulesCache;
     const grid = $("[data-form-rules]");
-    if (!grid) return null;
-    try { return JSON.parse(grid.getAttribute("data-form-rules") || "[]"); } catch (e) { return null; }
+    if (!grid) return (rulesCache = null);
+    try { rulesCache = JSON.parse(grid.getAttribute("data-form-rules") || "[]"); } catch (e) { rulesCache = null; }
+    return rulesCache;
   }
 
   function applyClassRules() {
@@ -434,8 +455,8 @@
       if (!field) return;
       const rule = byField[name];
       let required = !!rule && rule.requirement === "required";
-      if (name === "country_of_origin") required = isImport;
       if (!chosen) required = ["brand_name", "class_type"].includes(name);
+      if (name === "country_of_origin") required = isImport; // whatever the class, imports name the country
       field.classList.toggle("required", required);
       field.classList.toggle("optional", !!rule && rule.requirement === "optional");
       const label = $("label", field);
@@ -518,6 +539,7 @@
       if (document.hidden) return; // a background tab polls again when it is shown
       try {
         const resp = await fetch("/me/unread", { headers: { Accept: "application/json" } });
+        if (resp.status === 401) { clearInterval(timer); return; } // signed out: stop asking
         if (!resp.ok) return;
         const n = (await resp.json()).count || 0;
         badges.forEach((b) => {
@@ -528,7 +550,7 @@
         document.title = n ? `(${n}) ${baseTitle}` : baseTitle;
       } catch (err) { /* offline; try again next tick */ }
     };
-    setInterval(tick, 30000);
+    const timer = setInterval(tick, 30000);
     document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });
   }
 

@@ -20,12 +20,6 @@
   font-weight: 400;
   font-display: swap;
 }
-@font-face {
-  font-family: "JetBrains Mono";
-  src: url("/static/fonts/JetBrainsMono-Medium.woff2") format("woff2");
-  font-weight: 500;
-  font-display: swap;
-}
 
 :root {
   color-scheme: dark;
@@ -215,8 +209,6 @@ img { color-scheme: light; }
 .theme-toggle .i-sun { display: none; }
 :root[data-theme="light"] .theme-toggle .i-sun { display: block; }
 :root[data-theme="light"] .theme-toggle .i-moon { display: none; }
-.theme-toggle-floating { position: fixed; right: 16px; top: 16px; border-color: var(--line-strong); color: var(--ink-2); background: var(--surface); z-index: 5; }
-.theme-toggle-floating:hover { background: var(--surface-3); color: var(--ink); }
 
 .avatar { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--accent-soft); border: 1px solid var(--accent-soft-line); color: var(--accent-soft-fg); font-weight: 600; font-size: 0.74rem; letter-spacing: 0.04em; flex: none; }
 .sidebar .avatar { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.14); color: var(--side-ink); }
@@ -348,7 +340,6 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--acce
 .flash .icon-btn { margin-left: auto; color: inherit; }
 .alert { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--radius); border: 1px solid; margin-bottom: 12px; }
 .alert-danger { background: var(--danger-bg); border-color: var(--danger-line); color: var(--danger-fg); }
-.alert-info { background: var(--info-bg); border-color: var(--info-line); color: var(--info-fg); }
 .banner { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; padding: 14px 18px; border-radius: var(--radius); border: 1px solid; margin-bottom: 14px; }
 .banner-main { display: flex; flex-direction: column; gap: 2px; }
 .banner-main strong { font-size: 1rem; font-weight: 600; }
@@ -528,15 +519,6 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--acce
 /* Rules and checklists -------------------------------------------------------- */
 .cite { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.04em; color: var(--muted); margin-top: 2px; }
 .banner-link { color: inherit; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
-.checklist { grid-column: 1 / -1; margin-top: 6px; padding: 14px 16px; border: 1px dashed var(--line-strong); border-radius: var(--radius); }
-.checklist-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-.checklist-head .eyebrow { margin: 0; }
-.checklist-title { font-weight: 600; margin-bottom: 8px; }
-.checklist ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 18px; }
-@media (max-width: 800px) { .checklist ul { grid-template-columns: 1fr; } }
-.checklist li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: 0.88rem; }
-.checklist li .cite { margin: 0; }
-.checklist-note { margin: 10px 0 0; }
 /* Class-aware application form: required marks and the label-only items */
 .field.required > label::after { content: " *"; color: var(--danger-fg); font-weight: 700; }
 .field.optional > label::after { content: " (optional)"; color: var(--muted); font-weight: 400; }
@@ -562,7 +544,7 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--acce
 /* Try-it batch box ------------------------------------------------------------ */
 .column-guide { margin-top: 8px; }
 .column-guide summary { cursor: pointer; color: var(--muted); font-size: 0.84rem; }
-.column-guide summary:hover { color: var(--text); }
+.column-guide summary:hover { color: var(--ink); }
 .column-guide .table { margin-top: 8px; }
 .table-compact th, .table-compact td { padding: 6px 8px; font-size: 0.82rem; vertical-align: top; }
 .column-guide p { margin: 8px 0 0; }
@@ -623,7 +605,6 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--acce
 .demo-user-text small { color: var(--muted); font-size: 0.76rem; }
 
 /* Busy state ----------------------------------------------------------------- */
-.busy { position: relative; opacity: 0.6; pointer-events: none; }
 .busy-note { display: flex; align-items: center; gap: 10px; color: var(--muted); padding: 24px; justify-content: center; }
 .spinner { width: 18px; height: 18px; border: 2px solid var(--line-strong); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 

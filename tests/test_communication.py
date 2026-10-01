@@ -130,7 +130,9 @@ class Party:
         assert created.status_code == 200, created.text
         app_id = created.json()["id"]
         submitted = self.client.post(
-            f"/applicant/applications/{app_id}/submit", data=_form(sample_id), follow_redirects=False
+            f"/applicant/applications/{app_id}/submit",
+            data=_form(sample_id),
+            follow_redirects=False,
         )
         assert submitted.status_code == 303, submitted.text
         return app_id
@@ -224,7 +226,9 @@ class TestSendAndReceive:
         inbox = text_of(sarah.inbox())
         assert "Maria Alvarez replied on Brand Name" in inbox
         page = sarah.open_app(app_id)
-        assert page.index("Is the apostrophe printed?") < page.index("Yes, exactly as on the artwork.")
+        assert page.index("Is the apostrophe printed?") < page.index(
+            "Yes, exactly as on the artwork."
+        )
         assert page.count(NEW_PILL) == 1
 
     def test_general_discussion_both_directions(self, sarah, maria):
@@ -245,7 +249,9 @@ class TestSendAndReceive:
         per-field count on the page."""
         app_id = maria.submit_new("old-tom-bourbon")
         maria.open_app(app_id)
-        for n, field in enumerate(["brand_name", "brand_name", "net_contents", "general", "general"]):
+        for n, field in enumerate(
+            ["brand_name", "brand_name", "net_contents", "general", "general"]
+        ):
             sarah.comment(app_id, field, f"Message {n}")
 
         assert maria.unread() == 5
@@ -253,7 +259,7 @@ class TestSendAndReceive:
         assert [int(m) for m in re.findall(r"Message (\d)", inbox)] == [4, 3, 2, 1, 0]
         page = maria.open_app(app_id)
         assert "2 new comments on this field" in page  # brand name toggle tooltip
-        assert '2 new</span>' in page  # general discussion title
+        assert "2 new</span>" in page  # general discussion title
         assert maria.unread() == 0
 
 
@@ -294,14 +300,19 @@ class TestNoticesAndDecisions:
         assert location.endswith("#history") and "Resubmitted" in page
         assert sarah.unread() == 1
 
-    def test_approval_and_rejection_notify_the_applicant_and_close_the_threads(self, app, sarah, maria):
+    def test_approval_and_rejection_notify_the_applicant_and_close_the_threads(
+        self, app, sarah, maria
+    ):
         """A decision reaches the applicant as one item; after it, neither side can post."""
         approved = maria.submit_new("old-tom-bourbon")
         rejected = maria.submit_new("old-tom-abv-mismatch")
         for app_id in (approved, rejected):
             maria.open_app(app_id)
         assert sarah.decide(approved, "approve").status_code == 303
-        assert sarah.decide(rejected, "reject", "The alcohol content does not match.").status_code == 303
+        assert (
+            sarah.decide(rejected, "reject", "The alcohol content does not match.").status_code
+            == 303
+        )
 
         assert maria.unread() == 2
         inbox = text_of(maria.inbox())
@@ -366,7 +377,9 @@ class TestReadState:
 
 
 class TestResolutionAndIsolation:
-    def test_resolving_a_thread_is_visible_to_the_applicant_and_only_the_specialist_can(self, sarah, maria):
+    def test_resolving_a_thread_is_visible_to_the_applicant_and_only_the_specialist_can(
+        self, sarah, maria
+    ):
         app_id = maria.submit_new("old-tom-bourbon")
         sarah.comment(app_id, "brand_name", "Please confirm the spelling.")
         maria.comment(app_id, "brand_name", "Confirmed.")
@@ -428,7 +441,9 @@ class TestLiveness:
         maria.open_item(maria.inbox_links("comment")[0])
         assert maria.unread() == 1
 
-        second = create_app(extractor=DemoExtractor(), database_url=url, secret="s", seed_data=False)
+        second = create_app(
+            extractor=DemoExtractor(), database_url=url, secret="s", seed_data=False
+        )
         maria2 = Party(second, MARIA)
         assert maria2.unread() == 1
         page = maria2.open_app(app_id)

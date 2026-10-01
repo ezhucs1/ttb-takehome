@@ -21,6 +21,13 @@ from .models import Role, User
 
 log = logging.getLogger(__name__)
 
+# Set LABELVERIFY_SECURE_COOKIES=true behind HTTPS (the deployment does) so the session
+# cookie is never sent in clear; off by default so local http://127.0.0.1 still works.
+SECURE_COOKIES = os.environ.get("LABELVERIFY_SECURE_COOKIES", "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+}
 SESSION_COOKIE = "lv_session"
 SESSION_MAX_AGE = 60 * 60 * 12
 _PBKDF2_ROUNDS = 120_000
@@ -116,7 +123,9 @@ def optional_user(request: Request) -> User | None:
 def current_user(request: Request) -> User:
     user = optional_user(request)
     if user is None:
-        raise LoginRequired(str(request.url.path))
+        raise LoginRequired(
+            request.url.path + (f"?{request.url.query}" if request.url.query else "")
+        )
     return user
 
 

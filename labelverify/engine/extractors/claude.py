@@ -14,12 +14,10 @@ re-runs whenever the schema changes, can take longer than a read is allowed to.
 from __future__ import annotations
 
 import base64
-import json
 import os
 from collections.abc import Sequence
 
 import anthropic
-from pydantic import ValidationError
 
 from ..models import LabelExtraction
 from .base import ExtractionError, Panel
@@ -110,7 +108,7 @@ def parse_label_json(text: str) -> LabelExtraction:
         raise ExtractionError("The model's reply was not a JSON object.")
     try:
         return LabelExtraction.model_validate_json(body[start : end + 1])
-    except (ValidationError, json.JSONDecodeError, ValueError) as exc:
+    except ValueError as exc:  # pydantic's ValidationError and JSONDecodeError both are one
         raise ExtractionError("The model's reply was not valid label JSON.") from exc
 
 

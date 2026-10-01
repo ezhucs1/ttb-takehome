@@ -116,7 +116,6 @@ def _apply_overrides(args: argparse.Namespace) -> None:
 def cmd_extract(args: argparse.Namespace) -> int:
     _apply_overrides(args)
     extractor = get_extractor(args.extractor)
-    started = time.perf_counter()
     try:
         panels = _prepared_panels(args.images)
         started = time.perf_counter()
@@ -176,7 +175,9 @@ def cmd_bench(args: argparse.Namespace) -> int:
             except ExtractionError as exc:
                 waited_ms = int((time.perf_counter() - started) * 1000)
                 failures.append(f"{exc} (gave up after {waited_ms} ms)")
-        model = getattr(extractor, "model", "")
+        model = getattr(
+            getattr(extractor, "inner", extractor), "model", ""
+        )  # through the budget wrapper
         if times:
             print(
                 f"{name:<12} {model:<24} {len(times):>4} {int(statistics.median(times)):>10} "

@@ -122,12 +122,59 @@ _COUNTRY_NOTE = "Required on imported products, in English."
 
 # Standards of fill per the January 2025 final rule (advisory; see module docstring).
 SPIRITS_STANDARDS_ML = frozenset(
-    {50, 100, 187, 200, 250, 331, 350, 355, 375, 475, 500, 570, 700, 710, 720, 750, 900,
-     945, 1000, 1500, 1750, 1800, 2000, 3000, 3750}
+    {
+        50,
+        100,
+        187,
+        200,
+        250,
+        331,
+        350,
+        355,
+        375,
+        475,
+        500,
+        570,
+        700,
+        710,
+        720,
+        750,
+        900,
+        945,
+        1000,
+        1500,
+        1750,
+        1800,
+        2000,
+        3000,
+        3750,
+    }
 )
 WINE_STANDARDS_ML = frozenset(
-    {50, 100, 180, 187, 300, 330, 360, 375, 473, 500, 550, 568, 600, 620, 700, 720, 750,
-     1000, 1500, 1800, 2250, 3000}
+    {
+        50,
+        100,
+        180,
+        187,
+        300,
+        330,
+        360,
+        375,
+        473,
+        500,
+        550,
+        568,
+        600,
+        620,
+        700,
+        720,
+        750,
+        1000,
+        1500,
+        1800,
+        2250,
+        3000,
+    }
 )
 
 RULES: dict[BeverageType, ClassRules] = {
@@ -142,7 +189,9 @@ RULES: dict[BeverageType, ClassRules] = {
         fields={
             "brand_name": FieldRule(Requirement.REQUIRED, "27 CFR 5.63"),
             "class_type": FieldRule(
-                Requirement.REQUIRED, "27 CFR 5.63", "A class or type from the standards of identity."
+                Requirement.REQUIRED,
+                "27 CFR 5.63",
+                "A class or type from the standards of identity.",
             ),
             "alcohol_content": FieldRule(
                 Requirement.REQUIRED,
@@ -151,7 +200,9 @@ RULES: dict[BeverageType, ClassRules] = {
                 "Tolerance ±0.15.",
             ),
             "net_contents": FieldRule(
-                Requirement.REQUIRED, "27 CFR 5.70", "Metric units; a standard of fill (27 CFR 5.203)."
+                Requirement.REQUIRED,
+                "27 CFR 5.70",
+                "Metric units; a standard of fill (27 CFR 5.203).",
             ),
             "producer_name": FieldRule(Requirement.REQUIRED, "27 CFR 5.66"),
             "producer_address": FieldRule(Requirement.REQUIRED, "27 CFR 5.66", "City and state."),
@@ -274,7 +325,12 @@ RULES: dict[BeverageType, ClassRules] = {
         proof_permitted=False,
         metric_required=False,
         standards_of_fill_ml=None,
-        qualifying_phrases=("Brewed by", "Brewed and bottled by", "Brewed and canned by", "Imported by"),
+        qualifying_phrases=(
+            "Brewed by",
+            "Brewed and bottled by",
+            "Brewed and canned by",
+            "Imported by",
+        ),
         fields={
             "brand_name": FieldRule(
                 Requirement.REQUIRED,

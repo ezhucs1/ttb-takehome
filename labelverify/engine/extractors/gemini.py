@@ -26,6 +26,7 @@ import time
 import urllib.error
 import urllib.request
 from collections.abc import Sequence
+from functools import lru_cache
 from typing import Any
 
 from ..models import LabelExtraction
@@ -145,6 +146,11 @@ def discover_model(api_key: str, *, timeout: float, list_transport=None) -> str:
 # --------------------------------------------------------------------------- extractor
 
 
+@lru_cache(maxsize=1)
+def _label_schema() -> dict:
+    return to_gemini_schema(LabelExtraction.model_json_schema())
+
+
 class GeminiExtractor:
     name = "gemini"
 
@@ -166,7 +172,7 @@ class GeminiExtractor:
         self.thinking_budget = int(raw_budget) if raw_budget else None
         self._transport = transport or _http_post  # injectable for tests
         self._list_transport = list_transport or _http_get
-        self._schema = to_gemini_schema(LabelExtraction.model_json_schema())
+        self._schema = _label_schema()
 
     def resolve_model(self) -> str:
         if self.model == AUTO:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import mimetypes
+
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
@@ -45,10 +47,9 @@ async def verify(
 def sample_image_route(request: Request, sample_id: str):
     from fastapi.responses import Response
 
-    data, _ = sample_image(request, sample_id)
-    return Response(
-        data, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"}
-    )
+    data, filename = sample_image(request, sample_id)
+    media_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    return Response(data, media_type=media_type, headers={"Cache-Control": "public, max-age=86400"})
 
 
 @router.get("/rules")

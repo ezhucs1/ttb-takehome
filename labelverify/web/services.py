@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import csv
 import io
-import json
 import logging
 import re
 import secrets
@@ -32,9 +31,10 @@ from ..engine.models import (
     VerificationResult,
 )
 from ..engine.notices import NoticeDraft, draft_notice, flagged_fields
-from ..engine.preprocess import UnreadableImageError, prepare_image
+from ..engine.preprocess import PreparedImage, UnreadableImageError, prepare_image
 from ..engine.verify import run_verification
 from .models import (
+    OPEN_STATUSES,
     ActivityRead,
     Application,
     ApplicationStatus,
@@ -188,17 +188,31 @@ Upload = tuple[bytes, str]  # (raw bytes, filename)
 MAX_PANELS = 4
 
 
-def attach_images(db: Session, app: Application, uploads: Sequence[Upload]) -> list[LabelImage]:
-    """Store a new label set (front, back, neck ...) as the next version."""
+PreparedUpload = tuple[PreparedImage, str]  # (prepared image, filename)
+
+
+def prepare_uploads(uploads: Sequence[Upload]) -> list[PreparedUpload]:
+    """Validate and preprocess a label set. Pure CPU work, so callers that hold a
+    database transaction (SQLite has one writer) can do it beforehand."""
     if not uploads:
         raise UnreadableImageError("Choose at least one label image.")
     if len(uploads) > MAX_PANELS:
         raise UnreadableImageError(f"Upload at most {MAX_PANELS} images per label set.")
     for data, _ in uploads:
         validate_upload(data)
-    prepared = [
-        (prepare_image(data), filename) for data, filename in uploads
-    ]  # validates all first
+    return [(prepare_image(data), filename) for data, filename in uploads]
+
+
+def attach_images(
+    db: Session,
+    app: Application,
+    uploads: Sequence[Upload],
+    *,
+    prepared: Sequence[PreparedUpload] | None = None,
+) -> list[LabelImage]:
+    """Store a new label set (front, back, neck ...) as the next version."""
+    if prepared is None:
+        prepared = prepare_uploads(uploads)
     version = app.current_version + 1
     images = []
     for panel, (image, filename) in enumerate(prepared, start=1):
@@ -278,7 +292,6 @@ class LabelSet:
     """The bytes of an application's current label set, detached from any session, so a
     model call can run with no database transaction open (SQLite has one writer)."""
 
-    application_id: str
     image_id: str
     image_version: int
     media_type: str
@@ -316,7 +329,6 @@ def label_set_of(app: Application, *, reuse: bool = True) -> LabelSet:
     first = images[0]
     cached = cached_extraction(app) if reuse else None
     return LabelSet(
-        application_id=app.id,
         image_id=first.id,
         image_version=first.version,
         media_type=first.media_type,
@@ -380,6 +392,9 @@ def store_run(
         )
         app.runs.append(run)
         db.flush()
+        app.latest_run_id = run.id
+        app.recommendation = "error"  # listed under "Needs a look", never under "Ready"
+        app.risk_score = 20
         return run
     run = VerificationRun(
         application_id=app.id,
@@ -432,7 +447,12 @@ def record_run(
 
 
 def create_draft(
-    db: Session, applicant: User, data: ApplicationData, uploads: Sequence[Upload]
+    db: Session,
+    applicant: User,
+    data: ApplicationData,
+    uploads: Sequence[Upload],
+    *,
+    prepared: Sequence[PreparedUpload] | None = None,
 ) -> Application:
     app = Application(
         serial=next_serial(db),
@@ -443,7 +463,7 @@ def create_draft(
     )
     db.add(app)
     db.flush()
-    attach_images(db, app, uploads)
+    attach_images(db, app, uploads, prepared=prepared)
     app.events.append(
         StatusEvent(
             application_id=app.id,
@@ -1037,11 +1057,7 @@ def queue(db: Session, tab: str = "open") -> list[Application]:
 
 def queue_stats(db: Session) -> QueueStats:
     """The four stat cards, from one grouped count instead of one query per card."""
-    open_statuses = {
-        ApplicationStatus.SUBMITTED.value,
-        ApplicationStatus.UNDER_REVIEW.value,
-        ApplicationStatus.RESUBMITTED.value,
-    }
+    open_statuses = {status.value for status in OPEN_STATUSES}
     rows = db.execute(
         select(Application.status, Application.recommendation, func.count()).group_by(
             Application.status, Application.recommendation
@@ -1101,22 +1117,52 @@ def batch_template_csv() -> str:
     writer.writerows(
         [
             [
-                "old-tom-bourbon.jpg", "distilled_spirits", "OLD TOM DISTILLERY",
-                "Kentucky Straight Bourbon Whiskey", "45% Alc./Vol. (90 Proof)", "750 mL",
-                "Old Tom Distillery", "Bardstown, KY 40004", "false", "",
+                "old-tom-bourbon.jpg",
+                "distilled_spirits",
+                "OLD TOM DISTILLERY",
+                "Kentucky Straight Bourbon Whiskey",
+                "45% Alc./Vol. (90 Proof)",
+                "750 mL",
+                "Old Tom Distillery",
+                "Bardstown, KY 40004",
+                "false",
+                "",
             ],
             [
-                "stones-throw-wine.jpg", "wine", "Stone's Throw", "Cabernet Sauvignon", "14.5",
-                "750 mL", "Stone's Throw Vineyards", "St. Helena, CA", "false", "",
+                "stones-throw-wine.jpg",
+                "wine",
+                "Stone's Throw",
+                "Cabernet Sauvignon",
+                "14.5",
+                "750 mL",
+                "Stone's Throw Vineyards",
+                "St. Helena, CA",
+                "false",
+                "",
             ],
             [
-                "harbor-light-ipa.jpg", "malt_beverage", "Harbor Light", "India Pale Ale", "",
-                "12 fl oz", "Harbor Light Brewing Co.", "Portland, ME 04101", "false", "",
+                "harbor-light-ipa.jpg",
+                "malt_beverage",
+                "Harbor Light",
+                "India Pale Ale",
+                "",
+                "12 fl oz",
+                "Harbor Light Brewing Co.",
+                "Portland, ME 04101",
+                "false",
+                "",
             ],
             [
-                "glen-aldie-front.jpg;glen-aldie-back.jpg", "", "Glen Aldie",
-                "Single Malt Scotch Whisky", "43%", "700 mL", "Glen Aldie Distillers",
-                "Speyside, Scotland", "true", "United Kingdom",
+                "glen-aldie-front.jpg;glen-aldie-back.jpg",
+                "",
+                "Glen Aldie",
+                "Single Malt Scotch Whisky",
+                "43%",
+                "700 mL",
+                "Glen Aldie Distillers",
+                "Speyside, Scotland",
+                "true",
+                "United Kingdom",
             ],
         ]
     )
@@ -1142,8 +1188,10 @@ def not_a_label_image() -> bytes:
 
     noise = Image.effect_noise((900, 1200), 48).convert("RGB")
     shade = Image.linear_gradient("L").resize((900, 1200)).convert("RGB")
-    image = Image.blend(noise, shade, 0.6).point(lambda v: int(v * 0.35)).filter(
-        ImageFilter.GaussianBlur(3)
+    image = (
+        Image.blend(noise, shade, 0.6)
+        .point(lambda v: int(v * 0.35))
+        .filter(ImageFilter.GaussianBlur(3))
     )
     out = io.BytesIO()
     image.save(out, format="JPEG", quality=80)
@@ -1224,6 +1272,9 @@ def parse_batch(csv_bytes: bytes, zip_bytes: bytes) -> ParsedBatch:
                     (".png", ".jpg", ".jpeg", ".webp")
                 ):
                     continue
+                if info.file_size > MAX_UPLOAD_BYTES:  # checked before anything is inflated
+                    errors.append(f"Image '{name}' is larger than 10 MB.")
+                    continue
                 images[name] = zf.read(info)
     except zipfile.BadZipFile:
         errors.append("The images file is not a valid .zip archive.")
@@ -1294,10 +1345,12 @@ def process_batch(
     def work(item_id: str, row_number: int) -> None:
         """Three steps, two short transactions: the model call in the middle holds no lock.
         SQLite allows one writer at a time, and a model read takes seconds."""
+        app_id: str | None = None
         try:
             data, uploads = row_inputs(parsed.rows[row_number - 1])
+            prepared = prepare_uploads(uploads)  # decode and resize before taking the write lock
             with session_factory() as db:  # 1. the draft and its images
-                app = create_draft(db, applicant, data, uploads)
+                app = create_draft(db, applicant, data, uploads, prepared=prepared)
                 app.batch_id = batch_id
                 label_set = label_set_of(app)
                 app_id = app.id
@@ -1312,7 +1365,7 @@ def process_batch(
         except Exception as exc:  # one bad row must not sink the batch
             log.exception("batch row %s failed", row_number)
             try:
-                mark(item_id, application_id=None, error=str(exc))
+                mark(item_id, application_id=app_id, error=str(exc))
             except Exception:  # the finalizer below still accounts for this row
                 log.exception("batch row %s could not record its failure", row_number)
 
@@ -1323,6 +1376,16 @@ def process_batch(
                 future.result()  # work() never raises; this surfaces anything unexpected
     finally:
         _finish_batch(session_factory, batch_id)
+
+
+def finish_stale_batches(session_factory: sessionmaker) -> int:
+    """Close every batch still marked processing: its worker died with the previous
+    process, and nothing else would ever stop the page from saying 'working'."""
+    with session_factory() as db:
+        stale = list(db.scalars(select(Batch.id).where(Batch.status == "processing")))
+    for batch_id in stale:
+        _finish_batch(session_factory, batch_id)
+    return len(stale)
 
 
 def _finish_batch(session_factory: sessionmaker, batch_id: str) -> None:
@@ -1353,7 +1416,3 @@ def batch_summary(batch: Batch) -> dict[str, int]:
                 counts.get(item.application.recommendation or "error", 0) + 1
             )
     return counts
-
-
-def serialize_result_for_ui(result: VerificationResult | None) -> str:
-    return json.dumps(result.model_dump(mode="json")) if result else "null"

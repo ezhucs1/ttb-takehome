@@ -8,6 +8,8 @@ normalization; the heading is checked separately for capitalization and bold.
 from __future__ import annotations
 
 import difflib
+import re
+from functools import lru_cache
 
 from .models import FieldResult, HealthWarningExtraction, Verdict, WordDiff
 from .normalize import collapse_whitespace, normalize_words
@@ -24,16 +26,16 @@ STATUTORY_BODY = (
 STATUTORY_TEXT = f"{HEADING} {STATUTORY_BODY}"
 
 _HEADING_WORDS = ["government", "warning"]
+_HEADING_RE = re.compile(r"government\s+warning", re.IGNORECASE)
 
 
 def split_heading(text: str) -> tuple[str, str]:
     """Return (heading_as_printed, body_as_printed) from a transcribed statement."""
     cleaned = collapse_whitespace(text)
-    lowered = cleaned.casefold()
-    idx = lowered.find("government warning")
-    if idx == -1:
+    match = _HEADING_RE.search(cleaned)  # searched in place: case folding can change lengths
+    if match is None:
         return "", cleaned
-    end = idx + len("government warning")
+    idx, end = match.span()
     if end < len(cleaned) and cleaned[end] == ":":
         end += 1
     return cleaned[idx:end], cleaned[end:].strip()
@@ -64,6 +66,7 @@ def word_diff(expected: str, actual: str) -> list[WordDiff]:
     return diff
 
 
+@lru_cache(maxsize=256)
 def _tokens(text: str) -> list[tuple[str, str]]:
     """(normalized token, word as printed) pairs; punctuation-only words are dropped."""
     pairs: list[tuple[str, str]] = []
@@ -102,7 +105,7 @@ def check_health_warning(extraction: HealthWarningExtraction) -> FieldResult:
     # Body: word for word after normalization.
     diff = word_diff(STATUTORY_BODY, body)
     wrong_words = [d for d in diff if d.op != "equal"]
-    if not normalize_words(body):
+    if not _tokens(body):
         problems.append("The warning heading is present but the statement body is missing.")
     elif wrong_words:
         missing = sum(1 for d in wrong_words if d.op == "missing")

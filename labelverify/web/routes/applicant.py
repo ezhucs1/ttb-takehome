@@ -17,16 +17,15 @@ from fastapi import (
 )
 from fastapi.responses import JSONResponse, PlainTextResponse
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ...engine.extractors import ExtractionError
-from ...engine.models import ApplicationData
 from ...engine.preprocess import UnreadableImageError
 from ...engine.rules import all_rules
 from .. import services
 from ..auth import require_applicant
 from ..db import get_db
-from ..models import ApplicationStatus, Batch, User
+from ..models import Application, ApplicationStatus, Batch, BatchItem, User
 from .common import (
     application_from_form,
     load_application,
@@ -114,7 +113,7 @@ async def create_application(
         app = services.create_draft(
             db,
             user,
-            ApplicationData(beverage_type=beverage_type or None, brand_name="", class_type=""),
+            application_from_form({"beverage_type": beverage_type}),
             uploads,
         )
     except UnreadableImageError as exc:
@@ -148,20 +147,26 @@ def _read_label(request: Request, db: Session, app) -> dict:
         warning = f"Could not read the label automatically ({exc})"
         log.warning("read failed for %s (%d panels): %s", app.serial, len(app.current_images), exc)
     elapsed_ms = int((time.perf_counter() - started) * 1000)
-    log.info("read %s: %d panel(s), %d ms, %s", app.serial, len(app.current_images), elapsed_ms, extractor.name)
+    log.info(
+        "read %s: %d panel(s), %d ms, %s",
+        app.serial,
+        len(app.current_images),
+        elapsed_ms,
+        extractor.name,
+    )
 
     image_urls = [f"/applications/{app.id}/images/{img.id}" for img in app.current_images]
     return {
-            "id": app.id,
-            "serial": app.serial,
-            "image_url": image_urls[0],
-            "image_urls": image_urls,
-            "prefill": prefill,
-            "label_read": label_read,
-            "warning": warning,
-            "read_failed": read_failed,
-            "extractor": extractor.name,
-            "ms": elapsed_ms,
+        "id": app.id,
+        "serial": app.serial,
+        "image_url": image_urls[0],
+        "image_urls": image_urls,
+        "prefill": prefill,
+        "label_read": label_read,
+        "warning": warning,
+        "read_failed": read_failed,
+        "extractor": extractor.name,
+        "ms": elapsed_ms,
     }
 
 
@@ -221,8 +226,10 @@ async def submit(
     data = application_from_form(dict(form))
     if not data.brand_name or not data.class_type:
         raise HTTPException(422, "Brand name and class/type are required before submitting.")
+    previous = services.to_application_data(app)
     services.update_fields(app, data)
-    if app.latest_run is None or app.latest_run.trigger != "precheck":
+    stale = app.latest_run is None or app.latest_run.trigger != "precheck" or data != previous
+    if stale:  # the stored verdict must describe the values actually submitted
         services.record_run(db, app, request.app.state.get_extractor(), "submit")
     services.submit(db, app, user)
     db.commit()
@@ -305,13 +312,20 @@ async def resubmit(
 def batches(
     request: Request, db: Session = Depends(get_db), user: User = Depends(require_applicant)
 ):
-    rows = list(
+    return renderer(request).page(
+        request,
+        "applicant/batches.html",
+        batches=_batches_for(db, user),
+        errors=[],
+        columns=services.BATCH_COLUMNS,
+    )
+
+
+def _batches_for(db: Session, user: User) -> list[Batch]:
+    return list(
         db.scalars(
             select(Batch).where(Batch.applicant_id == user.id).order_by(Batch.created_at.desc())
         )
-    )
-    return renderer(request).page(
-        request, "applicant/batches.html", batches=rows, errors=[], columns=services.BATCH_COLUMNS
     )
 
 
@@ -358,16 +372,11 @@ async def create_batch(
 ):
     parsed = services.parse_batch(await csv_file.read(), await zip_file.read())
     if parsed.errors:
-        rows = list(
-            db.scalars(
-                select(Batch).where(Batch.applicant_id == user.id).order_by(Batch.created_at.desc())
-            )
-        )
         return renderer(request).page(
             request,
             "applicant/batches.html",
             status_code=422,
-            batches=rows,
+            batches=_batches_for(db, user),
             errors=parsed.errors,
             columns=services.BATCH_COLUMNS,
         )
@@ -388,7 +397,17 @@ async def create_batch(
 
 
 def _load_batch(db: Session, batch_id: str, user: User) -> Batch:
-    batch = db.get(Batch, batch_id)
+    """The batch with its rows, their applications and runs loaded up front: the rows
+    partial reads each application's latest run, and it is polled while processing."""
+    batch = db.scalars(
+        select(Batch)
+        .where(Batch.id == batch_id)
+        .options(
+            selectinload(Batch.items)
+            .selectinload(BatchItem.application)
+            .selectinload(Application.runs)
+        )
+    ).first()
     if batch is None or batch.applicant_id != user.id:
         raise HTTPException(404, "Batch not found.")
     return batch

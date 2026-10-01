@@ -9,6 +9,7 @@ import zipfile
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from labelverify.engine.extractors import DemoExtractor, FixtureExtractor
 from labelverify.engine.extractors.demo import SAMPLES_DIR, load_manifest
@@ -116,12 +117,12 @@ class TestAuth:
         page = anon.get("/login").text
         assert '<dialog id="signin"' in page and "data-open-signin" in page
         assert "Not an official" in page  # the prototype disclaimer next to the seal
-        assert re.search(r'/static/app\.css\?v=[0-9a-f]{10}', page)
-        version = re.search(r'/static/app\.css\?v=([0-9a-f]{10})', page).group(1)
+        assert re.search(r"/static/app\.css\?v=[0-9a-f]{10}", page)
+        version = re.search(r"/static/app\.css\?v=([0-9a-f]{10})", page).group(1)
         versioned = anon.get(f"/static/app.css?v={version}")
         assert versioned.status_code == 200 and "immutable" in versioned.headers["cache-control"]
         assert anon.get("/static/app.css").headers["cache-control"] == "public, max-age=86400"
-        assert "Sarah Chen" in page and 'data-open' not in page.split("<dialog")[1].split(">")[0]
+        assert "Sarah Chen" in page and "data-open" not in page.split("<dialog")[1].split(">")[0]
 
     def test_failed_login_reopens_the_dialog(self, anon):
         resp = anon.post("/login", data={"email": SPECIALIST["email"], "password": "nope"})
@@ -193,7 +194,7 @@ class TestSpecialistWorkflow:
         page = specialist.get(f"/specialist/applications/{app_id}")
         assert "Correction requested" in page.text and "Correction request" in page.text
         # No decision panel while the applicant holds the next move; threads stay open.
-        assert "Waiting on the applicant" in page.text and "Approve label" not in page.text
+        assert "Awaiting applicant" in page.text and "Approve label" not in page.text
         assert "comment-form" in page.text
         # The applicant now sees it as needing action, with the notice and field comments.
         dash = applicant.get("/applicant")
@@ -316,7 +317,10 @@ class TestComments:
         inbox = applicant.get("/inbox").text
         assert "Is the apostrophe printed?" in inbox and "on <em>Brand Name</em>" in inbox
         assert "/inbox/open/comment/" in inbox
-        assert 'data-unread-badge' in inbox and "hidden>" not in inbox.split("data-unread-badge")[1][:80]
+        assert (
+            "data-unread-badge" in inbox
+            and "hidden>" not in inbox.split("data-unread-badge")[1][:80]
+        )
 
         page = applicant.get(f"/applicant/applications/{app_id}").text
         assert "Is the apostrophe printed?" in page
@@ -351,7 +355,10 @@ class TestComments:
         pills = inbox.count('pill-xs">New</span>')
         resp = applicant.get(links[0], follow_redirects=False)
         assert resp.status_code == 303
-        assert resp.headers["location"] == f"/applicant/applications/{app_id}?via=inbox#field-brand_name"
+        assert (
+            resp.headers["location"]
+            == f"/applicant/applications/{app_id}?via=inbox#field-brand_name"
+        )
         page = applicant.get(resp.headers["location"]).text
         assert page.count('pill-xs">New</span>') == 2  # the two unopened questions stay new
         assert applicant.get("/me/unread").json()["count"] == before + 2
@@ -511,10 +518,16 @@ class TestApplicantWorkflow:
             "/applicant/applications", data={"sample_id": "stones-throw-wine"}
         ).json()
         assert created["prefill"]["beverage_type"] == "wine"
-        form = {k: v for k, v in sample("stones-throw-wine")["application"].items() if v not in (None, False, "")}
+        form = {
+            k: v
+            for k, v in sample("stones-throw-wine")["application"].items()
+            if v not in (None, False, "")
+        }
         form.pop("beverage_type")  # leave it unstated on purpose
         resp = applicant.post(
-            f"/applicant/applications/{created['id']}/precheck", data=form, headers={"X-Partial": "1"}
+            f"/applicant/applications/{created['id']}/precheck",
+            data=form,
+            headers={"X-Partial": "1"},
         )
         assert resp.status_code == 200
         assert "Wine · 27 CFR part 4" in resp.text and "type taken from the label" in resp.text
@@ -529,7 +542,11 @@ class TestApplicantWorkflow:
 
     def test_rules_reference_page_and_api(self, applicant, anon):
         page = applicant.get("/rules")
-        assert page.status_code == 200 and "27 CFR part 7" in page.text and "Sulfite declaration" in page.text
+        assert (
+            page.status_code == 200
+            and "27 CFR part 7" in page.text
+            and "Sulfite declaration" in page.text
+        )
         api = applicant.get("/api/rules").json()["rules"]
         assert [r["part"] for r in api] == [5, 4, 7]
         assert anon.get("/rules", follow_redirects=False).status_code == 303
@@ -573,7 +590,9 @@ class TestApplicantWorkflow:
         payload = created.json()
         assert payload["prefill"] == {} and "ANTHROPIC_API_KEY" in payload["warning"]
 
-    def test_a_failed_read_can_be_retried_on_the_stored_images(self, tmp_path, extraction, label_png):
+    def test_a_failed_read_can_be_retried_on_the_stored_images(
+        self, tmp_path, extraction, label_png
+    ):
         """A timeout at upload leaves the draft and its images in place; 'Read again' reads
         them once more without a second upload."""
         from labelverify.engine.extractors.base import ExtractionError
@@ -609,7 +628,9 @@ class TestApplicantWorkflow:
         assert reader.calls == 2
         # The retried read is kept, so the pre-check needs no third call.
         resp = client.post(
-            f"/applicant/applications/{created['id']}/precheck", data=FORM, headers={"X-Partial": "1"}
+            f"/applicant/applications/{created['id']}/precheck",
+            data=FORM,
+            headers={"X-Partial": "1"},
         )
         assert resp.status_code == 200 and "reused from upload" in resp.text and reader.calls == 2
 
@@ -700,13 +721,17 @@ class TestBatch:
         )
         assert applicant.get(batch_url).status_code == 200
         assert "peak.csv" in applicant.get("/applicant/batches").text
-        assert "OLD TOM DISTILLERY" in specialist.get("/specialist").text  # the batch rows are queued
+        assert (
+            "OLD TOM DISTILLERY" in specialist.get("/specialist").text
+        )  # the batch rows are queued
 
     def test_sample_batch_downloads_and_runs_end_to_end(self, applicant, specialist):
         """The two downloads on the batch page are enough to exercise the whole flow."""
         csv_resp = applicant.get("/applicant/batches/sample.csv")
         zip_resp = applicant.get("/applicant/batches/sample-images.zip")
-        assert csv_resp.status_code == 200 and len(csv_resp.text.strip().splitlines()) == 17  # header + 16 rows
+        assert (
+            csv_resp.status_code == 200 and len(csv_resp.text.strip().splitlines()) == 17
+        )  # header + 16 rows
         assert zip_resp.status_code == 200 and zip_resp.headers["content-type"] == "application/zip"
         names = zipfile.ZipFile(io.BytesIO(zip_resp.content)).namelist()
         assert len(names) == 15 and "not-a-label.jpg" in names and "missing-photo.jpg" not in names
@@ -731,7 +756,9 @@ class TestBatch:
         assert "7 corrections needed" in rows.text and "2 could not be checked" in rows.text
         assert "missing-photo.jpg" in rows.text and "Not checked" in rows.text
         assert "was not found in the zip" in rows.text  # the missing image, explained
-        assert "Demo mode can only read" in rows.text  # the non-label photo, explained (demo reader)
+        assert (
+            "Demo mode can only read" in rows.text
+        )  # the non-label photo, explained (demo reader)
         assert "Sunset Ridge" in specialist.get("/specialist").text
 
     def test_batch_validation_errors_render(self, applicant):
@@ -801,3 +828,95 @@ class TestApi:
             .headers["content-type"]
             .startswith("image/")
         )
+
+
+class TestReviewFixes:
+    """Behaviours pinned down by the pre-deployment review."""
+
+    def test_submit_after_editing_a_prechecked_field_reruns_the_check(self, applicant):
+        created = applicant.post(
+            "/applicant/applications",
+            data={"sample_id": "old-tom-bourbon"},
+            headers={"Accept": "application/json"},
+        ).json()
+        app_id = created["id"]
+        assert (
+            applicant.post(
+                f"/applicant/applications/{app_id}/precheck", data=FORM, headers={"X-Partial": "1"}
+            ).status_code
+            == 200
+        )
+        edited = {**FORM, "brand_name": "SOMETHING ELSE ENTIRELY"}
+        resp = applicant.post(
+            f"/applicant/applications/{app_id}/submit", data=edited, follow_redirects=False
+        )
+        assert resp.status_code == 303
+        page = applicant.get(f"/applicant/applications/{app_id}").text
+        assert "SOMETHING ELSE ENTIRELY" in page
+        assert (
+            "needs corrections" in page.lower() or "mismatch" in page.lower()
+        )  # not the stale approve
+
+    def test_invalid_type_value_is_a_422_not_a_crash(self, applicant):
+        resp = applicant.post(
+            "/applicant/applications",
+            data={"sample_id": "old-tom-bourbon", "beverage_type": "beer"},
+            headers={"Accept": "application/json"},
+        )
+        assert resp.status_code == 422
+
+    def test_unknown_route_renders_the_html_error_page(self, specialist):
+        resp = specialist.get("/no-such-page")
+        assert resp.status_code == 404 and "text/html" in resp.headers["content-type"]
+        assert "Something went wrong" in resp.text or "not found" in resp.text.lower()
+
+    def test_specialist_cannot_open_an_unsubmitted_draft(self, applicant, specialist):
+        created = applicant.post(
+            "/applicant/applications",
+            data={"sample_id": "old-tom-bourbon"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert specialist.get(f"/specialist/applications/{created['id']}").status_code == 404
+
+    def test_signed_out_partial_request_gets_a_short_401_partial(self, anon):
+        resp = anon.post(
+            "/applications/x/comments",
+            data={"field": "general", "body": "hi"},
+            headers={"X-Partial": "1"},
+        )
+        assert resp.status_code == 401 and "Sign in again" in resp.text and "<html" not in resp.text
+
+    def test_zip_members_over_the_limit_are_reported_not_inflated(self, applicant):
+        import io
+        import zipfile
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("huge.jpg", b"\xff\xd8" + b"\0" * (10 * 1024 * 1024 + 1))
+            zf.writestr("old-tom-bourbon.jpg", sample_bytes("old-tom-bourbon"))
+        csv = "image,beverage_type,brand_name,class_type,alcohol_content,net_contents,producer_name,producer_address,is_import,country_of_origin\nhuge.jpg,,X,Y,,,,,false,\n"
+        resp = applicant.post(
+            "/applicant/batches",
+            files={
+                "csv_file": ("b.csv", csv.encode(), "text/csv"),
+                "zip_file": ("z.zip", buf.getvalue(), "application/zip"),
+            },
+        )
+        assert resp.status_code == 422 and "larger than 10 MB" in resp.text
+
+
+def test_batches_left_processing_are_closed_at_startup(tmp_path):
+    from labelverify.web import services
+    from labelverify.web.models import Batch, User
+
+    url = f"sqlite:///{tmp_path}/stale.db"
+    first = create_app(extractor=DemoExtractor(), database_url=url, secret="s", seed_data=True)
+    with first.state.session_factory() as db:
+        maria = db.scalars(select(User).where(User.email == "maria@alvarezlabels.com")).one()
+        db.add(Batch(applicant_id=maria.id, filename="crashed.csv", total=1, status="processing"))
+        db.commit()
+    second = create_app(extractor=DemoExtractor(), database_url=url, secret="s", seed_data=False)
+    with second.state.session_factory() as db:
+        batch = db.scalars(select(Batch).where(Batch.filename == "crashed.csv")).one()
+        assert batch.status == "done" and batch.finished_at is not None
+    assert services.finish_stale_batches(second.state.session_factory) == 0

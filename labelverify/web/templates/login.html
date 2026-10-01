@@ -11,10 +11,10 @@
     </a>
     <nav class="landing-actions">
       <a class="landing-link" href="{{ repo_url }}" target="_blank" rel="noopener">
-        <svg class="icon"><use href="#i-github"></use></svg> GitHub
+        <svg class="icon" aria-hidden="true"><use href="#i-github"></use></svg> GitHub
       </a>
       <button type="button" class="landing-signin" data-open-signin title="Sign in" aria-label="Sign in">
-        <svg class="icon"><use href="#i-user"></use></svg> Sign in
+        <svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg> Sign in
       </button>
     </nav>
   </header>
@@ -23,7 +23,7 @@
     <span class="eyebrow">TTB · COLA label verification · prototype</span>
     <h1>Five seconds per label,<br>not five minutes.</h1>
     <p>Applicants get an instant pre-check before they submit. Specialists open a queue where the matching is already done and every judgment call is flagged for them.</p>
-    <button type="button" class="landing-cta" data-open-signin>Sign in <svg class="icon"><use href="#i-arrow"></use></svg></button>
+    <button type="button" class="landing-cta" data-open-signin>Sign in <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button>
   </section>
 
   <footer class="landing-foot">
@@ -39,7 +39,7 @@
     <form method="post" action="/login" class="auth-form" autocomplete="on">
       <div class="signin-head">
         <h2>Sign in</h2>
-        <button type="button" class="icon-btn" data-close-signin aria-label="Close"><svg class="icon"><use href="#i-x"></use></svg></button>
+        <button type="button" class="icon-btn" data-close-signin aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg></button>
       </div>
       <input type="hidden" name="next" value="{{ next }}">
       {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}

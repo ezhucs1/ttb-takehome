@@ -15,6 +15,7 @@ Nothing here calls a model. All judgment calls are thresholds that can be tuned 
 from __future__ import annotations
 
 import re
+from contextvars import ContextVar
 from datetime import date
 
 from rapidfuzz import fuzz
@@ -63,14 +64,21 @@ CATEGORY_CONFIDENCE = 0.6
 
 _CLASS_SYNONYMS: dict[str, str] = {
     "whisky": "whiskey",
-    "cabernet": "cabernet sauvignon",
-    "ipa": "india pale ale",
+    "cabernet sauvignon": "cabernet",
+    "india pale ale": "ipa",
 }
+_CLASS_SYNONYM_RE = re.compile(
+    r"\b(" + "|".join(sorted(_CLASS_SYNONYMS, key=len, reverse=True)) + r")\b"
+)
 
 
 def _apply_synonyms(text: str) -> str:
-    words = [_CLASS_SYNONYMS.get(w, w) for w in text.split()]
-    return " ".join(words)
+    """Spellings and short forms that name the same class, folded to one form."""
+    return _CLASS_SYNONYM_RE.sub(lambda m: _CLASS_SYNONYMS[m.group(1)], text)
+
+
+def _normalize_class(text: str | None) -> str:
+    return _apply_synonyms(normalize_text(text))
 
 
 def _similarity(a: str, b: str) -> float:
@@ -149,7 +157,7 @@ def compare_class_type(application: ApplicationData, extraction: LabelExtraction
         application_value=application.class_type,
         extracted=extraction.class_type,
         review_at=CLASS_REVIEW,
-        normalizer=lambda s: _apply_synonyms(normalize_text(s)),
+        normalizer=_normalize_class,
     )
     # A malt beverage must use a recognized class designation (27 CFR 7.64): beer, ale,
     # lager, stout, porter, malt liquor ... A designation with none of them goes to review.
@@ -158,7 +166,7 @@ def compare_class_type(application: ApplicationData, extraction: LabelExtraction
     if (
         rules.beverage_type is BeverageType.MALT_BEVERAGE
         and designation
-        and not _CATEGORY_PATTERNS[2][1].search(designation)
+        and not _MALT_DESIGNATION_RE.search(designation)
     ):
         result.notes.append(
             f"'{extraction.class_type.value}' contains no recognized class designation (beer, "
@@ -197,6 +205,8 @@ _CATEGORY_PATTERNS: tuple[tuple[BeverageType, re.Pattern[str]], ...] = (
         ),
     ),
 )
+
+_MALT_DESIGNATION_RE = dict(_CATEGORY_PATTERNS)[BeverageType.MALT_BEVERAGE]
 
 CATEGORY_LABELS = {
     BeverageType.DISTILLED_SPIRITS: "distilled spirits",
@@ -238,9 +248,17 @@ def resolve_beverage_type(
     return None, "unknown"
 
 
+# The rulebook for the verify() call in progress, so a dozen comparators do not each
+# re-resolve the class. Context-local: batch worker threads each see their own.
+_CURRENT_RULES: ContextVar[ClassRules | None] = ContextVar("labelverify_rules", default=None)
+
+
 def _class_of(application: ApplicationData, extraction: LabelExtraction) -> ClassRules:
     """The rulebook to apply. An unresolved class is checked as distilled spirits, the
     strictest of the three, and the type-of-product row says so."""
+    current = _CURRENT_RULES.get()
+    if current is not None:
+        return current
     resolved, _ = resolve_beverage_type(application, extraction)
     return rules_for(resolved or BeverageType.DISTILLED_SPIRITS)
 
@@ -261,7 +279,9 @@ def compare_beverage_type(application: ApplicationData, extraction: LabelExtract
             and guess.confidence >= CATEGORY_CONFIDENCE
         ):
             implied = BeverageType(guess.value)
-    confidence = extraction.class_type.confidence if infer_beverage_category(designation) else extraction.product_category.confidence
+    confidence = (
+        extraction.class_type.confidence if implied else extraction.product_category.confidence
+    )
     base = dict(
         field="beverage_type",
         label="Type of Product",
@@ -423,7 +443,9 @@ def compare_alcohol_content(
         )
     if app_abv is None:
         if application.alcohol_content.strip():
-            reason = f"The label shows '{extracted.value}' but the application value could not be read."
+            reason = (
+                f"The label shows '{extracted.value}' but the application value could not be read."
+            )
         elif optional:
             return FieldResult(
                 verdict=Verdict.NEEDS_REVIEW,
@@ -450,13 +472,16 @@ def compare_alcohol_content(
                 f"Label proof ({label_abv.proof:g}) does not equal twice the stated percentage."
             )
     difference = abs(app_abv.abv - label_abv.abv)
+    if any("does not equal twice" in n for n in notes):
+        return FieldResult(
+            verdict=Verdict.MISMATCH,
+            reason="The proof printed on the label does not agree with its own percentage.",
+            notes=notes,
+            **base,
+        )
     if difference <= ABV_TOLERANCE:
-        verdict = Verdict.MISMATCH if any("does not equal twice" in n for n in notes) else Verdict.MATCH
+        verdict = Verdict.NEEDS_REVIEW if notes else Verdict.MATCH
         reason = f"Both state {label_abv.abv:g}% alcohol by volume."
-        if verdict is Verdict.MISMATCH:
-            reason = "Percentage matches, but the proof printed on the label is inconsistent."
-        elif notes:
-            verdict = Verdict.NEEDS_REVIEW
     elif difference <= rules.abv_tolerance(label_abv.abv):
         line = _wine_tax_class_line(rules, app_abv.abv, label_abv.abv)
         if line is not None:
@@ -529,11 +554,12 @@ def compare_net_contents(application: ApplicationData, extraction: LabelExtracti
             **base,
         )
     if app_vol is None:
-        return FieldResult(
-            verdict=Verdict.NEEDS_REVIEW,
-            reason=f"The label shows '{extracted.value}' but the application value could not be read.",
-            **base,
+        reason = (
+            f"The label shows '{extracted.value}' but the application value could not be read."
+            if application.net_contents.strip()
+            else f"The label shows '{extracted.value}' but the application left it blank."
         )
+        return FieldResult(verdict=Verdict.NEEDS_REVIEW, reason=reason, **base)
     if label_vol is None:
         if (extracted.value or "").strip():
             return FieldResult(
@@ -590,9 +616,7 @@ def _standard_of_fill_notes(rules: ClassRules, ml: float) -> list[str]:
         return []
     if any(abs(ml - s) <= VOLUME_TOLERANCE_ML for s in standards):
         return []
-    return [
-        f"{_fmt_ml(ml)} is not a listed standard of fill for {rules.name.lower()}. Confirm."
-    ]
+    return [f"{_fmt_ml(ml)} is not a listed standard of fill for {rules.name.lower()}. Confirm."]
 
 
 def compare_sulfite_declaration(
@@ -729,7 +753,10 @@ def compare_qualifying_phrase(
         )
     if application.is_import:
         importer = (extraction.importer_statement.value or "").strip()
-        if not importer and "import" not in f"{phrase} {extraction.producer_name.value or ''}".lower():
+        if (
+            not importer
+            and "import" not in f"{phrase} {extraction.producer_name.value or ''}".lower()
+        ):
             return FieldResult(
                 verdict=Verdict.NEEDS_REVIEW,
                 reason=(
@@ -751,7 +778,9 @@ def compare_age_statement(
     """Whisky only: a statement of age is required when the whisky is under four years old,
     so a whisky label without one goes to review (27 CFR 5.141)."""
     rules = _class_of(application, extraction)
-    if rules.requirement("age_statement") is Requirement.NOT_APPLICABLE or not _is_whisky(extraction):
+    if rules.requirement("age_statement") is Requirement.NOT_APPLICABLE or not _is_whisky(
+        extraction
+    ):
         return None
     extracted = extraction.age_statement
     statement = (extracted.value or "").strip()
@@ -788,9 +817,13 @@ def compare_bottled_in_bond(
         label="Bottled in Bond",
         application_value="100 proof (50% alc/vol)",
         label_value=(
-            f"{claim} · {extraction.alcohol_content.value}" if extraction.alcohol_content.value else claim
+            f"{claim} · {extraction.alcohol_content.value}"
+            if extraction.alcohol_content.value
+            else claim
         ),
-        confidence=min(extraction.bottled_in_bond_claim.confidence, extraction.alcohol_content.confidence),
+        confidence=min(
+            extraction.bottled_in_bond_claim.confidence, extraction.alcohol_content.confidence
+        ),
     )
     if abv is None:
         return FieldResult(
@@ -800,7 +833,9 @@ def compare_bottled_in_bond(
         )
     if abs(abv.abv - 50.0) <= ABV_TOLERANCE:
         return FieldResult(
-            verdict=Verdict.MATCH, reason=f"'{claim}' at {abv.abv:g}% alcohol by volume, as required.", **base
+            verdict=Verdict.MATCH,
+            reason=f"'{claim}' at {abv.abv:g}% alcohol by volume, as required.",
+            **base,
         )
     return FieldResult(
         verdict=Verdict.MISMATCH,
@@ -818,7 +853,10 @@ def compare_blend_percentage(
     """Only when the class/type says blended: the percentage of straight whisky must appear."""
     rules = _class_of(application, extraction)
     designation = normalize_text(extraction.class_type.value)
-    if rules.requirement("blend_percentage") is Requirement.NOT_APPLICABLE or "blend" not in designation:
+    if (
+        rules.requirement("blend_percentage") is Requirement.NOT_APPLICABLE
+        or "blend" not in designation
+    ):
         return None
     extracted = extraction.blend_percentage
     statement = (extracted.value or "").strip()
@@ -1019,6 +1057,20 @@ def verify(application: ApplicationData, extraction: LabelExtraction) -> Verific
     """Compare every required field under the class's rules and roll the verdicts up."""
     resolved, source = resolve_beverage_type(application, extraction)
     rules = rules_for(resolved or BeverageType.DISTILLED_SPIRITS)
+    token = _CURRENT_RULES.set(rules)
+    try:
+        return _verify_with(application, extraction, rules, resolved, source)
+    finally:
+        _CURRENT_RULES.reset(token)
+
+
+def _verify_with(
+    application: ApplicationData,
+    extraction: LabelExtraction,
+    rules: ClassRules,
+    resolved: BeverageType | None,
+    source: str,
+) -> VerificationResult:
     fields = [_apply_confidence_gate(fn(application, extraction)) for fn in _COMPARATORS]
     fields.append(_apply_confidence_gate(compare_qualifying_phrase(application, extraction)))
     if rules.requirement("sulfite_declaration") is not Requirement.NOT_APPLICABLE:

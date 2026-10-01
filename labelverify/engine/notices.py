@@ -110,9 +110,11 @@ def draft_notice(
     (rate limit, outage, empty reply) returns the template unchanged.
     """
     template = template_notice(application, result, serial=serial, applicant_org=applicant_org)
-    provider = notice_provider() if use_ai is None else ("claude" if use_ai else "template")
-    if use_ai and provider == "claude" and not os.environ.get("ANTHROPIC_API_KEY"):
-        provider = notice_provider()
+    provider = "template" if use_ai is False else notice_provider()
+    if use_ai and provider == "template":  # asked for a rewrite with no provider configured
+        provider = "gemini" if os.environ.get("GEMINI_API_KEY") else "claude"
+    if provider == "claude" and not os.environ.get("ANTHROPIC_API_KEY"):
+        provider = "template"
     if provider == "template":
         return NoticeDraft(body=template, source="template")
     try:

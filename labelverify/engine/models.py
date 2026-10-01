@@ -206,7 +206,9 @@ class FieldResult(BaseModel):
     diff: list[WordDiff] | None = None
     citation: str | None = Field(default=None, description="The CFR section the row rests on.")
     requirement: str = Field(
-        default="required", description="required, optional, or conditional for this class."
+        default="",
+        description="required, optional, or conditional for this class; blank for a row "
+        "that is not one of the class's fields (the type-of-product row).",
     )
 
 

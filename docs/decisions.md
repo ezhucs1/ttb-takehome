@@ -395,3 +395,46 @@ the rulebook. Four things were not:
 Brand-name restrictions (misleading identity or origin, simulating a government stamp)
 and the statement of composition on a flavored malt beverage are listed as notes for the
 specialist; neither can be settled from a transcription.
+
+## 18. Pre-deployment review: what three reviewers found, and what changed
+
+Before deploying, the engine, the web backend, and the frontend were each reviewed
+against the running code, with every finding confirmed by reading the path or running it.
+The ones that changed behaviour:
+
+- **Reads.** "100% Agave 40% Alc./Vol." parsed as 0% (the regex matched "00%"); "1,000 mL"
+  parsed as one millilitre; "Charleston, West Virginia" normalized to "w va" because
+  "virginia" was substituted first; "Cabernet" and "Cabernet Sauvignon" never met because
+  the synonym was word-wise; transparent PNG artwork flattened to black on black; the
+  Tesseract blend-percentage pattern could not match "51% Straight Bourbon Whiskey"; a
+  proof inconsistent with its own percentage was a finding only when the percentages
+  agreed closely. All fixed, each with a spot check.
+- **Verdicts that could be stale.** Submitting after editing a field that had been
+  pre-checked kept the pre-check's verdict; the submission now re-runs the comparison on
+  the cached read when the values changed. A failed read left the previous recommendation
+  in place, so a re-check that timed out could leave an application in "Ready"; a failed
+  read is now its own recommendation and lands under "Needs a look".
+- **Edges.** An invalid type value from the form was a 500, now a 422. The router's own
+  404 and 405 now render the HTML error page. A specialist could open and comment on an
+  applicant's unsubmitted draft; drafts are now hidden from that role. A batch left
+  "processing" by a restart is closed at startup. A worker that failed after creating
+  the draft lost the link between the row and the draft. Zip members are size-checked
+  before they are inflated. A signed-out page that posts a comment now gets a short
+  "sign in again" partial instead of the landing page injected into the thread.
+- **Cost.** Label image bytes are loaded only when read, not with every application
+  (a review page with twelve thumbnails loaded every version's bytes twelve times over);
+  batch rows load their runs in three queries instead of one per row per poll; the
+  worker decodes and resizes images before it takes the SQLite write lock; the class is
+  resolved once per comparison instead of once per comparator; the demo reader's sample
+  hash table and the Gemini schema are built once per process; static assets with a
+  content hash are cached for a year, label images for a year by id; the unread badge
+  does not poll in a hidden tab and stops after a sign-out; the queue's four stat cards
+  are one grouped query.
+- **Housekeeping.** Dead CSS, an unused JSON filter, an unused medium-weight font, the
+  "kept for older imports" alias, and a few unused helpers were removed. The nav is one
+  macro with `aria-current`; icons are hidden from screen readers; locked wizard steps are
+  `inert`, not just unclickable.
+
+Left as documented limits rather than changed now: the unread count is computed in
+Python over the user's items (fine at this scale, a single grouped query at larger ones),
+and opening a review page claims the application on a GET.

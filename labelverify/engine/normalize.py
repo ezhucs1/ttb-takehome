@@ -10,17 +10,6 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
-_QUOTE_MAP = str.maketrans(
-    {
-        "‘": "'",
-        "’": "'",
-        "“": '"',
-        "”": '"',
-        "–": "-",
-        "—": "-",
-    }
-)
-
 _PUNCT_RE = re.compile(r"[^\w\s]")
 _WS_RE = re.compile(r"\s+")
 
@@ -36,7 +25,7 @@ def normalize_text(text: str | None) -> str:
     """
     if not text:
         return ""
-    text = unicodedata.normalize("NFKC", text).translate(_QUOTE_MAP)
+    text = unicodedata.normalize("NFKC", text)
     text = text.replace("&", " and ")
     text = _PUNCT_RE.sub(" ", text)
     return collapse_whitespace(text).casefold()
@@ -50,14 +39,16 @@ def normalize_words(text: str | None) -> list[str]:
 # --------------------------------------------------------------------------- alcohol content
 
 _PERCENT_RE = re.compile(
-    r"(?P<num>\d{1,2}(?:[.,]\d{1,2})?)\s*%\s*"
+    r"(?<![\d.])(?P<num>\d{1,2}(?:[.,]\d{1,2})?)\s*%\s*"
     r"(?:alc(?:ohol)?\.?(?:\s*/\s*|\s+by\s+|\s*)vol(?:ume)?\.?|abv)?",
     re.IGNORECASE,
 )
 _ALC_PREFIX_RE = re.compile(
-    r"alc(?:ohol)?\.?\s*(?P<num>\d{1,2}(?:[.,]\d{1,2})?)\s*%", re.IGNORECASE
+    r"alc(?:ohol)?\.?\s*(?<![\d.])(?P<num>\d{1,2}(?:[.,]\d{1,2})?)\s*%", re.IGNORECASE
 )
-_PROOF_RE = re.compile(r"(?P<num>\d{1,3}(?:[.,]\d{1,2})?)\s*(?:°\s*)?proof", re.IGNORECASE)
+_PROOF_RE = re.compile(
+    r"(?<![\d.])(?P<num>\d{1,3}(?:[.,]\d{1,2})?)\s*(?:°\s*)?proof", re.IGNORECASE
+)
 _BARE_NUMBER_RE = re.compile(r"^\s*(?P<num>\d{1,2}(?:[.,]\d{1,2})?)\s*%?\s*$")
 
 
@@ -91,13 +82,14 @@ def parse_alcohol_content(text: str | None) -> AlcoholContent | None:
 
 
 def _to_float(raw: str) -> float:
+    """ "12,5" is a European decimal; "1,000" is a thousands separator."""
+    raw = re.sub(r",(?=\d{3}\b)", "", raw)
     return float(raw.replace(",", "."))
 
 
 # --------------------------------------------------------------------------- net contents
 
 METRIC_UNITS = {"ml", "cl", "l"}
-_METRIC_UNITS = METRIC_UNITS  # kept for older imports
 
 _UNIT_TO_ML: dict[str, float] = {
     "ml": 1.0,
@@ -131,7 +123,7 @@ _UNIT_ALIASES: dict[str, str] = {
     "gallons": "gal",
 }
 
-_VOLUME_RE = re.compile(
+VOLUME_RE = re.compile(
     r"(?P<num>\d+(?:[.,]\d+)?)\s*"
     r"(?P<unit>fl\.?\s*oz\.?|milliliters?|millilitres?|centiliters?|centilitres?|liters?|litres?"
     r"|ml|cl|l|oz\.?|pints?|pt\.?|quarts?|qt\.?|gallons?|gal\.?)(?![a-z])",
@@ -155,7 +147,7 @@ def parse_net_contents(text: str | None) -> NetContents | None:
         return None
     cleaned = unicodedata.normalize("NFKC", text)
     candidates: list[NetContents] = []
-    for match in _VOLUME_RE.finditer(cleaned):
+    for match in VOLUME_RE.finditer(cleaned):
         unit_key = re.sub(r"[\s.]", "", match.group("unit")).lower()
         unit_key = _UNIT_ALIASES.get(unit_key, unit_key)
         factor = _UNIT_TO_ML.get(unit_key)
@@ -169,7 +161,7 @@ def parse_net_contents(text: str | None) -> NetContents | None:
         )
     if not candidates:
         return None
-    metric = [c for c in candidates if c.original_unit in _METRIC_UNITS]
+    metric = [c for c in candidates if c.original_unit in METRIC_UNITS]
     return (metric or candidates)[0]
 
 
@@ -245,11 +237,12 @@ _STATE_NAMES: dict[str, str] = {
 }
 
 
+_STATE_NAME_RE = re.compile(r"\b(" + "|".join(sorted(_STATE_NAMES, key=len, reverse=True)) + r")\b")
+
+
 def normalize_address(text: str | None) -> str:
     """Normalize so "123 Main Street, Louisville, Kentucky" equals "123 MAIN ST LOUISVILLE KY"."""
-    normalized = normalize_text(text)
-    for name, abbr in _STATE_NAMES.items():
-        normalized = re.sub(rf"\b{name}\b", abbr, normalized)
+    normalized = _STATE_NAME_RE.sub(lambda m: _STATE_NAMES[m.group(1)], normalize_text(text))
     words = [_ADDRESS_ABBREVIATIONS.get(w, w) for w in normalized.split()]
     return " ".join(words)
 
@@ -269,7 +262,9 @@ _COUNTRY_ALIASES: dict[str, str] = {
 }
 
 _ORIGIN_PREFIX_RE = re.compile(
-    r"^(?:product of|produce of|made in|imported from|bottled in|distilled in)\s+", re.IGNORECASE
+    r"^(?:product of|produce of|made in|imported from|bottled in|distilled in|produced in|"
+    r"brewed in|distilled and bottled in|bottled and distilled in)\s+(?:the\s+)?",
+    re.IGNORECASE,
 )
 
 

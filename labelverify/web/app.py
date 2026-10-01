@@ -11,13 +11,15 @@ import logging
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from ..engine.extractors import Extractor, get_extractor
 from ..engine.extractors.demo import load_manifest
+from . import services
 from .auth import LoginRequired, read_session, secret_key
 from .db import init_db, make_engine, make_session_factory
 from .models import User
@@ -34,6 +36,8 @@ class UserMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         request.state.user = None
+        if request.url.path.startswith(("/static/", "/healthz")):  # no user lookup for assets
+            return await call_next(request)
         user_id = read_session(request)
         if user_id:
             with request.app.state.session_factory() as db:
@@ -54,6 +58,9 @@ def create_app(
     engine = make_engine(database_url)
     init_db(engine)
     app.state.session_factory = make_session_factory(engine)
+    stale = services.finish_stale_batches(app.state.session_factory)
+    if stale:
+        log.warning("closed %d batch(es) left processing by a previous process", stale)
     app.state.secret_key = secret or secret_key(database_url=database_url or "")
     app.state.extractor = extractor
     app.state.samples = load_manifest()
@@ -78,10 +85,17 @@ def create_app(
     async def _login_required(request: Request, exc: LoginRequired):
         if request.url.path.startswith("/api/") or _wants_json(request):
             return JSONResponse({"detail": "Login required"}, status_code=401)
+        if request.headers.get("x-partial") == "1":  # a fetch from a page whose session ended
+            return app.state.render.partial(
+                request,
+                "partials/error.html",
+                status_code=401,
+                message="Your session has ended. Sign in again to continue.",
+            )
         return RedirectResponse(f"/login?next={exc.next_url}", status_code=303)
 
-    @app.exception_handler(HTTPException)
-    async def _http_error(request: Request, exc: HTTPException):
+    @app.exception_handler(StarletteHTTPException)  # FastAPI's and the router's own 404/405
+    async def _http_error(request: Request, exc: StarletteHTTPException):
         if request.url.path.startswith("/api/") or _wants_json(request):
             return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
         if request.headers.get("x-partial") == "1":
