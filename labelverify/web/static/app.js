@@ -401,66 +401,88 @@
     });
   }
 
-  // Step 2 of the wizard: the requirements for the detected class, from the engine's
-  // own rulebook (embedded in the page), re-rendered whenever the type changes. Each
-  // item says where it comes from: a form field the applicant fills, or the label
-  // itself, in which case the last read's finding is shown so it can be reviewed here.
+  // The application form follows the class's own rules: a red mark on every field the
+  // class requires, and a short "also read from the label" list for the items the
+  // applicant never types (qualifying phrase, sulfites, vintage ...) with what the read
+  // found, so they can be reviewed before the check. The class is detected from the
+  // label and can be changed in the select, which re-applies the rules.
   const FORM_ITEMS = ["brand_name", "class_type", "alcohol_content", "net_contents",
     "producer_name", "producer_address", "country_of_origin"];
   let lastRead = {};
+  let typeSource = "none";
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-  function checklistSource(i) {
-    if (FORM_ITEMS.includes(i.field)) {
-      return `<button type="button" class="pill pill-neutral pill-xs pill-btn" data-focus="${i.field}" title="Enter this in the form above">on the form</button>`;
+  function formRules() {
+    const grid = $("[data-form-rules]");
+    if (!grid) return null;
+    try { return JSON.parse(grid.getAttribute("data-form-rules") || "[]"); } catch (e) { return null; }
+  }
+
+  function applyClassRules() {
+    const rules = formRules();
+    const select = $("#beverage_type");
+    if (!rules || !select) return;
+    const chosen = rules.find((r) => r.beverage_type === select.value);
+    const isImport = $("#is_import") && $("#is_import").checked;
+    const byField = {};
+    (chosen ? chosen.checklist : []).forEach((i) => { byField[i.field] = i; });
+
+    // Required markers on the form fields.
+    FORM_ITEMS.forEach((name) => {
+      const input = document.getElementById(name);
+      const field = input && input.closest(".field");
+      if (!field) return;
+      const rule = byField[name];
+      let required = !!rule && rule.requirement === "required";
+      if (name === "country_of_origin") required = isImport;
+      if (!chosen) required = ["brand_name", "class_type"].includes(name);
+      field.classList.toggle("required", required);
+      field.classList.toggle("optional", !!rule && rule.requirement === "optional");
+      const label = $("label", field);
+      if (label && rule) label.title = `${rule.citation}${rule.note ? " · " + rule.note : ""}`;
+    });
+
+    // Where the type came from.
+    const source = $("[data-type-source]");
+    if (source) {
+      source.hidden = typeSource === "none";
+      source.textContent = typeSource === "label" ? "detected from the label" : typeSource === "user" ? "chosen by you" : "";
     }
-    if (i.checked_by === "specialist") {
-      return `<span class="pill pill-neutral pill-xs" title="A visual judgment the specialist makes">specialist checks</span>`;
-    }
-    if (!(i.field in lastRead)) return `<span class="pill pill-neutral pill-xs">read from the label</span>`;
-    const value = lastRead[i.field];
-    if (value) return `<span class="read-found" title="Read from the label">&#10003; ${esc(value)}</span>`;
-    return i.requirement === "required"
-      ? `<span class="read-missing">not found on the label</span>`
-      : `<span class="muted">not on the label</span>`;
+
+    // Items printed on the label that are not entered here.
+    const panel = $("#label-read");
+    if (!panel) return;
+    const items = (chosen ? chosen.checklist : []).filter((i) => !FORM_ITEMS.includes(i.field) && i.checked_by === "engine");
+    if (!chosen || !items.length || !Object.keys(lastRead).length) { panel.hidden = true; return; }
+    $("[data-label-read]", panel).innerHTML = items.map((i) => {
+      const value = lastRead[i.field];
+      const mark = i.requirement === "required" ? '<span class="req" title="Required">*</span>' : "";
+      const found = value
+        ? `<span class="read-found">&#10003; ${esc(value)}</span>`
+        : i.requirement === "required"
+          ? '<span class="read-missing">not found on the label</span>'
+          : '<span class="muted">not on the label</span>';
+      return `<li><span class="label-read-name">${esc(i.label)}${mark}</span>${found}<span class="cite" title="${esc(i.note || "")}">${esc(i.citation)}</span></li>`;
+    }).join("");
+    $("[data-label-read-note]", panel).textContent =
+      `${chosen.name}, 27 CFR part ${chosen.part}. ` +
+      (typeSource === "label" ? "The type was detected from the label; change it above if that is wrong. " : "") +
+      "Run the check below to compare everything against the rules.";
+    panel.hidden = false;
   }
 
   function renderChecklist(source) {
-    const host = $("#rules-checklist");
-    if (!host) return;
-    const select = $("#beverage_type");
-    const rules = JSON.parse(host.dataset.rules || "[]");
-    const chosen = rules.find((r) => r.beverage_type === select.value);
-    const body = $("[data-checklist-body]", host);
-    const empty = $("[data-checklist-empty]", host);
-    if (!chosen) { body.hidden = true; empty.hidden = false; return; }
-    const items = chosen.checklist.map((i) =>
-      `<li><strong>${esc(i.label)}</strong>` +
-      `<span class="pill pill-${i.requirement === "required" ? "info" : "neutral"} pill-xs">${i.requirement}</span>` +
-      checklistSource(i) +
-      `<span class="cite">${esc(i.citation)}</span></li>`
-    ).join("");
-    const how = source === "label" ? "Detected from the label. Change it above if that is wrong."
-      : source === "user" ? "Chosen by you." : "";
-    const legend = Object.keys(lastRead).length
-      ? "Items marked on the form are yours to enter; the others are printed on the label, and the check mark shows what the read found. Run the check below to compare everything against the rules."
-      : "";
-    body.innerHTML =
-      `<div class="checklist-title">${esc(chosen.name)} · 27 CFR part ${chosen.part}</div>` +
-      `<ul>${items}</ul>` +
-      (how || legend ? `<p class="muted small checklist-note">${[how, legend].filter(Boolean).join(" ")}</p>` : "");
-    body.hidden = false; empty.hidden = true;
-    $$("[data-focus]", body).forEach((b) => b.addEventListener("click", () => {
-      const input = document.getElementById(b.dataset.focus);
-      if (input) { input.focus(); input.scrollIntoView({ behavior: "smooth", block: "center" }); }
-    }));
+    typeSource = source;
+    applyClassRules();
   }
 
   function checklist() {
     const select = $("#beverage_type");
-    if (!select || !$("#rules-checklist")) return;
+    if (!select || !formRules()) return;
     select.addEventListener("change", () => renderChecklist("user"));
-    renderChecklist("none");
+    const imp = $("#is_import");
+    if (imp) imp.addEventListener("change", applyClassRules);
+    renderChecklist(select.value ? "preset" : "none");
   }
 
   function decisionPanel() {

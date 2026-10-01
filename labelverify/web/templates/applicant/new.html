@@ -53,18 +53,10 @@
 
   <!-- Step 2 -->
   <section class="card step step-locked" id="step-2">
-    <div class="step-head"><span class="step-num">2</span><h2>Application details</h2><span class="step-hint" id="prefill-hint"></span></div>
+    <div class="step-head"><span class="step-num">2</span><h2>Application details</h2><span class="step-hint" id="prefill-hint"></span><a class="small step-ref" href="/rules" target="_blank" rel="noopener" title="What each class must carry, with citations">Reference</a></div>
     <div class="step-body">
       <form id="details-form" method="post" action="" data-async data-target="#precheck-result" data-busy="Checking the label…">
-        {{ m.form_fields({}, [('distilled_spirits','Distilled spirits'),('wine','Wine'),('malt_beverage','Malt beverage')]) }}
-        <div class="checklist" id="rules-checklist" data-rules='{{ rules | tojson }}'>
-          <div class="checklist-head">
-            <span class="eyebrow">What this label must carry</span>
-            <a class="small" href="/rules" target="_blank" rel="noopener">All three classes</a>
-          </div>
-          <p class="muted small" data-checklist-empty>Read the label above and the type of product is detected; the requirements for that class appear here. Items marked <em>on the form</em> are what you enter; the rest are printed on the label itself, and the read shows what it found.</p>
-          <div data-checklist-body hidden></div>
-        </div>
+        {{ m.form_fields({}, [('distilled_spirits','Distilled spirits'),('wine','Wine'),('malt_beverage','Malt beverage')], rules=rules) }}
         <div class="step-actions">
           <button type="submit" class="btn btn-primary" id="precheck-btn"><svg class="icon"><use href="#i-sparkle"></use></svg> Check before submitting</button>
           <span class="muted" id="precheck-status"></span>

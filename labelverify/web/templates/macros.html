@@ -47,10 +47,10 @@
 </dl>
 {%- endmacro %}
 
-{% macro form_fields(values, beverage_types, required=True) -%}
-<div class="form-grid">
+{% macro form_fields(values, beverage_types, required=True, rules=None) -%}
+<div class="form-grid" data-form-rules{% if rules %}='{{ rules | tojson }}'{% endif %}>
   <div class="field">
-    <label for="beverage_type">Type of product</label>
+    <label for="beverage_type">Type of product <span class="type-source" data-type-source hidden></span></label>
     <select name="beverage_type" id="beverage_type">
       <option value="" {% if not values.beverage_type %}selected{% endif %}>Detect from the label</option>
       {% for value, label in beverage_types %}
@@ -88,6 +88,14 @@
   <div class="field">
     <label for="country_of_origin">Country of origin</label>
     <input name="country_of_origin" id="country_of_origin" value="{{ values.country_of_origin or '' }}" placeholder="Required for imports" autocomplete="off">
+  </div>
+  <div class="label-read" id="label-read" hidden>
+    <div class="label-read-head">
+      <span class="eyebrow">Also read from the label</span>
+      <span class="small muted">Printed on the label, not entered here</span>
+    </div>
+    <ul data-label-read></ul>
+    <p class="muted small" data-label-read-note></p>
   </div>
 </div>
 {%- endmacro %}

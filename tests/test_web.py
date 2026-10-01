@@ -501,7 +501,8 @@ class TestApplicantWorkflow:
         """Step 1 no longer asks for the type: the read decides it, step 2 shows the class's
         checklist, and the comparison runs under that class's rules."""
         page = applicant.get("/applicant/applications/new").text
-        assert 'id="rules-checklist"' in page and "27 CFR" in page and "Detect from the label" in page
+        assert "data-form-rules=" in page and "27 CFR" in page and "Detect from the label" in page
+        assert 'id="label-read"' in page and 'href="/rules"' in page and ">Reference<" in page
         created = applicant.post(
             "/applicant/applications", data={"sample_id": "stones-throw-wine"}
         ).json()

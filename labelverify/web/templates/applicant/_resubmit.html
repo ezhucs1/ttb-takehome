@@ -3,7 +3,7 @@
   <div class="card-title"><svg class="icon"><use href="#i-alert"></use></svg> Fix and resubmit</div>
   <p class="muted">Correct the application values below, upload a revised label if the artwork changed, and resubmit. The label is checked again automatically and goes back to the same specialist.</p>
   <form method="post" action="/applicant/applications/{{ app.id }}/resubmit" enctype="multipart/form-data" class="stack">
-    {{ m.form_fields(app, [('distilled_spirits','Distilled spirits'),('wine','Wine'),('malt_beverage','Malt beverage')]) }}
+    {{ m.form_fields(app, [('distilled_spirits','Distilled spirits'),('wine','Wine'),('malt_beverage','Malt beverage')], rules=rules) }}
     <div class="field" data-file-picker data-max="4">
       <label for="images">Revised label images <span class="muted">(optional; front first, then back and neck)</span></label>
       <input type="file" name="images" id="images" accept="image/jpeg,image/png,image/webp" multiple>

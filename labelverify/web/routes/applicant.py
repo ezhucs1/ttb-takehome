@@ -261,6 +261,7 @@ def detail(
         can_comment=not app.is_decided,
         latest_notice=app.notices[-1] if app.notices else None,
         unread=unread,
+        rules=all_rules(),  # the resubmit form marks what the class requires
     )
 
 

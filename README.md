@@ -75,9 +75,11 @@ mismatch, because the application should carry the labeled figure. Standards of 
 advisory (a note, never a verdict) because TTB's list changes; the engine carries the
 January 2025 sizes. The rulebook lives in one module, `labelverify/engine/rules.py`, and
 drives the comparisons, the applicant's step-2 checklist, the citations on every result
-row, and the reference page at `/rules`. In the checklist each item is marked "on the
-form" or shows what the read found on the label, so the applicant reviews the label-only
-items (qualifying phrase, sulfites, appellation, vintage, age statement) before the check.
+row, and the reference page at `/rules` (linked as "Reference" from the form). The form
+itself follows the detected class: a red mark on every field the class requires, and an
+"also read from the label" list of the items the applicant never types (qualifying
+phrase, sulfites, appellation, vintage, age statement) with what the read found, so they
+are reviewed before the check. Changing the type re-applies the rules.
 | Health warning | Word for word against 27 CFR 16.21; `GOVERNMENT WARNING` must be all caps; bold is a visual judgment that goes to review when uncertain | exact statutory text |
 
 Per-field verdicts are match, needs review, mismatch, or not applicable. A match read at

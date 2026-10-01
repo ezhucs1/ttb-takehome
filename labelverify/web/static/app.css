@@ -537,10 +537,23 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--acce
 .checklist li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: 0.88rem; }
 .checklist li .cite { margin: 0; }
 .checklist-note { margin: 10px 0 0; }
-.checklist .pill-btn { cursor: pointer; font: inherit; font-size: inherit; }
-.checklist .pill-btn:hover { border-color: var(--accent); color: var(--accent); }
-.checklist .read-found { color: var(--success-fg); font-size: 0.84rem; }
-.checklist .read-missing { color: var(--warning-fg); font-size: 0.84rem; }
+/* Class-aware application form: required marks and the label-only items */
+.field.required > label::after { content: " *"; color: var(--danger-fg); font-weight: 700; }
+.field.optional > label::after { content: " (optional)"; color: var(--muted); font-weight: 400; }
+.type-source { margin-left: 6px; font-size: 0.74rem; font-weight: 400; color: var(--accent); }
+.step-ref { margin-left: 12px; }
+.label-read { grid-column: 1 / -1; margin-top: 6px; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--neutral-bg); }
+.label-read-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.label-read-head .eyebrow { margin: 0; }
+.label-read ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 18px; }
+@media (max-width: 800px) { .label-read ul { grid-template-columns: 1fr; } }
+.label-read li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: 0.86rem; }
+.label-read li .cite { margin: 0; }
+.label-read-name { font-weight: 600; }
+.label-read .req { color: var(--danger-fg); font-weight: 700; margin-left: 2px; }
+.label-read .read-found { color: var(--success-fg); }
+.label-read .read-missing { color: var(--warning-fg); }
+.label-read p { margin: 10px 0 0; }
 .rules-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
 @media (max-width: 1100px) { .rules-grid { grid-template-columns: 1fr; } }
 .rule-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
