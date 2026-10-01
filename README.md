@@ -230,6 +230,7 @@ can set them.
 | `LABELVERIFY_DAILY_READ_LIMIT` | unlimited | Paid model reads allowed per UTC day; after that uploads get a clear message and the sample labels still work. Set it on any public URL |
 | `LABELVERIFY_DEMO_ACCOUNTS` | `true` | Show the demo account list in the sign-in dialog. Set `false` on a public URL; reviewers use the accounts in this README |
 | `LABELVERIFY_REPO_URL` | this repository | GitHub link on the landing page |
+| `LABELVERIFY_STRUCTURED_OUTPUT` | `false` | `true` asks the API to constrain the reply to the extraction schema. Off by default: the API compiles a new schema into a grammar on first use, and that compile can take longer than a read is allowed to. The default asks for JSON in the prompt and validates it here |
 | `LABELVERIFY_IMAGE_MAX_EDGE` | `1500` | Long edge in pixels after preprocessing; smaller is faster, larger keeps more small-print detail |
 | `DATABASE_URL` | `sqlite:///./data/labelverify.db` | SQLAlchemy URL; Postgres works unchanged |
 | `SECRET_KEY` | generated once, kept beside the database | Signs session cookies; set it explicitly in any shared deployment |

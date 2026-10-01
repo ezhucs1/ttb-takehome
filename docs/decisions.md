@@ -298,3 +298,20 @@ should carry the labeled figure exactly.
 
 **Why:** weight is a visual judgment that varies with print quality and photo exposure.
 Capitalization and wording are unambiguous and are hard failures.
+
+## 14. The reader asks for JSON in the prompt; the API's schema grammar is opt-in
+
+The Claude extractor originally passed the `LabelExtraction` schema as `output_format`, so
+the API constrained the reply to it. That mode compiles each new schema into a grammar on
+its first use, and the compile re-runs whenever the schema changes. After the class-aware
+rulebook added seven fields to the schema, every read timed out at the 20-second limit,
+including the bundled sample that had read in four seconds the day before, with the
+client's two attempts each cut off before the server answered.
+
+A read has a five-second budget, so no step of it may have a latency the application does
+not control. The reader now spells out the reply shape in the system prompt and validates
+the JSON client-side with the same pydantic model; a reply wrapped in code fences or a
+sentence is still parsed, and a reply that is not label JSON is an `ExtractionError` like
+any other failed read. `LABELVERIFY_STRUCTURED_OUTPUT=true` restores the constrained call
+for comparison. The CLI prints the token counts and request id of each read so a slow call
+can be reported with its id.

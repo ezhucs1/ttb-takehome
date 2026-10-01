@@ -2,17 +2,24 @@
 
 One request does the work of OCR plus classification: the model reads the label
 panels, transcribes each required field verbatim, judges the warning heading's
-capitalization and weight, and reports image-quality problems. The response is
-constrained to the ``LabelExtraction`` schema so no free-text parsing is needed.
+capitalization and weight, and reports image-quality problems.
+
+The model is asked for a JSON object in the shape of ``LabelExtraction`` and the reply
+is validated client-side. The API's schema-constrained mode (``output_format``) is
+available behind ``LABELVERIFY_STRUCTURED_OUTPUT=true`` but is off by default: it
+compiles each new schema into a grammar on first use, and that compile step, which
+re-runs whenever the schema changes, can take longer than a read is allowed to.
 """
 
 from __future__ import annotations
 
 import base64
+import json
 import os
 from collections.abc import Sequence
 
 import anthropic
+from pydantic import ValidationError
 
 from ..models import LabelExtraction
 from .base import ExtractionError, Panel
@@ -47,7 +54,56 @@ Rules:
 - health_warning.heading_bold is true only if that heading is printed noticeably bolder than the sentences that follow it. Use null if you cannot tell.
 - image_quality.readable is false when substantial parts of the label text cannot be read. List concrete issues such as "glare across the bottom third of the front label" or "back label photographed at a steep angle"."""
 
+# The reply shape, spelled out once so the model does not have to infer it from field names.
+_FIELD = '{"value": "text as printed or null", "confidence": 0.0}'
+_FIELD_KEYS = (
+    "brand_name",
+    "class_type",
+    "alcohol_content",
+    "net_contents",
+    "producer_name",
+    "producer_address",
+    "country_of_origin",
+    "sulfite_declaration",
+    "qualifying_phrase",
+    "importer_statement",
+    "age_statement",
+    "bottled_in_bond_claim",
+    "blend_percentage",
+    "product_category",
+)
+JSON_SHAPE = (
+    "{"
+    + ", ".join(f'"{key}": {_FIELD}' for key in _FIELD_KEYS)
+    + ', "health_warning": {"present": true, "text": "verbatim statement or null", '
+    '"heading_all_caps": true, "heading_bold": true, "confidence": 0.0}'
+    ', "image_quality": {"readable": true, "issues": ["short note"]}'
+    "}"
+)
+
+OUTPUT_INSTRUCTIONS = f"""
+
+Output:
+Reply with one JSON object and nothing else: no prose, no code fences. Use exactly these keys and this shape, with null for anything not printed and booleans as true/false (heading_bold may be null):
+{JSON_SHAPE}"""
+
 USER_PROMPT = "Extract the required TTB label fields from {what}."
+
+
+def parse_label_json(text: str) -> LabelExtraction:
+    """Validate the model's reply; tolerate code fences or a sentence around the object."""
+    body = text.strip()
+    if body.startswith("```"):
+        body = body.strip("`")
+        if body.startswith("json"):
+            body = body[4:]
+    start, end = body.find("{"), body.rfind("}")
+    if start == -1 or end == -1:
+        raise ExtractionError("The model's reply was not a JSON object.")
+    try:
+        return LabelExtraction.model_validate_json(body[start : end + 1])
+    except (ValidationError, json.JSONDecodeError, ValueError) as exc:
+        raise ExtractionError("The model's reply was not valid label JSON.") from exc
 
 
 def supports_effort(model: str) -> bool:
@@ -65,13 +121,22 @@ class ClaudeExtractor:
         model: str | None = None,
         timeout: float | None = None,
         effort: str = "low",
+        structured_output: bool | None = None,
     ):
         self.model = model or os.environ.get("LABELVERIFY_MODEL", DEFAULT_MODEL)
         self.timeout = timeout or float(
             os.environ.get("LABELVERIFY_EXTRACT_TIMEOUT", DEFAULT_TIMEOUT_SECONDS)
         )
         self.effort = effort
+        self.structured_output = (
+            structured_output
+            if structured_output is not None
+            else os.environ.get("LABELVERIFY_STRUCTURED_OUTPUT", "").strip().lower()
+            in {"1", "true", "yes"}
+        )
         self._client = client
+        self.last_usage: dict[str, int] = {}
+        self.last_request_id: str | None = None
 
     @property
     def client(self) -> anthropic.Anthropic:
@@ -115,14 +180,18 @@ class ClaudeExtractor:
             model=self.model,
             max_tokens=8192,
             timeout=timeout,
-            system=SYSTEM_PROMPT,
+            system=SYSTEM_PROMPT if self.structured_output else SYSTEM_PROMPT + OUTPUT_INSTRUCTIONS,
             messages=self.build_messages(panels),
-            output_format=LabelExtraction,
         )
+        if self.structured_output:
+            request["output_format"] = LabelExtraction
         if supports_effort(self.model):
             request["output_config"] = {"effort": self.effort}
         try:
-            response = self.client.messages.parse(**request)
+            if self.structured_output:
+                response = self.client.messages.parse(**request)
+            else:
+                response = self.client.messages.create(**request)
         except anthropic.APITimeoutError as exc:
             raise ExtractionError(
                 f"The model did not respond within {timeout:.0f} s for {len(panels)} "
@@ -136,8 +205,26 @@ class ClaudeExtractor:
         except anthropic.APIStatusError as exc:
             raise ExtractionError(f"Model API error ({exc.status_code}): {exc.message}") from exc
 
+        self._remember(response)
         if response.stop_reason == "refusal":
             raise ExtractionError("The model declined to process this image.")
-        if response.stop_reason == "max_tokens" or response.parsed_output is None:
+        if response.stop_reason == "max_tokens":
             raise ExtractionError("The model returned an incomplete result.")
-        return response.parsed_output
+        if self.structured_output:
+            if response.parsed_output is None:
+                raise ExtractionError("The model returned an incomplete result.")
+            return response.parsed_output
+        text = "".join(
+            block.text for block in response.content if getattr(block, "type", "") == "text"
+        )
+        return parse_label_json(text)
+
+    def _remember(self, response) -> None:
+        """Keep the last call's token counts and request id for the CLI's timing report."""
+        usage = getattr(response, "usage", None)
+        self.last_usage = (
+            {key: int(getattr(usage, key, 0) or 0) for key in ("input_tokens", "output_tokens")}
+            if usage is not None
+            else {}
+        )
+        self.last_request_id = getattr(response, "_request_id", None)

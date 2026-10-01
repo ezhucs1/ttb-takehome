@@ -131,8 +131,22 @@ def cmd_extract(args: argparse.Namespace) -> int:
         print(f"# {extractor.name}: gave up after {waited_ms} ms", file=sys.stderr)
         return 3
     print(json.dumps(extraction.model_dump(mode="json"), indent=2))
-    print(f"\n# {extractor.name}: {elapsed_ms} ms for {len(panels)} image(s)", file=sys.stderr)
+    print(
+        f"\n# {extractor.name}: {elapsed_ms} ms for {len(panels)} image(s){_usage_note(extractor)}",
+        file=sys.stderr,
+    )
     return 0
+
+
+def _usage_note(extractor) -> str:
+    """Token counts and request id of the last model call, when the extractor keeps them."""
+    inner = getattr(extractor, "inner", extractor)
+    usage = getattr(inner, "last_usage", None) or {}
+    request_id = getattr(inner, "last_request_id", None)
+    parts = [f"{usage['input_tokens']} in / {usage['output_tokens']} out tokens"] if usage else []
+    if request_id:
+        parts.append(f"request {request_id}")
+    return f" ({', '.join(parts)})" if parts else ""
 
 
 def cmd_bench(args: argparse.Namespace) -> int:

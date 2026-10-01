@@ -14,7 +14,11 @@ import pytest
 
 from labelverify.engine.extractors import FixtureExtractor, get_extractor
 from labelverify.engine.extractors.base import ExtractionError
-from labelverify.engine.extractors.claude import SYSTEM_PROMPT, ClaudeExtractor
+from labelverify.engine.extractors.claude import (
+    OUTPUT_INSTRUCTIONS,
+    SYSTEM_PROMPT,
+    ClaudeExtractor,
+)
 from labelverify.engine.extractors.tesseract import classify_text
 from labelverify.engine.models import LabelExtraction
 from labelverify.engine.warning import STATUTORY_TEXT
@@ -25,12 +29,20 @@ class FakeMessages:
         self.response = response
         self.error = error
         self.calls: list[dict] = []
+        self.methods: list[str] = []
 
-    def parse(self, **kwargs):
+    def _answer(self, method: str, kwargs: dict):
         self.calls.append(kwargs)
+        self.methods.append(method)
         if self.error:
             raise self.error
         return self.response
+
+    def parse(self, **kwargs):
+        return self._answer("parse", kwargs)
+
+    def create(self, **kwargs):
+        return self._answer("create", kwargs)
 
 
 def fake_client(response=None, error=None):
@@ -38,12 +50,22 @@ def fake_client(response=None, error=None):
     return SimpleNamespace(messages=messages), messages
 
 
+def text_response(extraction: LabelExtraction, *, wrap: str = "{json}", stop="end_turn"):
+    """What ``messages.create`` returns: the extraction as a JSON text block."""
+    text = wrap.format(json=extraction.model_dump_json())
+    return SimpleNamespace(
+        stop_reason=stop,
+        content=[SimpleNamespace(type="text", text=text)],
+        usage=SimpleNamespace(input_tokens=1200, output_tokens=640),
+        _request_id="req_test",
+    )
+
+
 class TestClaudeExtractor:
     def test_each_extra_panel_gets_more_time(self, extraction: LabelExtraction):
         """A front-and-back set is one call with two images; it is given 1.5x the base
         timeout, and a timeout message says how long it waited and for how many images."""
-        response = SimpleNamespace(stop_reason="end_turn", parsed_output=extraction)
-        client, messages = fake_client(response)
+        client, messages = fake_client(text_response(extraction))
         extractor = ClaudeExtractor(client, model="claude-sonnet-5-5", timeout=20)
         extractor.extract(b"a", "image/jpeg")
         extractor.extract_panels([(b"a", "image/jpeg"), (b"b", "image/jpeg")])
@@ -57,27 +79,55 @@ class TestClaudeExtractor:
             )
 
     def test_request_shape_and_parsed_output(self, extraction: LabelExtraction):
-        response = SimpleNamespace(stop_reason="end_turn", parsed_output=extraction)
-        client, messages = fake_client(response)
+        """By default the read is a plain ``messages.create``: the JSON shape is in the
+        prompt and the reply is validated here, so no schema grammar is compiled server-side."""
+        client, messages = fake_client(text_response(extraction))
         extractor = ClaudeExtractor(client, model="claude-opus-5-5", effort="low")
 
         result = extractor.extract(b"\xff\xd8fake", "image/jpeg")
 
         assert result == extraction
+        assert messages.methods == ["create"]
         call = messages.calls[0]
         assert call["model"] == "claude-opus-5-5"
-        assert call["system"] == SYSTEM_PROMPT
-        assert call["output_format"] is LabelExtraction
+        assert call["system"].startswith(SYSTEM_PROMPT)
+        assert OUTPUT_INSTRUCTIONS in call["system"]
+        assert "output_format" not in call
         assert call["output_config"] == {"effort": "low"}
+        assert extractor.last_usage == {"input_tokens": 1200, "output_tokens": 640}
+        assert extractor.last_request_id == "req_test"
         content = call["messages"][0]["content"]
         assert content[0]["type"] == "image"
         assert content[0]["source"]["media_type"] == "image/jpeg"
         assert content[0]["source"]["data"] == "/9hmYWtl"  # base64 of the bytes above
         assert content[1]["type"] == "text"
 
-    def test_multiple_panels_are_numbered_in_one_request(self, extraction: LabelExtraction):
-        response = SimpleNamespace(stop_reason="end_turn", parsed_output=extraction)
+    def test_structured_output_mode_is_opt_in(self, extraction: LabelExtraction, monkeypatch):
+        """``LABELVERIFY_STRUCTURED_OUTPUT=true`` restores the schema-constrained call."""
+        response = SimpleNamespace(stop_reason="end_turn", parsed_output=extraction, usage=None)
         client, messages = fake_client(response)
+        monkeypatch.setenv("LABELVERIFY_STRUCTURED_OUTPUT", "true")
+        assert ClaudeExtractor(client).extract(b"x", "image/jpeg") == extraction
+        assert messages.methods == ["parse"]
+        assert messages.calls[0]["output_format"] is LabelExtraction
+        assert messages.calls[0]["system"] == SYSTEM_PROMPT
+
+    def test_reply_wrapped_in_fences_or_prose_still_parses(self, extraction: LabelExtraction):
+        for wrap in ("```json\n{json}\n```", "Here is the extraction:\n{json}\nDone."):
+            client, _ = fake_client(text_response(extraction, wrap=wrap))
+            assert ClaudeExtractor(client).extract(b"x", "image/jpeg") == extraction
+
+    def test_reply_that_is_not_label_json_is_an_extraction_error(self):
+        for text in ("I cannot read this.", '{"brand_name": "not an object"}'):
+            response = SimpleNamespace(
+                stop_reason="end_turn", content=[SimpleNamespace(type="text", text=text)]
+            )
+            client, _ = fake_client(response)
+            with pytest.raises(ExtractionError, match="not (a JSON object|valid label JSON)"):
+                ClaudeExtractor(client).extract(b"x", "image/jpeg")
+
+    def test_multiple_panels_are_numbered_in_one_request(self, extraction: LabelExtraction):
+        client, messages = fake_client(text_response(extraction))
         ClaudeExtractor(client).extract_panels([(b"front", "image/jpeg"), (b"back", "image/png")])
         content = messages.calls[0]["messages"][0]["content"]
         assert [c["type"] for c in content] == ["text", "image", "text", "image", "text"]
@@ -92,19 +142,18 @@ class TestClaudeExtractor:
         assert ExtractedField(value="x", confidence=-0.2).confidence == 0.0
 
     def test_haiku_is_called_without_effort(self, extraction: LabelExtraction):
-        response = SimpleNamespace(stop_reason="end_turn", parsed_output=extraction)
-        client, messages = fake_client(response)
+        client, messages = fake_client(text_response(extraction))
         ClaudeExtractor(client, model="claude-haiku-4-5").extract(b"x", "image/jpeg")
         assert "output_config" not in messages.calls[0]
         assert messages.calls[0]["model"] == "claude-haiku-4-5"
 
     def test_refusal_raises_extraction_error(self):
-        client, _ = fake_client(SimpleNamespace(stop_reason="refusal", parsed_output=None))
+        client, _ = fake_client(SimpleNamespace(stop_reason="refusal", content=[]))
         with pytest.raises(ExtractionError, match="declined"):
             ClaudeExtractor(client).extract(b"x", "image/png")
 
     def test_truncated_output_raises_extraction_error(self):
-        client, _ = fake_client(SimpleNamespace(stop_reason="max_tokens", parsed_output=None))
+        client, _ = fake_client(SimpleNamespace(stop_reason="max_tokens", content=[]))
         with pytest.raises(ExtractionError, match="incomplete"):
             ClaudeExtractor(client).extract(b"x", "image/png")
 
