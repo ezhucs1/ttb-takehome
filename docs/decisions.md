@@ -451,3 +451,33 @@ OCR reads have low confidence by design, so the confidence gate sends more rows 
 review, which is the right bias for a degraded read. The fallback is never the same
 backend as the primary, the demo reader has none, and `LABELVERIFY_FALLBACK=none` turns
 it off. Without the binary there is no fallback and the failure is reported as before.
+
+## 20. Tesseract is the local fallback, not PP-OCR, and accuracy is not why
+
+PP-OCR (PaddleOCR) reads photographs better than Tesseract, and its mobile models run on
+a CPU. It was considered for the fallback and set aside for the deliverable, for reasons
+that weigh more than accuracy in the setting the brief describes:
+
+- **It must install and run where the model cannot be reached.** The fallback exists for
+  the day the firewall or the API is in the way. PaddlePaddle plus PaddleOCR is a few
+  hundred megabytes of wheels, and PaddleOCR fetches its model files on first run, which
+  fails on a firewalled machine unless the files are bundled by hand. Tesseract is one
+  system package with its language data included, and it is in the Docker image.
+- **It must run on the tester's machine, not the developer's.** The PP-OCR mobile models
+  take one to three seconds per image on a current CPU and several times that on an older
+  one, with roughly a gigabyte of memory. Tesseract reads a label in well under a second on
+  anything that runs Python.
+- **The fallback's errors are mostly not character errors.** In this path the OCR text is
+  only half the job; the other half assigns raw lines to the seven fields with patterns,
+  and that is where the fallback goes wrong most often. A better character reader would
+  help a photo of a curved bottle, but not the field assignment, which is the same code
+  for either engine.
+- **Low accuracy is handled, not hidden.** The fallback reads are reported at low
+  confidence on purpose, so the confidence gate turns their matches into review items and
+  the applicant and specialist both see "read with local OCR" on the result. A degraded
+  read that is labelled as such is safer than a better read that nobody is told about.
+
+The reader interface is one method and the field assignment takes any block of text, so
+a PaddleOCR reader is a small optional extra when a deployment can bundle its models and
+has tested it on its own hardware. That is the next step for an offline installation,
+after the submission, not before it.

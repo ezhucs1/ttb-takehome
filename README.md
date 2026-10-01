@@ -325,6 +325,13 @@ application. No model is involved in the comparison step.
   blocks many outbound domains; the extractor interface, the Tesseract fallback, and the
   absence of any CDN-loaded assets are the mitigations, and `docs/production.md` names
   the Azure-hosted path.
+- The local fallback is Tesseract, a less accurate reader than PP-OCR, chosen because it
+  installs as one system package with no model download, runs in under a second on an old
+  CPU, and because the fallback's errors come mostly from assigning text to fields, which
+  is the same code for either engine. Its reads are reported at low confidence so the
+  confidence gate sends them to review and the result says "read with local OCR". The
+  reasoning is in `docs/decisions.md` (entry 20); a PaddleOCR reader is a small optional
+  extra for an offline installation that can bundle its models.
 - Up to four images per label set (front, back, neck). They are read together in one
   model call and each field is reported once.
 - The seven fields named in the brief are checked under the rules of the product's class,

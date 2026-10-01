@@ -28,7 +28,10 @@ need. Ordered roughly by how soon each would matter.
   network, Marcus's firewall would block that. Options, in order of least change: Claude
   through Microsoft Foundry on the agency's Azure tenant (endpoint inside the tenant,
   allow-listable); a FedRAMP-authorized gateway; or the bundled Tesseract fallback at
-  lower accuracy.
+  lower accuracy. Tesseract was chosen over PP-OCR for the fallback because it installs
+  as one package with no model download and runs on an old CPU in under a second
+  (`docs/decisions.md`, entry 20); a PaddleOCR reader is the upgrade for an offline
+  installation that can bundle its model files and test on its own hardware.
 - **FedRAMP.** Any hosted model or storage service used for real applications needs an
   authorization to operate. The extractor interface exists so the model behind it can be
   swapped without touching the workflow.
