@@ -37,8 +37,9 @@ recommends; a person decides.
   notice is drafted from the findings and edited before it goes out. A drafted notice can be
   discarded, which puts the panel back exactly as it was.
 
-Both roles get a light and a dark theme. The app follows the system preference and the
-toggle in the sidebar overrides it per browser.
+Both roles get a dark theme by default and a light theme behind the toggle in the sidebar,
+remembered per browser. Type is Inter and JetBrains Mono, served from the app itself:
+nothing on any page loads from a CDN.
 
 **The engine** (no web dependency, fully unit tested)
 
@@ -194,7 +195,7 @@ labelverify/
     services.py           every state change: create, verify, submit, review, decide, resubmit, batch
     routes/               shared (auth, images, comments), applicant, specialist, api
     templates/            Jinja2 pages and partials
-    static/               one stylesheet, one script, no external assets
+    static/               one stylesheet, one script, two self-hosted typefaces, no external assets
   samples/                bundled labels and manifest
   cli.py                  command-line verify/extract for latency checks
 scripts/make_samples.py   renders the sample labels

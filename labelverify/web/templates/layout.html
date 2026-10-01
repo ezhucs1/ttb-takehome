@@ -6,10 +6,10 @@
   <title>{% block title %}LabelVerify{% endblock %} · LabelVerify</title>
   <link rel="stylesheet" href="/static/app.css">
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <meta name="color-scheme" content="light dark">
+  <meta name="color-scheme" content="dark light">
   <script>
-    // Apply the saved theme before first paint to avoid a flash of the wrong palette.
-    (function () { try { var t = localStorage.getItem("lv-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {} })();
+    // Apply the saved theme before first paint. Dark is the default; "light" is opt-in.
+    (function () { var t = "dark"; try { t = localStorage.getItem("lv-theme") || t; } catch (e) {} document.documentElement.dataset.theme = t === "light" ? "light" : "dark"; })();
   </script>
 </head>
 <body class="{% block body_class %}{% endblock %}">

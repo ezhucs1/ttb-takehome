@@ -17,11 +17,7 @@
 
   // ---------------------------------------------------------------- theme
   const theme = {
-    current() {
-      const set = document.documentElement.dataset.theme;
-      if (set) return set;
-      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    },
+    current() { return document.documentElement.dataset.theme === "light" ? "light" : "dark"; },
     apply(name) {
       document.documentElement.dataset.theme = name;
       try { localStorage.setItem("lv-theme", name); } catch (e) { /* private mode */ }
@@ -411,7 +407,11 @@
         const resp = await fetch("/me/unread", { headers: { Accept: "application/json" } });
         if (!resp.ok) return;
         const n = (await resp.json()).count || 0;
-        badges.forEach((b) => { b.textContent = n; b.hidden = n === 0; });
+        badges.forEach((b) => {
+          const grew = n > parseInt(b.textContent || "0", 10);
+          b.textContent = n; b.hidden = n === 0;
+          if (grew) { b.classList.remove("bump"); void b.offsetWidth; b.classList.add("bump"); }
+        });
         document.title = n ? `(${n}) ${baseTitle}` : baseTitle;
       } catch (err) { /* offline; try again next tick */ }
     };

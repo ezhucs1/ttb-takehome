@@ -40,7 +40,9 @@
   </div>
 </div>
 <div class="auth-aside">
+  <div class="auth-hero" style="--hero: url('/api/samples/old-tom-angled-photo/image')" aria-hidden="true"></div>
   <div class="auth-aside-inner">
+    <span class="eyebrow">TTB · COLA label verification</span>
     <h2>Five seconds per label, not five minutes.</h2>
     <p>Applicants get an instant pre-check before they submit. Specialists open a queue where the matching work is already done and every judgment call is flagged for them.</p>
     <ul class="auth-points">
@@ -49,6 +51,11 @@
       <li>Comment threads anchored to the exact field in question</li>
       <li>Batch upload for peak-season importers</li>
     </ul>
+    <div class="auth-status">
+      <span><i class="mode-dot {% if demo_mode %}mode-demo{% endif %}"></i> Reader <strong>{{ extractor_label }}</strong></span>
+      <span>Budget <strong>5 s per label</strong></span>
+      <span>Rules <strong>27 CFR 16.21</strong></span>
+    </div>
   </div>
 </div>
 {% endblock %}

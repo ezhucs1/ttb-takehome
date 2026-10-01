@@ -192,7 +192,28 @@ and instant, and a model call would add latency and a chance of being wrong. Whe
 model could help later is summarizing a long thread in the inbox, not deciding what is
 in it.
 
-## 10. Bold detection is a reviewed judgment, not a hard fail
+## 10. Visual design: dark, hairline, one accent, motion that is brief
+
+**Chose:** a near-monochrome dark interface as the default (light remains a toggle), one
+blue accent, hairline borders with small corner radii, a variable grotesk (Inter) with
+tight headings and spaced uppercase labels, a monospace (JetBrains Mono) for serials,
+readings, and timestamps, and entrance and hover motion of under half a second that is
+disabled under the reduced-motion preference. Both typefaces are served from the app under
+the Open Font License, and the login hero is one of the bundled label photographs rather
+than stock imagery.
+
+**Considered:** a component framework; a CSS framework from a CDN; keeping the USWDS-style
+light interface as the default.
+
+**Why:** the reference points were Anduril and SpaceX: calm, dense, technical, with
+nothing decorative. That look is mostly typography, spacing, and restraint, which costs
+nothing to deploy. A CDN would break on the reviewers' network, and a framework adds a
+build step to a project whose whole front end is one stylesheet and one script. Dark as
+the default suits long review sessions and lets label photographs read as the only
+saturated thing on the page. The restyle changed no markup or class names, so every
+server and browser check from before it still applies.
+
+## 11. Bold detection is a reviewed judgment, not a hard fail
 
 **Chose:** the model reports whether the warning heading looks bolder than the body; a
 "no" or "unsure" produces "needs review", never "mismatch".
