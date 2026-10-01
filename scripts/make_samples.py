@@ -888,6 +888,14 @@ def main() -> None:
             image.save(OUT / filename, format="JPEG", quality=82, optimize=True)
         else:  # artwork: high quality, still far smaller than PNG with paper grain
             image.save(OUT / filename, format="JPEG", quality=90, optimize=True, subsampling=0)
+        extraction = dict(sample["extraction"])
+        # What a reader reports beyond the seven fields: the class it sees, and the
+        # sulfite statement the wine style prints in its footer.
+        extraction.setdefault("product_category", field(sample["application"]["beverage_type"]))
+        extraction.setdefault(
+            "sulfite_declaration",
+            field("CONTAINS SULFITES") if spec["style"] == "wine" else field(None),
+        )
         manifest.append(
             {
                 "id": sample["id"],
@@ -896,7 +904,7 @@ def main() -> None:
                 "file": filename,
                 "expected": sample["expected"],
                 "application": sample["application"],
-                "extraction": sample["extraction"],
+                "extraction": extraction,
             }
         )
         print(f"wrote {filename}")

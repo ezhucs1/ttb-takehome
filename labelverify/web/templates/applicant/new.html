@@ -17,14 +17,6 @@
       <form id="upload-form" method="post" action="/applicant/applications" enctype="multipart/form-data">
         <div class="upload-grid">
           <div>
-            <div class="field">
-              <label for="beverage_type_1">Type of product</label>
-              <select name="beverage_type" id="beverage_type_1">
-                <option value="distilled_spirits">Distilled spirits</option>
-                <option value="wine">Wine</option>
-                <option value="malt_beverage">Malt beverage</option>
-              </select>
-            </div>
             <div data-file-picker data-max="4">
               <div class="dropzone" id="dropzone">
                 <input type="file" name="images" id="image" accept="image/jpeg,image/png,image/webp" multiple>
@@ -65,6 +57,14 @@
     <div class="step-body">
       <form id="details-form" method="post" action="" data-async data-target="#precheck-result" data-busy="Checking the label…">
         {{ m.form_fields({}, [('distilled_spirits','Distilled spirits'),('wine','Wine'),('malt_beverage','Malt beverage')]) }}
+        <div class="checklist" id="rules-checklist" data-rules='{{ rules | tojson }}'>
+          <div class="checklist-head">
+            <span class="eyebrow">What this label must carry</span>
+            <a class="small" href="/rules" target="_blank" rel="noopener">All three classes</a>
+          </div>
+          <p class="muted small" data-checklist-empty>Read the label above and the type of product is detected; the requirements for that class appear here.</p>
+          <div data-checklist-body hidden></div>
+        </div>
         <div class="step-actions">
           <button type="submit" class="btn btn-primary" id="precheck-btn"><svg class="icon"><use href="#i-sparkle"></use></svg> Check before submitting</button>
           <span class="muted" id="precheck-status"></span>

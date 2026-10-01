@@ -21,6 +21,7 @@ from datetime import datetime
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, selectinload, sessionmaker
 
+from ..engine.compare import resolve_beverage_type
 from ..engine.compare import verify as compare_verify
 from ..engine.extractors import ExtractionError, Extractor
 from ..engine.models import (
@@ -117,6 +118,13 @@ def to_application_data(app: Application) -> ApplicationData:
     return ApplicationData(**app.application_fields())
 
 
+def _column_values(data: ApplicationData) -> dict:
+    """ApplicationData as table columns: an unstated type is stored as an empty string."""
+    values = data.model_dump()
+    values["beverage_type"] = data.beverage_type.value if data.beverage_type else ""
+    return values
+
+
 def result_of(run: VerificationRun | None) -> VerificationResult | None:
     if run is None or not run.result_json:
         return None
@@ -211,7 +219,12 @@ def extract_for_prefill(extractor: Extractor, images: Sequence[LabelImage]) -> L
 
 
 def prefill_fields(extraction: LabelExtraction) -> dict[str, str]:
+    """Form values read off the label, including the class it belongs to."""
+    detected, _ = resolve_beverage_type(
+        ApplicationData(beverage_type=None, brand_name="", class_type=""), extraction
+    )
     return {
+        "beverage_type": detected.value if detected else "",
         "brand_name": extraction.brand_name.value or "",
         "class_type": extraction.class_type.value or "",
         "alcohol_content": extraction.alcohol_content.value or "",
@@ -346,6 +359,11 @@ def store_run(
     app.latest_run_id = run.id
     app.recommendation = run.recommendation
     app.risk_score = risk_score(result)
+    if not app.beverage_type and result.beverage_type is not None:
+        # The applicant left the type unstated; keep what the label said so the record,
+        # the queue, and later comparisons all use the same class.
+        app.beverage_type = result.beverage_type.value
+        app.beverage_type_inferred = True
     if result.extraction is not None and not result.reused_read:
         remember_extraction(app, result.extraction, result.extractor, result.extraction_ms)
     return run
@@ -383,7 +401,7 @@ def create_draft(
         applicant_id=applicant.id,
         organization=applicant.organization,
         status=ApplicationStatus.DRAFT.value,
-        **data.model_dump(),
+        **_column_values(data),
     )
     db.add(app)
     db.flush()
@@ -401,8 +419,10 @@ def create_draft(
 
 
 def update_fields(app: Application, data: ApplicationData) -> None:
-    for key, value in data.model_dump().items():
+    for key, value in _column_values(data).items():
         setattr(app, key, value)
+    if data.beverage_type is not None:
+        app.beverage_type_inferred = False  # the applicant chose it
 
 
 def submit(db: Session, app: Application, actor: User) -> None:
@@ -1061,6 +1081,9 @@ def batch_template_csv() -> str:
 # does with bad input: a photo that is not a label, and a row whose image is not in the zip.
 NOT_A_LABEL = "not-a-label.jpg"
 MISSING_IMAGE = "missing-photo.jpg"
+# Rows of the sample batch that leave the type blank, so the demo shows it being read off
+# the label and the matching rules applied.
+SAMPLE_BATCH_UNTYPED = {"stones-throw-wine", "harbor-light-ipa-net-contents"}
 SAMPLE_BATCH_EXTRA_ROWS = [
     [NOT_A_LABEL, "wine", "Harbor Mist", "Red Wine", "13%", "750 mL", "", "", "false", ""],
     [MISSING_IMAGE, "malt_beverage", "Night Shift", "Lager", "5%", "12 fl oz", "", "", "false", ""],
@@ -1093,7 +1116,7 @@ def sample_batch_csv(samples) -> str:
         writer.writerow(
             [
                 s["file"],
-                a.get("beverage_type", ""),
+                "" if s["id"] in SAMPLE_BATCH_UNTYPED else a.get("beverage_type", ""),
                 a.get("brand_name", ""),
                 a.get("class_type", ""),
                 a.get("alcohol_content", ""),
@@ -1198,7 +1221,7 @@ def process_batch(
                 raise WorkflowError(f"Image '{name}' was not found in the zip.")
             uploads.append((image, name))
         data = ApplicationData(
-            beverage_type=row.get("beverage_type", ""),
+            beverage_type=row.get("beverage_type", "") or None,  # blank: the label decides
             brand_name=row.get("brand_name", ""),
             class_type=row.get("class_type", ""),
             alcohol_content=row.get("alcohol_content", ""),

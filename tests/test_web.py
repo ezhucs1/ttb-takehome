@@ -493,6 +493,38 @@ class TestApplicantWorkflow:
         )
         assert resp.status_code == 200 and "reused from upload" in resp.text
 
+    def test_unstated_type_is_taken_from_the_label(self, applicant, specialist):
+        """Step 1 no longer asks for the type: the read decides it, step 2 shows the class's
+        checklist, and the comparison runs under that class's rules."""
+        page = applicant.get("/applicant/applications/new").text
+        assert 'id="rules-checklist"' in page and "27 CFR" in page and "Detect from the label" in page
+        created = applicant.post(
+            "/applicant/applications", data={"sample_id": "stones-throw-wine"}
+        ).json()
+        assert created["prefill"]["beverage_type"] == "wine"
+        form = {k: v for k, v in sample("stones-throw-wine")["application"].items() if v not in (None, False, "")}
+        form.pop("beverage_type")  # leave it unstated on purpose
+        resp = applicant.post(
+            f"/applicant/applications/{created['id']}/precheck", data=form, headers={"X-Partial": "1"}
+        )
+        assert resp.status_code == 200
+        assert "Wine · 27 CFR part 4" in resp.text and "type taken from the label" in resp.text
+        assert "Sulfite Declaration" in resp.text and "27 CFR 4.32(e)" in resp.text
+        assert "27 CFR 4.36" in resp.text  # the alcohol row cites the wine section
+        submitted = applicant.post(
+            f"/applicant/applications/{created['id']}/submit", data=form, follow_redirects=False
+        )
+        assert submitted.status_code == 303
+        review = specialist.get(f"/specialist/applications/{created['id']}").text
+        assert "Wine" in review and "taken from the label" in review
+
+    def test_rules_reference_page_and_api(self, applicant, anon):
+        page = applicant.get("/rules")
+        assert page.status_code == 200 and "27 CFR part 7" in page.text and "Sulfite declaration" in page.text
+        api = applicant.get("/api/rules").json()["rules"]
+        assert [r["part"] for r in api] == [5, 4, 7]
+        assert anon.get("/rules", follow_redirects=False).status_code == 303
+
     def test_wrong_product_type_is_caught(self, applicant):
         """A bourbon filed as wine: every text field can match and it is still wrong."""
         created = applicant.post(
@@ -639,6 +671,7 @@ class TestBatch:
         rows = applicant.get(resp.headers["location"] + "/rows")
         assert rows.headers["X-Batch-Status"] == "done"
         assert "12 of 12 checked" in rows.text
+        assert ",," in csv_resp.text  # two rows leave the type blank on purpose
         assert "3 all fields match" in rows.text and "2 need a look" in rows.text
         assert "5 corrections needed" in rows.text and "2 could not be checked" in rows.text
         assert "missing-photo.jpg" in rows.text and "Not checked" in rows.text

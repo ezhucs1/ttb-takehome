@@ -62,6 +62,7 @@ _ADDED_COLUMNS: dict[str, dict[str, str]] = {
     },
     "verification_runs": {"image_version": "INTEGER NOT NULL DEFAULT 1"},
     "applications": {
+        "beverage_type_inferred": "BOOLEAN NOT NULL DEFAULT 0",
         "extraction_json": "TEXT",
         "extraction_version": "INTEGER NOT NULL DEFAULT 0",
         "extraction_ms": "INTEGER NOT NULL DEFAULT 0",

@@ -51,6 +51,14 @@ def sample_image_route(request: Request, sample_id: str):
     )
 
 
+@router.get("/rules")
+def rules():
+    """What each commodity class must carry, with citations: the engine's own rulebook."""
+    from ...engine.rules import all_rules
+
+    return {"rules": all_rules()}
+
+
 @router.get("/samples")
 def samples(request: Request):
     return [

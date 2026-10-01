@@ -36,7 +36,7 @@
 
 {% macro application_fields(app) -%}
 <dl class="kv">
-  <div><dt>Type of product</dt><dd>{{ BEVERAGE_LABELS.get(app.beverage_type, app.beverage_type) }}</dd></div>
+  <div><dt>Type of product</dt><dd>{{ BEVERAGE_LABELS.get(app.beverage_type) or 'Not stated' }}{% if app.beverage_type_inferred %} <span class="muted">(taken from the label)</span>{% endif %}</dd></div>
   <div><dt>Brand name</dt><dd>{{ app.brand_name or '—' }}</dd></div>
   <div><dt>Class / type</dt><dd>{{ app.class_type or '—' }}</dd></div>
   <div><dt>Alcohol content</dt><dd>{{ app.alcohol_content or '—' }}</dd></div>
@@ -51,7 +51,8 @@
 <div class="form-grid">
   <div class="field">
     <label for="beverage_type">Type of product</label>
-    <select name="beverage_type" id="beverage_type" required>
+    <select name="beverage_type" id="beverage_type">
+      <option value="" {% if not values.beverage_type %}selected{% endif %}>Detect from the label</option>
       {% for value, label in beverage_types %}
       <option value="{{ value }}" {% if values.beverage_type == value %}selected{% endif %}>{{ label }}</option>
       {% endfor %}

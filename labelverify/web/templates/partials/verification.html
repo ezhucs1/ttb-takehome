@@ -26,6 +26,7 @@
     </span>
   </div>
   <div class="banner-meta">
+    {% if result.rules_part %}<span title="Rules applied"><a href="/rules" class="banner-link">{{ BEVERAGE_LABELS.get(result.beverage_type, 'Type unknown') }} · 27 CFR part {{ result.rules_part }}</a>{% if result.beverage_type_inferred %} · type taken from the label{% endif %}</span>{% endif %}
     <span title="Extractor">{{ result.extractor }}</span>
     <span title="Extraction time">{{ result.extraction_ms }} ms read{% if result.reused_read %} (reused from upload){% endif %} · {{ result.total_ms }} ms compare</span>
   </div>
@@ -55,6 +56,7 @@
     <tr class="row-{{ f.verdict.value }}" id="field-{{ f.field }}">
       <th scope="row">
         <div class="field-name">{{ f.label }}</div>
+        {% if f.citation %}<div class="cite">{{ f.citation }}{% if f.requirement != 'required' %} · {{ f.requirement }}{% endif %}</div>{% endif %}
         {% if f.verdict.value != 'not_applicable' and f.confidence %}
         <div class="confidence" title="How confident the reader was that it transcribed this field correctly. Similarity to the application is reported in the finding.">
           <span class="confidence-bar"><span style="width:{{ (f.confidence * 100) | round | int }}%"></span></span>

@@ -30,7 +30,7 @@ def application_from_form(form: dict) -> ApplicationData:
     is_import = str(form.get("is_import", "")).lower() in ("true", "on", "1", "yes")
     try:
         return ApplicationData(
-            beverage_type=text("beverage_type") or "distilled_spirits",
+            beverage_type=text("beverage_type") or None,  # blank: taken from the label
             brand_name=text("brand_name"),
             class_type=text("class_type"),
             alcohol_content=text("alcohol_content"),

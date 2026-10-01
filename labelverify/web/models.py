@@ -81,7 +81,8 @@ class Application(Base):
     organization: Mapped[str] = mapped_column(String(200), default="")
     status: Mapped[str] = mapped_column(String(30), default=ApplicationStatus.DRAFT, index=True)
 
-    beverage_type: Mapped[str] = mapped_column(String(30))
+    beverage_type: Mapped[str] = mapped_column(String(30), default="")  # "" = not stated
+    beverage_type_inferred: Mapped[bool] = mapped_column(Boolean, default=False)
     brand_name: Mapped[str] = mapped_column(String(200), default="")
     class_type: Mapped[str] = mapped_column(String(200), default="")
     alcohol_content: Mapped[str] = mapped_column(String(100), default="")
@@ -166,7 +167,7 @@ class Application(Base):
 
     def application_fields(self) -> dict:
         return {
-            "beverage_type": self.beverage_type,
+            "beverage_type": self.beverage_type or None,
             "brand_name": self.brand_name,
             "class_type": self.class_type,
             "alcohol_content": self.alcohol_content,

@@ -132,6 +132,24 @@ class TestDraftAndPrecheck:
         fields = services.prefill_fields(extraction)
         assert fields["brand_name"] == "OLD TOM DISTILLERY"
         assert fields["net_contents"] == "750 mL"
+        assert fields["beverage_type"] == "distilled_spirits"  # read off the label
+
+    def test_an_unstated_type_is_inferred_and_kept_on_the_application(self, db, users):
+        applicant = users["maria@alvarezlabels.com"]
+        data = ApplicationData.model_validate(
+            {**sample("harbor-light-ipa-net-contents")["application"], "beverage_type": None}
+        )
+        app = services.create_draft(
+            db, applicant, data, [(sample_bytes("harbor-light-ipa-net-contents"), "can.png")]
+        )
+        assert app.beverage_type == "" and not app.beverage_type_inferred
+        run = services.record_run(db, app, DemoExtractor(), "precheck")
+        result = services.result_of(run)
+        assert result.beverage_type == "malt_beverage" and result.beverage_type_inferred
+        assert app.beverage_type == "malt_beverage" and app.beverage_type_inferred
+        # The applicant later states it explicitly: the inference flag clears.
+        services.update_fields(db and app, ApplicationData.model_validate(sample("harbor-light-ipa-net-contents")["application"]))
+        assert not app.beverage_type_inferred
 
 
 class TestLifecycle:
@@ -589,7 +607,13 @@ def test_init_db_adds_columns_to_a_database_from_the_previous_release(tmp_path):
         con.execute("ALTER TABLE label_images DROP COLUMN version")
         con.execute("ALTER TABLE label_images DROP COLUMN panel")
         con.execute("ALTER TABLE verification_runs DROP COLUMN image_version")
-        for column in ("extraction_json", "extraction_version", "extraction_ms", "extraction_extractor"):
+        for column in (
+            "extraction_json",
+            "extraction_version",
+            "extraction_ms",
+            "extraction_extractor",
+            "beverage_type_inferred",
+        ):
             con.execute(f"ALTER TABLE applications DROP COLUMN {column}")
         assert "version" not in [r[1] for r in con.execute("PRAGMA table_info(label_images)")]
 

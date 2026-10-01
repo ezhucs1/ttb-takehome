@@ -55,6 +55,14 @@
       "image_quality": {
         "readable": true,
         "issues": []
+      },
+      "product_category": {
+        "value": "distilled_spirits",
+        "confidence": 0.97
+      },
+      "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
       }
     }
   },
@@ -114,6 +122,14 @@
       "image_quality": {
         "readable": true,
         "issues": []
+      },
+      "product_category": {
+        "value": "distilled_spirits",
+        "confidence": 0.97
+      },
+      "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
       }
     }
   },
@@ -175,6 +191,14 @@
         "issues": [
           "Mild reflection on the glass near the top left."
         ]
+      },
+      "product_category": {
+        "value": "distilled_spirits",
+        "confidence": 0.97
+      },
+      "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
       }
     }
   },
@@ -236,6 +260,14 @@
         "issues": [
           "Photographed at a steep angle with glare across the upper half; small print is soft."
         ]
+      },
+      "product_category": {
+        "value": "distilled_spirits",
+        "confidence": 0.97
+      },
+      "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
       }
     }
   },
@@ -295,6 +327,14 @@
       "image_quality": {
         "readable": true,
         "issues": []
+      },
+      "product_category": {
+        "value": "wine",
+        "confidence": 0.97
+      },
+      "sulfite_declaration": {
+        "value": "CONTAINS SULFITES",
+        "confidence": 0.97
       }
     }
   },
@@ -354,6 +394,14 @@
       "image_quality": {
         "readable": true,
         "issues": []
+      },
+      "product_category": {
+        "value": "wine",
+        "confidence": 0.97
+      },
+      "sulfite_declaration": {
+        "value": "CONTAINS SULFITES",
+        "confidence": 0.97
       }
     }
   },
@@ -413,6 +461,14 @@
       "image_quality": {
         "readable": true,
         "issues": []
+      },
+      "product_category": {
+        "value": "distilled_spirits",
+        "confidence": 0.97
+      },
+      "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
       }
     }
   },
@@ -472,6 +528,14 @@
       "image_quality": {
         "readable": true,
         "issues": []
+      },
+      "product_category": {
+        "value": "malt_beverage",
+        "confidence": 0.97
+      },
+      "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
       }
     }
   },
@@ -533,6 +597,14 @@
         "issues": [
           "Curved can surface; text near the edges is compressed."
         ]
+      },
+      "product_category": {
+        "value": "malt_beverage",
+        "confidence": 0.97
+      },
+      "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
       }
     }
   },
@@ -592,6 +664,14 @@
       "image_quality": {
         "readable": true,
         "issues": []
+      },
+      "product_category": {
+        "value": "distilled_spirits",
+        "confidence": 0.97
+      },
+      "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
       }
     }
   }

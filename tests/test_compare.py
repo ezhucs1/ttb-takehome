@@ -99,6 +99,112 @@ class TestBeverageType:
         assert result.label_value == "Not stated on the label"
 
 
+class TestNetContentsByClass:
+    def test_malt_beverages_may_use_fluid_ounces_and_have_no_standards_of_fill(
+        self, application, extraction
+    ):
+        application.beverage_type = BeverageType.MALT_BEVERAGE
+        application.class_type = "Lager"
+        extraction.class_type = make_field("Lager")
+        application.net_contents = "16 fl oz"
+        extraction.net_contents = make_field("16 FL OZ")
+        result = compare_net_contents(application, extraction)
+        assert result.verdict is Verdict.MATCH and result.notes == []
+
+    def test_spirits_need_a_metric_statement(self, application, extraction):
+        """27 CFR 5.70: fluid ounces alone are not enough on a spirits label."""
+        application.net_contents = "750 mL"
+        extraction.net_contents = make_field("25.4 FL OZ")
+        result = compare_net_contents(application, extraction)
+        assert result.verdict is Verdict.NEEDS_REVIEW
+        assert any("metric" in n for n in result.notes) and "5.70" in " ".join(result.notes)
+        extraction.net_contents = make_field("25.4 FL OZ (750 mL)")
+        assert compare_net_contents(application, extraction).verdict is Verdict.MATCH
+
+    def test_standards_of_fill_are_advisory_and_per_class(self, application, extraction):
+        application.net_contents = "600 mL"
+        extraction.net_contents = make_field("600 mL")
+        spirits = compare_net_contents(application, extraction)
+        assert spirits.verdict is Verdict.MATCH and any("standard of fill" in n for n in spirits.notes)
+        application.beverage_type = BeverageType.WINE
+        application.class_type = "Red Wine"
+        extraction.class_type = make_field("Red Wine")
+        wine = compare_net_contents(application, extraction)  # 600 mL is a wine size since 2025
+        assert wine.verdict is Verdict.MATCH and wine.notes == []
+
+
+class TestSulfiteDeclaration:
+    def test_only_wine_gets_the_row_and_a_missing_statement_is_a_review_item(
+        self, application, extraction
+    ):
+        from labelverify.engine.compare import compare_sulfite_declaration
+
+        assert "sulfite_declaration" not in [f.field for f in verify(application, extraction).fields]
+        application.beverage_type = BeverageType.WINE
+        application.class_type = "Cabernet Sauvignon"
+        extraction.class_type = make_field("Cabernet Sauvignon")
+        application.alcohol_content = "13.5"
+        extraction.alcohol_content = make_field("13.5% Alc. by Vol.")
+        fields = {f.field: f for f in verify(application, extraction).fields}
+        assert fields["sulfite_declaration"].verdict is Verdict.NEEDS_REVIEW
+        assert fields["sulfite_declaration"].citation == "27 CFR 4.32(e)"
+        extraction.sulfite_declaration = make_field("Contains Sulfites")
+        assert compare_sulfite_declaration(application, extraction).verdict is Verdict.MATCH
+
+
+class TestClassResolution:
+    def test_filed_type_wins_then_designation_then_reader(self, application, extraction):
+        from labelverify.engine.compare import resolve_beverage_type
+
+        assert resolve_beverage_type(application, extraction) == (
+            BeverageType.DISTILLED_SPIRITS,
+            "filed",
+        )
+        application.beverage_type = None
+        assert resolve_beverage_type(application, extraction) == (
+            BeverageType.DISTILLED_SPIRITS,
+            "class_type",
+        )
+        extraction.class_type = make_field("Special Reserve")  # no category words
+        extraction.product_category = make_field("wine", 0.9)
+        assert resolve_beverage_type(application, extraction) == (BeverageType.WINE, "reader")
+        extraction.product_category = make_field("wine", 0.3)  # too unsure to trust
+        assert resolve_beverage_type(application, extraction) == (None, "unknown")
+
+    def test_unfiled_type_is_taken_from_the_label_and_its_rules_applied(
+        self, application, extraction
+    ):
+        application.beverage_type = None
+        application.class_type = "India Pale Ale"
+        extraction.class_type = make_field("India Pale Ale")
+        application.alcohol_content = ""
+        extraction.alcohol_content = make_field(None)
+        application.net_contents = "12 fl oz"
+        extraction.net_contents = make_field("12 FL OZ")
+        result = verify(application, extraction)
+        assert result.beverage_type is BeverageType.MALT_BEVERAGE and result.rules_part == 7
+        assert result.beverage_type_inferred
+        assert result.field("beverage_type").verdict is Verdict.NOT_APPLICABLE
+        assert result.field("alcohol_content").verdict is Verdict.NOT_APPLICABLE  # malt rule
+        assert result.field("net_contents").verdict is Verdict.MATCH  # fluid ounces allowed
+        assert any("taken from the label: malt beverage" in line for line in result.summary)
+
+    def test_unresolvable_type_is_checked_strictly_and_flagged(self, application, extraction):
+        application.beverage_type = None
+        application.class_type = "Special Reserve"
+        extraction.class_type = make_field("Special Reserve")
+        result = verify(application, extraction)
+        assert result.beverage_type is None and result.rules_part == 5
+        assert result.field("beverage_type").verdict is Verdict.NEEDS_REVIEW
+        assert result.recommendation is Recommendation.NEEDS_REVIEW
+
+    def test_every_row_carries_its_citation(self, application, extraction):
+        result = verify(application, extraction)
+        assert all(f.citation for f in result.fields)
+        assert result.field("health_warning").citation == "27 CFR 16.21"
+        assert result.field("alcohol_content").citation == "27 CFR 5.65"
+
+
 class TestClassType:
     def test_whisky_spelling_variant_matches(self, application, extraction):
         extraction.class_type = make_field("Kentucky Straight Bourbon Whisky")
@@ -134,11 +240,62 @@ class TestAlcoholContent:
         extraction.alcohol_content = make_field(None)
         assert compare_alcohol_content(application, extraction).verdict is Verdict.MISMATCH
 
-    def test_blank_everywhere_is_not_applicable_for_wine(self, application, extraction):
+    def test_wine_must_state_it_unless_it_is_a_table_wine(self, application, extraction):
+        """27 CFR 4.36: required, but 'Table Wine' may replace the number at 7 to 14 percent."""
         application.beverage_type = BeverageType.WINE
         application.alcohol_content = ""
         extraction.alcohol_content = make_field(None)
+        extraction.class_type = make_field("Red Wine")
+        result = compare_alcohol_content(application, extraction)
+        assert result.verdict is Verdict.MISMATCH and "4.36" in result.reason
+        extraction.class_type = make_field("California Table Wine")
+        result = compare_alcohol_content(application, extraction)
+        assert result.verdict is Verdict.MATCH and "Table Wine" in result.reason
+        application.alcohol_content = "12.5"
+        assert compare_alcohol_content(application, extraction).verdict is Verdict.MATCH
+        application.alcohol_content = "15"  # outside the 7 to 14 band: the number is required
+        assert compare_alcohol_content(application, extraction).verdict is Verdict.MISMATCH
+
+    def test_malt_beverages_may_omit_it(self, application, extraction):
+        """27 CFR 7.65: optional federally, even when the application states a figure."""
+        application.beverage_type = BeverageType.MALT_BEVERAGE
+        application.class_type = "India Pale Ale"
+        extraction.class_type = make_field("India Pale Ale")
+        extraction.alcohol_content = make_field(None)
+        result = compare_alcohol_content(application, extraction)
+        assert result.verdict is Verdict.NOT_APPLICABLE and "7.65" in result.reason
+        assert any("45%" in n for n in result.notes)  # the application's figure is noted
+        application.alcohol_content = ""
         assert compare_alcohol_content(application, extraction).verdict is Verdict.NOT_APPLICABLE
+
+    def test_differences_inside_the_class_tolerance_go_to_review(self, application, extraction):
+        """Identical is a match; inside the labeling tolerance is a review item; beyond it is
+        a mismatch. The tolerance is the class's own (27 CFR 5.65, 4.36, 7.65)."""
+        extraction.alcohol_content = make_field("45.1% Alc./Vol.")  # spirits: ±0.15
+        result = compare_alcohol_content(application, extraction)
+        assert result.verdict is Verdict.NEEDS_REVIEW and "0.15" in result.reason
+        extraction.alcohol_content = make_field("45.5% Alc./Vol.")
+        assert compare_alcohol_content(application, extraction).verdict is Verdict.MISMATCH
+
+        application.beverage_type = BeverageType.WINE
+        application.class_type = "Cabernet Sauvignon"
+        extraction.class_type = make_field("Cabernet Sauvignon")
+        application.alcohol_content = "13"
+        extraction.alcohol_content = make_field("14% Alc. by Vol.")  # wine at or under 14: ±1.5
+        result = compare_alcohol_content(application, extraction)
+        assert result.verdict is Verdict.NEEDS_REVIEW and "1.5" in result.reason
+        extraction.alcohol_content = make_field("15.5% Alc. by Vol.")  # above 14: ±1.0
+        assert compare_alcohol_content(application, extraction).verdict is Verdict.MISMATCH
+
+    def test_proof_on_a_wine_label_is_flagged(self, application, extraction):
+        application.beverage_type = BeverageType.WINE
+        application.class_type = "Cabernet Sauvignon"
+        extraction.class_type = make_field("Cabernet Sauvignon")
+        application.alcohol_content = "13.5"
+        extraction.alcohol_content = make_field("13.5% Alc./Vol. (27 Proof)")
+        result = compare_alcohol_content(application, extraction)
+        assert result.verdict is Verdict.NEEDS_REVIEW
+        assert any("spirits convention" in n for n in result.notes)
 
     def test_blank_everywhere_is_mismatch_for_spirits(self, application, extraction):
         application.alcohol_content = ""

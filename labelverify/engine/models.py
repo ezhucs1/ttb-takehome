@@ -29,7 +29,11 @@ class BeverageType(StrEnum):
 class ApplicationData(BaseModel):
     """Fields from the COLA application (TTB Form 5100.31) that must match the label."""
 
-    beverage_type: BeverageType
+    beverage_type: BeverageType | None = Field(
+        default=None,
+        description="The commodity class filed. None means not stated: the engine infers it "
+        "from the label and applies that class's rules.",
+    )
     brand_name: str
     class_type: str
     alcohol_content: str = Field(
@@ -106,6 +110,17 @@ class LabelExtraction(BaseModel):
     producer_name: ExtractedField = Field(default_factory=ExtractedField)
     producer_address: ExtractedField = Field(default_factory=ExtractedField)
     country_of_origin: ExtractedField = Field(default_factory=ExtractedField)
+    sulfite_declaration: ExtractedField = Field(
+        default_factory=ExtractedField,
+        description="The sulfite statement as printed, for example 'Contains Sulfites', or null.",
+    )
+    product_category: ExtractedField = Field(
+        default_factory=ExtractedField,
+        description=(
+            "Which TTB class the product is, judged from every cue on the label: exactly one of "
+            "'distilled_spirits', 'wine', or 'malt_beverage', or null if it cannot be told."
+        ),
+    )
     health_warning: HealthWarningExtraction = Field(
         default_factory=lambda: HealthWarningExtraction(present=False)
     )
@@ -144,12 +159,23 @@ class FieldResult(BaseModel):
     similarity: float | None = None
     notes: list[str] = Field(default_factory=list)
     diff: list[WordDiff] | None = None
+    citation: str | None = Field(default=None, description="The CFR section the row rests on.")
+    requirement: str = Field(
+        default="required", description="required, optional, or conditional for this class."
+    )
 
 
 class VerificationResult(BaseModel):
     recommendation: Recommendation
     fields: list[FieldResult]
     image_quality: ImageQuality
+    beverage_type: BeverageType | None = Field(
+        default=None, description="The class whose rules were applied."
+    )
+    rules_part: int | None = Field(default=None, description="27 CFR part applied: 4, 5, or 7.")
+    beverage_type_inferred: bool = Field(
+        default=False, description="True when the class came from the label, not the application."
+    )
     summary: list[str] = Field(default_factory=list)
     extractor: str = ""
     extraction_ms: int = 0

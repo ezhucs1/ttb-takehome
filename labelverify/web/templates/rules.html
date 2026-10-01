@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+{% block title %}Labeling rules{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>What each label must carry</h1>
+    <p class="subtitle">TTB regulates the three commodity classes under separate parts of 27 CFR. The engine applies the class's own rules to every comparison; this is the same table it uses, with the section each row rests on. The Government Health Warning (part 16) is the same for all three.</p>
+  </div>
+</div>
+<div class="rules-grid">
+  {% for r in rules %}
+  <div class="card">
+    <div class="card-title">{{ r.name }} <span class="muted">27 CFR part {{ r.part }}</span></div>
+    <ul class="rule-list">
+      {% for item in r.checklist %}
+      <li class="rule-item rule-{{ item.requirement }}">
+        <div class="rule-line">
+          <strong>{{ item.label }}</strong>
+          <span class="pill pill-{{ 'info' if item.requirement == 'required' else 'neutral' }} pill-xs">{{ item.requirement }}</span>
+          {% if item.checked_by == 'specialist' %}<span class="pill pill-neutral pill-xs" title="A visual judgment the engine does not make">specialist</span>{% endif %}
+        </div>
+        <div class="cite">{{ item.citation }}</div>
+        {% if item.note %}<div class="muted small">{{ item.note }}</div>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    <div class="rule-foot muted small">
+      {% if r.proof_permitted %}Proof may accompany the percentage.{% else %}Percent alcohol by volume only; proof is not used.{% endif %}
+      {% if r.metric_required %}Net contents in metric units{% if r.standards_of_fill_ml %}, from the standards of fill{% endif %}.{% else %}Net contents in fluid ounces or metric units.{% endif %}
+      Qualifying phrases: {{ r.qualifying_phrases | join(', ') }}.
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<p class="muted small">Standards of fill follow TTB's January 2025 final rule and are advisory in the engine: a size not on the list produces a note, never a verdict. Sections are cited by number; read the full text on eCFR for anything consequential.</p>
+{% endblock %}

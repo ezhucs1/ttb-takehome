@@ -101,6 +101,21 @@ class TesseractExtractor:
         return classify_text("\n\n".join(texts))
 
 
+_SULFITE_RE = re.compile(r"contains\s+sulf(?:ph)?ites", re.IGNORECASE)
+_CATEGORY_CUES = (
+    ("distilled_spirits", re.compile(r"\b(distilled|proof|whisk(e)?y|bourbon|vodka|gin|rum|tequila)\b", re.I)),
+    ("wine", re.compile(r"\b(wine|vint(ed|age)|sulfites|cabernet|chardonnay|merlot|ros[eé])\b", re.I)),
+    ("malt_beverage", re.compile(r"\b(brewed|beer|ale|lager|ipa|stout|porter|malt)\b", re.I)),
+)
+
+
+def _category_from_text(text: str) -> str | None:
+    """The class with the most cue hits in the OCR text, or None on a tie at zero."""
+    scores = {name: len(pattern.findall(text)) for name, pattern in _CATEGORY_CUES}
+    best = max(scores, key=scores.get)
+    return best if scores[best] > 0 else None
+
+
 def classify_text(text: str) -> LabelExtraction:
     """Assign raw OCR text to TTB fields using regexes and keyword heuristics."""
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
@@ -157,6 +172,8 @@ def classify_text(text: str) -> LabelExtraction:
     def field(value: str | None, confidence: float = _LOW) -> ExtractedField:
         return ExtractedField(value=value, confidence=confidence if value else 0.0)
 
+    sulfites = _first_match(_SULFITE_RE, text)
+    category = _category_from_text(text)
     return LabelExtraction(
         brand_name=field(brand_line, 0.35),
         class_type=field(class_line),
@@ -165,6 +182,8 @@ def classify_text(text: str) -> LabelExtraction:
         producer_name=field(producer_name),
         producer_address=field(producer_address, 0.4),
         country_of_origin=field(country),
+        sulfite_declaration=field(sulfites, 0.6),
+        product_category=field(category, 0.6 if category else 0.0),
         health_warning=warning,
         image_quality=ImageQuality(
             readable=bool(lines),

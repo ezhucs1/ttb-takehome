@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 from ...engine.extractors import ExtractionError
 from ...engine.models import ApplicationData
 from ...engine.preprocess import UnreadableImageError
+from ...engine.rules import all_rules
 from .. import services
 from ..auth import require_applicant
 from ..db import get_db
@@ -86,7 +87,9 @@ def dashboard(
 
 @router.get("/applications/new")
 def new_application(request: Request, user: User = Depends(require_applicant)):
-    return renderer(request).page(request, "applicant/new.html", samples=request.app.state.samples)
+    return renderer(request).page(
+        request, "applicant/new.html", samples=request.app.state.samples, rules=all_rules()
+    )
 
 
 @router.post("/applications")
@@ -96,7 +99,7 @@ async def create_application(
     user: User = Depends(require_applicant),
     images: list[UploadFile] = File(default=[]),
     sample_id: str = Form(""),
-    beverage_type: str = Form("distilled_spirits"),
+    beverage_type: str = Form(""),
 ):
     """Step 1: store the label set, run extraction, and return pre-filled form values."""
     try:
@@ -108,7 +111,7 @@ async def create_application(
         app = services.create_draft(
             db,
             user,
-            ApplicationData(beverage_type=beverage_type, brand_name="", class_type=""),
+            ApplicationData(beverage_type=beverage_type or None, brand_name="", class_type=""),
             uploads,
         )
     except UnreadableImageError as exc:

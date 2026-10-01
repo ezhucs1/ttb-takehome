@@ -247,7 +247,39 @@ engines and casual visitors. The thing that actually bounds the cost is the cap:
 process-local counter is enough for one always-on machine and adds no datastore.
 Per-account quotas would be the production answer and are noted in production.md.
 
-## 12. Bold detection is a reviewed judgment, not a hard fail
+## 12. One rulebook per commodity class, consulted by every comparison
+
+**Chose:** a rulebook module with one entry per class (27 CFR part 5 for distilled
+spirits, part 4 for wine, part 7 for malt beverages) stating, per field, whether it is
+required, optional, or conditional, the section it rests on, the alcohol tolerance, whether
+proof is permitted, whether net contents must be metric, and the standards of fill. The
+reader reports the class it sees; the engine confirms it from the class/type words,
+falls back to the reader's judgment when the words do not settle it, and applies that
+class's rules. The type on the application and in the batch CSV became optional: when it
+is absent the label decides, and the record says so. The same table renders the
+applicant's step-2 checklist, the citation under every result row, and the `/rules` page.
+
+**Considered:** keeping one set of rules for all three classes with a few special cases
+in the comparators; encoding the rules in the model prompt and letting it judge.
+
+**Why:** the classes genuinely differ on the fields the brief asks about. A malt beverage
+need not state alcohol content, a wine between 7 and 14 percent may say "Table Wine"
+instead of a number, malt beverages may use fluid ounces while the other two must be
+metric, and wine carries a sulfite declaration the others do not. Scattering those as
+special cases had already produced one wrong verdict (wine treated as optional for
+alcohol content). A table the UI and the engine share cannot drift. The model is still
+only trusted to read: it reports the class it sees as one more field with a confidence,
+and the deterministic rules decide what that class requires.
+
+**Validation:** Excisely's curated regulation list was used as a cross-check for the
+section numbers and the per-class differences; the live eCFR could not be reached from
+the build environment, so the citations are by section number and the rules page says to
+read the full text for anything consequential. Tolerances: ±0.15 (5.65), ±1.5 and ±1.0
+(4.36), ±0.3 (7.65). A difference inside a tolerance is a review item, not a match,
+because the tolerance governs actual versus labeled content, while the application
+should carry the labeled figure exactly.
+
+## 13. Bold detection is a reviewed judgment, not a hard fail
 
 **Chose:** the model reports whether the warning heading looks bolder than the body; a
 "no" or "unsure" produces "needs review", never "mismatch".

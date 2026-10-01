@@ -11,6 +11,10 @@ need. Ordered roughly by how soon each would matter.
 - **Session secret.** With `SECRET_KEY` unset, a key is generated once and stored beside
   the database, which is enough for one machine. A deployment with more than one instance,
   or one that must survive losing its volume, sets `SECRET_KEY` from its secret store.
+- **Keeping the rulebook current.** `labelverify/engine/rules.py` carries section
+  numbers, tolerances, and the January 2025 standards of fill. Production would review it
+  against eCFR on a schedule and extend it to the class-specific items the engine lists
+  as specialist checks (age statements, appellations, qualifying phrases, type sizes).
 - **Rate limiting and upload scanning.** Only a process-wide daily cap on model reads.
   Add per-account quotas, a reverse-proxy limit on the upload endpoints, and antivirus
   scanning of uploaded files.

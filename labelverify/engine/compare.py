@@ -29,12 +29,14 @@ from .models import (
     VerificationResult,
 )
 from .normalize import (
+    METRIC_UNITS,
     normalize_address,
     normalize_country,
     normalize_text,
     parse_alcohol_content,
     parse_net_contents,
 )
+from .rules import ClassRules, Requirement, rules_for
 from .warning import check_health_warning
 
 # Text fields match only when they are identical after normalization (case, punctuation,
@@ -49,13 +51,14 @@ ADDRESS_REVIEW = 65.0
 # Extractions below this confidence never produce an unattended "match".
 LOW_CONFIDENCE = 0.6
 
+# Two values are "the same" within reading slack; anything beyond that is a difference,
+# which the class's labeling tolerance then grades as review (within tolerance) or mismatch.
 ABV_TOLERANCE = 0.05  # percentage points
 VOLUME_TOLERANCE_ML = 1.0
 
-# Common standards of fill (27 CFR 5.203 and 4.72). Advisory only: the list changes as TTB
-# adds sizes, so a miss produces a note rather than a verdict.
-SPIRITS_STANDARDS_ML = {50, 100, 200, 375, 700, 720, 750, 900, 1000, 1500, 1750, 1800}
-WINE_STANDARDS_ML = {50, 100, 187, 200, 250, 355, 375, 500, 750, 1000, 1500, 3000}
+# The model's own view of the product class is used only when the class/type words do not
+# settle it, and only when the model is reasonably sure.
+CATEGORY_CONFIDENCE = 0.6
 
 _CLASS_SYNONYMS: dict[str, str] = {
     "whisky": "whiskey",
@@ -202,6 +205,29 @@ def infer_beverage_category(class_type: str | None) -> BeverageType | None:
     return None
 
 
+def resolve_beverage_type(
+    application: ApplicationData, extraction: LabelExtraction
+) -> tuple[BeverageType | None, str]:
+    """The class whose rules apply, and where it came from: 'filed', 'class_type' (the
+    designation's words), 'reader' (the model's judgment of the whole label), or 'unknown'."""
+    if application.beverage_type is not None:
+        return BeverageType(application.beverage_type), "filed"
+    implied = infer_beverage_category(extraction.class_type.value)
+    if implied is not None:
+        return implied, "class_type"
+    guess = extraction.product_category
+    if guess.value in {b.value for b in BeverageType} and guess.confidence >= CATEGORY_CONFIDENCE:
+        return BeverageType(guess.value), "reader"
+    return None, "unknown"
+
+
+def _class_of(application: ApplicationData, extraction: LabelExtraction) -> ClassRules:
+    """The rulebook to apply. An unresolved class is checked as distilled spirits, the
+    strictest of the three, and the type-of-product row says so."""
+    resolved, _ = resolve_beverage_type(application, extraction)
+    return rules_for(resolved or BeverageType.DISTILLED_SPIRITS)
+
+
 def compare_beverage_type(application: ApplicationData, extraction: LabelExtraction) -> FieldResult:
     """The type of product on the application against what the label's class/type implies.
 
@@ -209,16 +235,49 @@ def compare_beverage_type(application: ApplicationData, extraction: LabelExtract
     the class/type text itself may match perfectly. Only unambiguous words decide; a
     designation that names no category is left to the specialist as not applicable.
     """
-    filed = BeverageType(application.beverage_type)
     designation = (extraction.class_type.value or "").strip()
     implied = infer_beverage_category(designation)
+    if implied is None:
+        guess = extraction.product_category
+        if (
+            guess.value in {b.value for b in BeverageType}
+            and guess.confidence >= CATEGORY_CONFIDENCE
+        ):
+            implied = BeverageType(guess.value)
+    confidence = extraction.class_type.confidence if infer_beverage_category(designation) else extraction.product_category.confidence
     base = dict(
         field="beverage_type",
         label="Type of Product",
-        application_value=CATEGORY_NAMES[filed],
         label_value=CATEGORY_NAMES[implied] if implied else "Not stated on the label",
-        confidence=extraction.class_type.confidence,
+        confidence=confidence,
+        citation="27 CFR parts 4, 5, and 7",
     )
+
+    if application.beverage_type is None:  # not filed: the label decides
+        if implied is None:
+            return FieldResult(
+                verdict=Verdict.NEEDS_REVIEW,
+                application_value="Not filed",
+                reason=(
+                    "The application did not state a type and the label does not say which "
+                    "of the three classes the product is in. Checked under the distilled "
+                    "spirits rules, the strictest; a specialist should confirm the class."
+                ),
+                **base,
+            )
+        return FieldResult(
+            verdict=Verdict.NOT_APPLICABLE,
+            application_value="Not filed",
+            reason=(
+                f"The application did not state a type. The label reads as "
+                f"{CATEGORY_LABELS[implied]} and the {rules_for(implied).name.lower()} rules "
+                f"(27 CFR part {rules_for(implied).part}) were applied."
+            ),
+            **base,
+        )
+
+    filed = BeverageType(application.beverage_type)
+    base["application_value"] = CATEGORY_NAMES[filed]
     if implied is None:
         return FieldResult(
             verdict=Verdict.NOT_APPLICABLE,
@@ -273,6 +332,14 @@ def compare_producer_address(
 def compare_alcohol_content(
     application: ApplicationData, extraction: LabelExtraction
 ) -> FieldResult:
+    """Alcohol content under the class's rules.
+
+    Spirits and wine must state it; malt beverages need not (27 CFR 7.65). Wine between 7
+    and 14 percent may print 'Table Wine' or 'Light Wine' instead of a number (27 CFR 4.36).
+    Identical values match. A difference inside the class's labeling tolerance goes to
+    review, since the application should carry the labeled figure; beyond it is a mismatch.
+    """
+    rules = _class_of(application, extraction)
     extracted = extraction.alcohol_content
     base = dict(
         field="alcohol_content",
@@ -283,56 +350,98 @@ def compare_alcohol_content(
     )
     app_abv = parse_alcohol_content(application.alcohol_content)
     label_abv = parse_alcohol_content(extracted.value)
-    optional = application.beverage_type in (BeverageType.WINE, BeverageType.MALT_BEVERAGE)
+    label_text = (extracted.value or "").strip()
+    optional = rules.requirement("alcohol_content") is Requirement.OPTIONAL
 
-    if app_abv is None and label_abv is None:
-        if application.alcohol_content.strip() or (extracted.value or "").strip():
-            return FieldResult(
-                verdict=Verdict.NEEDS_REVIEW,
-                reason="Could not read a percentage or proof value. Confirm visually.",
-                **base,
-            )
+    if label_abv is None and not label_text:  # nothing printed
         if optional:
+            note = (
+                f"The application states {app_abv.abv:g}%; printing it is not required."
+                if app_abv
+                else ""
+            )
             return FieldResult(
                 verdict=Verdict.NOT_APPLICABLE,
-                reason="Not stated on the application or the label. Optional for some wines and malt beverages.",
+                reason=(
+                    f"Not printed on the label, which {rules.rule('alcohol_content').citation} "
+                    "allows for malt beverages at the federal level; some states require it."
+                ),
+                notes=[note] if note else [],
+                **base,
+            )
+        if rules.table_wine_exemption and (app_abv is None or 7.0 <= app_abv.abv <= 14.0):
+            designation = normalize_text(extraction.class_type.value)
+            if "table wine" in designation or "light wine" in designation:
+                stated = f"; the application states {app_abv.abv:g}%" if app_abv else ""
+                return FieldResult(
+                    verdict=Verdict.MATCH,
+                    reason=(
+                        f"The label says '{extraction.class_type.value}' instead of a number, "
+                        f"which {rules.rule('alcohol_content').citation} allows between 7 and "
+                        f"14 percent{stated}."
+                    ),
+                    **base,
+                )
+        if app_abv is None and not application.alcohol_content.strip():
+            return FieldResult(
+                verdict=Verdict.MISMATCH,
+                reason=f"Alcohol content is required ({rules.rule('alcohol_content').citation}) and was not found on the label or the application.",
                 **base,
             )
         return FieldResult(
             verdict=Verdict.MISMATCH,
-            reason="Alcohol content is required on distilled spirits labels and was not found.",
-            **base,
-        )
-    if app_abv is None:
-        return FieldResult(
-            verdict=Verdict.NEEDS_REVIEW,
-            reason=f"The label shows '{extracted.value}' but the application value could not be read.",
+            reason=(
+                f"Application states {app_abv.abv:g}% but no alcohol content was found on the "
+                f"label; it is required ({rules.rule('alcohol_content').citation})."
+                if app_abv
+                else f"No alcohol content was found on the label; it is required ({rules.rule('alcohol_content').citation})."
+            ),
             **base,
         )
     if label_abv is None:
-        if (extracted.value or "").strip():
-            return FieldResult(
-                verdict=Verdict.NEEDS_REVIEW,
-                reason=f"The label shows '{extracted.value}', which could not be read as a percentage or proof. Confirm visually.",
-                **base,
-            )
         return FieldResult(
-            verdict=Verdict.MISMATCH,
-            reason=f"Application states {app_abv.abv:g}% but no alcohol content was found on the label.",
+            verdict=Verdict.NEEDS_REVIEW,
+            reason=f"The label shows '{extracted.value}', which could not be read as a percentage or proof. Confirm visually.",
             **base,
         )
+    if app_abv is None:
+        if application.alcohol_content.strip():
+            reason = f"The label shows '{extracted.value}' but the application value could not be read."
+        elif optional:
+            return FieldResult(
+                verdict=Verdict.NEEDS_REVIEW,
+                reason=f"The label states {label_abv.abv:g}% but the application left it blank. Add it to the application.",
+                **base,
+            )
+        else:
+            reason = f"The label states {label_abv.abv:g}% but the application left it blank."
+        return FieldResult(verdict=Verdict.NEEDS_REVIEW, reason=reason, **base)
 
     notes: list[str] = []
-    if label_abv.proof is not None and label_abv.source == "percent":
-        if abs(label_abv.proof - 2 * label_abv.abv) > 0.1:
+    if label_abv.proof is not None:
+        if not rules.proof_permitted:
+            notes.append(
+                f"Proof is a distilled spirits convention; {rules.name.lower()} labels state percent alcohol by volume."
+            )
+        elif label_abv.source == "percent" and abs(label_abv.proof - 2 * label_abv.abv) > 0.1:
             notes.append(
                 f"Label proof ({label_abv.proof:g}) does not equal twice the stated percentage."
             )
-    if abs(app_abv.abv - label_abv.abv) <= ABV_TOLERANCE:
-        verdict = Verdict.MISMATCH if notes else Verdict.MATCH
+    difference = abs(app_abv.abv - label_abv.abv)
+    if difference <= ABV_TOLERANCE:
+        verdict = Verdict.MISMATCH if any("does not equal twice" in n for n in notes) else Verdict.MATCH
         reason = f"Both state {label_abv.abv:g}% alcohol by volume."
-        if notes:
+        if verdict is Verdict.MISMATCH:
             reason = "Percentage matches, but the proof printed on the label is inconsistent."
+        elif notes:
+            verdict = Verdict.NEEDS_REVIEW
+    elif difference <= rules.abv_tolerance(label_abv.abv):
+        verdict = Verdict.NEEDS_REVIEW
+        reason = (
+            f"Application states {app_abv.abv:g}% but the label shows {label_abv.abv:g}%. The "
+            f"difference is within the ±{rules.abv_tolerance(label_abv.abv):g} labeling tolerance "
+            f"({rules.rule('alcohol_content').citation}), but the application should carry the labeled figure."
+        )
     else:
         verdict = Verdict.MISMATCH
         reason = f"Application states {app_abv.abv:g}% but the label shows {label_abv.abv:g}%."
@@ -377,11 +486,19 @@ def compare_net_contents(application: ApplicationData, extraction: LabelExtracti
             **base,
         )
 
-    notes = _standard_of_fill_notes(application.beverage_type, label_vol.milliliters)
-    if abs(app_vol.milliliters - label_vol.milliliters) <= VOLUME_TOLERANCE_ML:
+    rules = _class_of(application, extraction)
+    notes = _standard_of_fill_notes(rules, label_vol.milliliters)
+    metric_missing = rules.metric_required and label_vol.original_unit not in METRIC_UNITS
+    if metric_missing:
+        notes.append(
+            f"Only '{extracted.value}' was found; {rules.name.lower()} labels must state net "
+            f"contents in metric units ({rules.rule('net_contents').citation})."
+        )
+    if abs(app_vol.milliliters - label_vol.milliliters) <= _volume_tolerance(app_vol.milliliters):
         return FieldResult(
-            verdict=Verdict.MATCH,
-            reason=f"Both state {_fmt_ml(label_vol.milliliters)}.",
+            verdict=Verdict.NEEDS_REVIEW if metric_missing else Verdict.MATCH,
+            reason=f"Both state {_fmt_ml(label_vol.milliliters)}."
+            + (" The label lacks the required metric statement." if metric_missing else ""),
             notes=notes,
             **base,
         )
@@ -396,20 +513,55 @@ def compare_net_contents(application: ApplicationData, extraction: LabelExtracti
     )
 
 
+def _volume_tolerance(ml: float) -> float:
+    """Reading slack for volumes: a millilitre, or half a percent when the two statements
+    use different units (25.4 fl oz is 751 mL)."""
+    return max(VOLUME_TOLERANCE_ML, ml * 0.005)
+
+
 def _fmt_ml(ml: float) -> str:
     return f"{ml:g} mL"
 
 
-def _standard_of_fill_notes(beverage_type: BeverageType, ml: float) -> list[str]:
-    standards = {
-        BeverageType.DISTILLED_SPIRITS: SPIRITS_STANDARDS_ML,
-        BeverageType.WINE: WINE_STANDARDS_ML,
-    }.get(beverage_type)
+def _standard_of_fill_notes(rules: ClassRules, ml: float) -> list[str]:
+    standards = rules.standards_of_fill_ml
     if standards is None:
         return []
     if any(abs(ml - s) <= VOLUME_TOLERANCE_ML for s in standards):
         return []
-    return [f"{_fmt_ml(ml)} is not a common standard of fill for this beverage type. Confirm."]
+    return [
+        f"{_fmt_ml(ml)} is not a listed standard of fill for {rules.name.lower()}. Confirm."
+    ]
+
+
+def compare_sulfite_declaration(
+    application: ApplicationData, extraction: LabelExtraction
+) -> FieldResult:
+    """Wine only: 'Contains sulfites' is required at 10 ppm or more (27 CFR 4.32(e)). The
+    label cannot show the sulfur dioxide level, so a missing statement is a review item,
+    not a failure: the wine may qualify for the exemption."""
+    extracted = extraction.sulfite_declaration
+    base = dict(
+        field="sulfite_declaration",
+        label="Sulfite Declaration",
+        application_value="Required at 10 ppm or more",
+        label_value=extracted.value,
+        confidence=extracted.confidence,
+    )
+    if (extracted.value or "").strip():
+        return FieldResult(
+            verdict=Verdict.MATCH,
+            reason=f"The label declares sulfites ('{extracted.value}').",
+            **base,
+        )
+    return FieldResult(
+        verdict=Verdict.NEEDS_REVIEW,
+        reason=(
+            "No sulfite declaration was found. It is required when sulfur dioxide is 10 ppm "
+            "or more; confirm the wine qualifies for the exemption or add the statement."
+        ),
+        **base,
+    )
 
 
 def compare_country_of_origin(
@@ -482,15 +634,33 @@ _COMPARATORS = (
 
 
 def verify(application: ApplicationData, extraction: LabelExtraction) -> VerificationResult:
-    """Compare every required field and roll the verdicts up into a recommendation."""
+    """Compare every required field under the class's rules and roll the verdicts up."""
+    resolved, source = resolve_beverage_type(application, extraction)
+    rules = rules_for(resolved or BeverageType.DISTILLED_SPIRITS)
     fields = [_apply_confidence_gate(fn(application, extraction)) for fn in _COMPARATORS]
+    if rules.requirement("sulfite_declaration") is not Requirement.NOT_APPLICABLE:
+        fields.append(_apply_confidence_gate(compare_sulfite_declaration(application, extraction)))
     fields.append(_apply_confidence_gate(check_health_warning(extraction.health_warning)))
+    for f in fields:
+        rule = rules.fields.get(f.field)
+        if rule is not None:
+            f.citation = f.citation or rule.citation
+            f.requirement = rule.requirement.value
 
     summary: list[str] = []
     if not extraction.image_quality.readable:
         summary.append("The image could not be read reliably. Ask for a clearer photo.")
     for issue in extraction.image_quality.issues:
         summary.append(f"Image note: {issue}")
+    if source in ("class_type", "reader"):
+        summary.append(
+            f"Type of product taken from the label: {rules.name.lower()} "
+            f"(27 CFR part {rules.part})."
+        )
+    elif source == "unknown":
+        summary.append(
+            "Type of product could not be determined; checked under the distilled spirits rules."
+        )
 
     verdicts = {f.verdict for f in fields}
     if Verdict.MISMATCH in verdicts:
@@ -511,5 +681,8 @@ def verify(application: ApplicationData, extraction: LabelExtraction) -> Verific
         recommendation=recommendation,
         fields=fields,
         image_quality=extraction.image_quality,
+        beverage_type=resolved,
+        rules_part=rules.part,
+        beverage_type_inferred=source != "filed",
         summary=summary,
     )

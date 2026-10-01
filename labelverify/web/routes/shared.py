@@ -64,6 +64,13 @@ def healthz(request: Request) -> dict:
     return {"status": "ok", "extractor": renderer(request).extractor_label(request)}
 
 
+@router.get("/rules")
+def rules_page(request: Request, user: User = Depends(current_user)):
+    from ...engine.rules import all_rules
+
+    return renderer(request).page(request, "rules.html", rules=all_rules())
+
+
 @router.get("/inbox")
 def inbox(request: Request, db: Session = Depends(get_db), user: User = Depends(current_user)):
     items = services.activity_feed(db, user)

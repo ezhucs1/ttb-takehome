@@ -306,8 +306,6 @@
       samplePreview.hidden = false;
       $("img", samplePreview).src = btn.querySelector("img").src;
       $("span", samplePreview).textContent = `Sample: ${btn.textContent.trim()}`;
-      const app = JSON.parse(btn.dataset.application || "{}");
-      if (app.beverage_type) $("#beverage_type_1").value = app.beverage_type;
       status.textContent = "";
     }
     $$(".sample").forEach((btn) => btn.addEventListener("click", () => pickSample(btn)));
@@ -336,11 +334,11 @@
         const secs = ((performance.now() - started) / 1000).toFixed(1);
         const n = (data.image_urls || []).length;
         status.textContent = `Read ${n > 1 ? n + " images" : "the label"} in ${secs} s · ${data.serial}`;
-        $("#beverage_type").value = $("#beverage_type_1").value;
         for (const [key, value] of Object.entries(data.prefill || {})) {
           const el = detailsForm.elements[key];
           if (el) el.value = value;
         }
+        renderChecklist((data.prefill || {}).beverage_type ? "label" : "none");
         if (data.prefill && data.prefill.country_of_origin) $("#is_import").checked = true;
         $("#prefill-hint").textContent = data.warning ? data.warning : "Filled from the label. Check every value against your application.";
         detailsForm.action = `/applicant/applications/${applicationId}/precheck`;
@@ -372,6 +370,39 @@
         submitForm.appendChild(input);
       });
     });
+  }
+
+  // Step 2 of the wizard: the requirements for the detected class, from the engine's
+  // own rulebook (embedded in the page), re-rendered whenever the type changes.
+  function renderChecklist(source) {
+    const host = $("#rules-checklist");
+    if (!host) return;
+    const select = $("#beverage_type");
+    const rules = JSON.parse(host.dataset.rules || "[]");
+    const chosen = rules.find((r) => r.beverage_type === select.value);
+    const body = $("[data-checklist-body]", host);
+    const empty = $("[data-checklist-empty]", host);
+    if (!chosen) { body.hidden = true; empty.hidden = false; return; }
+    const items = chosen.checklist.map((i) =>
+      `<li><strong>${i.label}</strong>` +
+      `<span class="pill pill-${i.requirement === "required" ? "info" : "neutral"} pill-xs">${i.requirement}</span>` +
+      (i.checked_by === "specialist" ? `<span class="pill pill-neutral pill-xs" title="A visual judgment the specialist makes">specialist</span>` : "") +
+      `<span class="cite">${i.citation}</span></li>`
+    ).join("");
+    const how = source === "label" ? "Detected from the label. Change it above if that is wrong."
+      : source === "user" ? "Chosen by you." : "";
+    body.innerHTML =
+      `<div class="checklist-title">${chosen.name} · 27 CFR part ${chosen.part}</div>` +
+      `<ul>${items}</ul>` +
+      (how ? `<p class="muted small checklist-note">${how}</p>` : "");
+    body.hidden = false; empty.hidden = true;
+  }
+
+  function checklist() {
+    const select = $("#beverage_type");
+    if (!select || !$("#rules-checklist")) return;
+    select.addEventListener("change", () => renderChecklist("user"));
+    renderChecklist("none");
   }
 
   function decisionPanel() {
@@ -431,5 +462,5 @@
     if (dialog.hasAttribute("data-open")) open();
   }
 
-  document.addEventListener("DOMContentLoaded", () => { wire(document); wizard(); decisionPanel(); unreadBadge(); signin(); });
+  document.addEventListener("DOMContentLoaded", () => { wire(document); wizard(); checklist(); decisionPanel(); unreadBadge(); signin(); });
 })();

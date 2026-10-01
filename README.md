@@ -14,7 +14,8 @@ recommends; a person decides.
 
 - Upload the label first, front and back panels together if the product has both. Images
   can be added one at a time, removed individually, and reordered; the application form
-  fills itself from what is printed across all panels.
+  fills itself from what is printed across all panels, including the type of product,
+  and step 2 shows what that class of label must carry, with the regulation for each item.
 - Run a pre-check before submitting and fix problems while they are cheap.
 - See correction requests as plain-language notices, reply on the exact field in
   question, and resubmit with a revised label. The application keeps its number.
@@ -49,7 +50,24 @@ nothing on any page loads from a CDN.
 | Alcohol content | Parsed to % ABV; proof converted; label proof must equal 2 × ABV | `45% Alc./Vol. (90 Proof)` = `45` = `90 proof` |
 | Net contents | Parsed to mL; standard-of-fill sizes noted | `750 mL` = `0.75 L` = `75 cL` |
 | Country of origin | Required for imports only; aliases folded | `Product of Scotland` = `United Kingdom` |
-| Type of product | The category the class/type implies must be the category filed | `Straight Bourbon Whiskey` filed as wine is a mismatch |
+| Type of product | The class the label implies must be the class filed; if none was filed, the label decides and that class's rules apply | `Straight Bourbon Whiskey` filed as wine is a mismatch |
+| Sulfite declaration | Wine only: "Contains sulfites" is required at 10 ppm or more, so a missing statement goes to review | wine label without the statement |
+
+**The rules differ by class**, and the engine applies the class's own (27 CFR part 5 for
+distilled spirits, part 4 for wine, part 7 for malt beverages; part 16 for the warning):
+
+| | Distilled spirits | Wine | Malt beverage |
+| --- | --- | --- | --- |
+| Alcohol content | Required; proof allowed; ±0.15 | Required; "Table Wine" may replace the number at 7 to 14%; ±1.5 up to 14%, ±1.0 above | Optional federally; ±0.3 when stated |
+| Net contents | Metric; standards of fill | Metric; standards of fill | Fluid ounces or metric; no standards of fill |
+| Sulfites | Not applicable | Required at 10 ppm or more | Not applicable |
+
+A difference inside the class's labeling tolerance is a review item rather than a
+mismatch, because the application should carry the labeled figure. Standards of fill are
+advisory (a note, never a verdict) because TTB's list changes; the engine carries the
+January 2025 sizes. The rulebook lives in one module, `labelverify/engine/rules.py`, and
+drives the comparisons, the applicant's step-2 checklist, the citations on every result
+row, and the reference page at `/rules`.
 | Health warning | Word for word against 27 CFR 16.21; `GOVERNMENT WARNING` must be all caps; bold is a visual judgment that goes to review when uncertain | exact statutory text |
 
 Per-field verdicts are match, needs review, mismatch, or not applicable. A match read at
@@ -77,6 +95,10 @@ Open the landing page, choose Sign in, and use one of the demo accounts (passwor
 
 Maria is a label-compliance agent filing for several producers, so her one account holds
 all ten sample cases.
+
+The `beverage_type` column may be left blank in a batch CSV, and the type may be left on
+"Detect from the label" in the form: the reader decides the class and the record says the
+type was taken from the label.
 
 **Trying the batch upload** needs a CSV and a zip of images. The batch page offers both
 ready-made: a twelve-row CSV and a zip of the sample labels. Ten rows are the bundled
@@ -250,9 +272,11 @@ application. No model is involved in the comparison step.
   the Azure-hosted path.
 - Up to four images per label set (front, back, neck). They are read together in one
   model call and each field is reported once.
-- The seven fields named in the brief are checked, plus one consistency check: the
-  category the class/type implies (spirits, wine, malt beverage) must be the category
-  filed. Beverage-specific labeling rules beyond that are not applied.
+- The seven fields named in the brief are checked under the rules of the product's class,
+  plus the type-of-product consistency check and, for wine, the sulfite declaration.
+  Class-specific rules beyond those (age statements, appellations, vintage, varietal
+  percentages, qualifying phrases, type sizes) are listed on the rules page as the
+  specialist's visual checks and are not applied by the engine.
 - Bold detection on the warning heading is a visual judgment and is surfaced for review
   rather than failed automatically.
 - Sample labels are synthetic renders, not real COLA images.

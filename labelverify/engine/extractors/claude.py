@@ -35,6 +35,8 @@ Rules:
 - net_contents is the volume statement as printed, for example "750 mL".
 - producer_name and producer_address come from the "Distilled by", "Bottled by", "Produced by", "Brewed by", or "Imported by" statement.
 - country_of_origin is the "Product of ..." or "Imported from ..." statement, or null if none.
+- sulfite_declaration is the sulfite statement as printed, for example "Contains Sulfites", or null if none.
+- product_category is your judgment of which TTB class the product is, from every cue (the class/type words, "Distilled by" or "Brewed by", proof, vintage, grape variety, "Contains sulfites"): exactly one of "distilled_spirits", "wine", or "malt_beverage", with your confidence; null if the label gives no basis.
 - health_warning.text must be the complete Government Health Warning Statement transcribed verbatim starting at the words "GOVERNMENT WARNING", preserving the capitalization used on the label.
 - health_warning.heading_all_caps is true only if the words GOVERNMENT WARNING are printed entirely in capital letters.
 - health_warning.heading_bold is true only if that heading is printed noticeably bolder than the sentences that follow it. Use null if you cannot tell.

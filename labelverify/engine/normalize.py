@@ -96,7 +96,8 @@ def _to_float(raw: str) -> float:
 
 # --------------------------------------------------------------------------- net contents
 
-_METRIC_UNITS = {"ml", "cl", "l"}
+METRIC_UNITS = {"ml", "cl", "l"}
+_METRIC_UNITS = METRIC_UNITS  # kept for older imports
 
 _UNIT_TO_ML: dict[str, float] = {
     "ml": 1.0,
