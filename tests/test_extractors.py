@@ -197,3 +197,37 @@ class TestRegistry:
         first = fixture.extract(b"", "image/png")
         first.brand_name.value = "changed"
         assert fixture.extract(b"", "image/png").brand_name.value == "OLD TOM DISTILLERY"
+
+
+class TestDailyBudget:
+    def test_budget_refuses_after_the_limit_and_resets_next_day(self, extraction):
+        from datetime import UTC, datetime
+
+        from labelverify.engine.extractors.budget import BudgetedExtractor, BudgetExhausted
+
+        inner = FixtureExtractor(extraction)
+        inner.name = "claude"  # pretend it costs money
+        now = [datetime(2026, 10, 1, 23, 59, tzinfo=UTC)]
+        budget = BudgetedExtractor(inner, 2, clock=lambda: now[0])
+        assert budget.name == "claude" and budget.remaining == 2
+        budget.extract(b"x", "image/png")
+        budget.extract_panels([(b"x", "image/png")])
+        assert budget.remaining == 0 and len(inner.calls) == 2
+        with pytest.raises(BudgetExhausted, match="reading budget of 2"):
+            budget.extract(b"x", "image/png")
+        assert len(inner.calls) == 2  # the refused call never reached the model
+        now[0] = datetime(2026, 10, 2, 0, 1, tzinfo=UTC)
+        budget.extract(b"x", "image/png")
+        assert budget.used_today == 1
+
+    def test_with_budget_wraps_only_paid_extractors_when_configured(self, extraction, monkeypatch):
+        from labelverify.engine.extractors.budget import BudgetedExtractor, with_budget
+
+        monkeypatch.delenv("LABELVERIFY_DAILY_READ_LIMIT", raising=False)
+        inner = FixtureExtractor(extraction)
+        assert with_budget(inner) is inner  # nothing configured
+        monkeypatch.setenv("LABELVERIFY_DAILY_READ_LIMIT", "5")
+        assert with_budget(inner) is inner  # fixtures are free
+        inner.name = "gemini"
+        wrapped = with_budget(inner)
+        assert isinstance(wrapped, BudgetedExtractor) and wrapped.limit == 5

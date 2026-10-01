@@ -13,12 +13,15 @@ from __future__ import annotations
 import os
 
 from .base import ExtractionError, Extractor, FixtureExtractor
+from .budget import BudgetedExtractor, BudgetExhausted, with_budget
 from .claude import ClaudeExtractor
 from .demo import DemoExtractor
 from .gemini import GeminiExtractor
 from .tesseract import TesseractExtractor
 
 __all__ = [
+    "BudgetExhausted",
+    "BudgetedExtractor",
     "ClaudeExtractor",
     "DemoExtractor",
     "ExtractionError",
@@ -28,6 +31,7 @@ __all__ = [
     "TesseractExtractor",
     "get_extractor",
     "resolve_extractor_name",
+    "with_budget",
 ]
 
 _REGISTRY: dict[str, type] = {
@@ -51,9 +55,10 @@ def resolve_extractor_name(name: str | None = None) -> str:
 
 
 def get_extractor(name: str | None = None) -> Extractor:
+    """The configured extractor, wrapped in the daily read budget when one is set."""
     chosen = resolve_extractor_name(name)
     try:
-        return _REGISTRY[chosen]()
+        return with_budget(_REGISTRY[chosen]())
     except KeyError as exc:
         raise ValueError(
             f"Unknown extractor '{chosen}'. Choose one of: {', '.join(sorted(_REGISTRY))}."

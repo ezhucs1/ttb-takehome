@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
@@ -22,6 +24,23 @@ from ..seed import DEMO_PASSWORD, USERS
 from .common import load_application, renderer
 
 router = APIRouter()
+
+
+def _login_context() -> dict:
+    """What the landing page shows besides the form. Demo accounts are listed unless
+    LABELVERIFY_DEMO_ACCOUNTS=false, which a public deployment should set; reviewers then
+    take the credentials from the README instead of the page."""
+    show_demo = os.environ.get("LABELVERIFY_DEMO_ACCOUNTS", "true").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+        "off",
+    )
+    return {
+        "demo_users": USERS if show_demo else [],
+        "demo_password": DEMO_PASSWORD if show_demo else "",
+        "repo_url": os.environ.get("LABELVERIFY_REPO_URL", "https://github.com/ezhucs1/ttb-takehome"),
+    }
 
 
 def _home_for(user: User) -> str:
@@ -100,9 +119,7 @@ def home(request: Request, user: User | None = Depends(optional_user)):
 def login_page(request: Request, next: str = "", user: User | None = Depends(optional_user)):
     if user:
         return RedirectResponse(_home_for(user), status_code=303)
-    return renderer(request).page(
-        request, "login.html", next=next, demo_users=USERS, demo_password=DEMO_PASSWORD, error=None
-    )
+    return renderer(request).page(request, "login.html", next=next, error=None, **_login_context())
 
 
 @router.post("/login")
@@ -120,9 +137,8 @@ def login(
             "login.html",
             status_code=401,
             next=next,
-            demo_users=USERS,
-            demo_password=DEMO_PASSWORD,
             error="That email and password do not match.",
+            **_login_context(),
         )
     response = RedirectResponse(_safe_next(user, next), status_code=303)
     response.set_cookie(

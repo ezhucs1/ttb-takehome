@@ -1,61 +1,77 @@
 {% extends "layout.html" %}
 {% block title %}Sign in{% endblock %}
 {% block auth %}
-<div class="auth-panel">
-  <div class="auth-brand">
-    <span class="logo-mark">LV</span>
-    <div>
-      <h1>LabelVerify</h1>
-      <p>AI-assisted label review for COLA applications</p>
-    </div>
-  </div>
+<div class="landing">
+  <div class="landing-hero" style="--hero: url('/static/hero.jpg')" aria-hidden="true"></div>
 
-  <form method="post" action="/login" class="auth-form">
-    <input type="hidden" name="next" value="{{ next }}">
-    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
-    <div class="field">
-      <label for="email">Email</label>
-      <input type="email" name="email" id="email" required autofocus autocomplete="username">
-    </div>
-    <div class="field">
-      <label for="password">Password</label>
-      <input type="password" name="password" id="password" required autocomplete="current-password">
-    </div>
-    <button class="btn btn-primary btn-block" type="submit">Sign in</button>
-  </form>
-
-  <div class="auth-demo">
-    <div class="auth-demo-title">Demo accounts <span class="muted">· password <code>{{ demo_password }}</code></span></div>
-    <div class="auth-demo-grid">
-      {% for u in demo_users %}
-      <button type="button" class="demo-user" data-email="{{ u.email }}">
-        <span class="avatar">{{ u.name.split(' ') | map('first') | join('') }}</span>
-        <span class="demo-user-text">
-          <strong>{{ u.name }}</strong>
-          <small>{{ 'Labeling specialist' if u.role == 'specialist' else 'Applicant' }} · {{ u.organization }}</small>
-        </span>
+  <header class="landing-bar">
+    <a class="landing-logo" href="/">
+      <span class="logo-mark">LV</span>
+      <span>LabelVerify</span>
+    </a>
+    <nav class="landing-actions">
+      <a class="landing-link" href="{{ repo_url }}" target="_blank" rel="noopener">
+        <svg class="icon"><use href="#i-github"></use></svg> GitHub
+      </a>
+      <button type="button" class="landing-signin" data-open-signin title="Sign in" aria-label="Sign in">
+        <svg class="icon"><use href="#i-user"></use></svg> Sign in
       </button>
-      {% endfor %}
-    </div>
-  </div>
-</div>
-<div class="auth-aside">
-  <div class="auth-hero" style="--hero: url('/api/samples/old-tom-angled-photo/image')" aria-hidden="true"></div>
-  <div class="auth-aside-inner">
-    <span class="eyebrow">TTB · COLA label verification</span>
-    <h2>Five seconds per label, not five minutes.</h2>
-    <p>Applicants get an instant pre-check before they submit. Specialists open a queue where the matching work is already done and every judgment call is flagged for them.</p>
-    <ul class="auth-points">
-      <li>Field-by-field comparison against the COLA application</li>
-      <li>Word-for-word health warning check with capitalization rules</li>
-      <li>Comment threads anchored to the exact field in question</li>
-      <li>Batch upload for peak-season importers</li>
-    </ul>
+    </nav>
+  </header>
+
+  <section class="landing-copy">
+    <span class="eyebrow">TTB · COLA label verification · prototype</span>
+    <h1>Five seconds per label,<br>not five minutes.</h1>
+    <p>Applicants get an instant pre-check before they submit. Specialists open a queue where the matching is already done and every judgment call is flagged for them.</p>
+    <button type="button" class="landing-cta" data-open-signin>Sign in <svg class="icon"><use href="#i-arrow"></use></svg></button>
+  </section>
+
+  <footer class="landing-foot">
     <div class="auth-status">
       <span><i class="mode-dot {% if demo_mode %}mode-demo{% endif %}"></i> Reader <strong>{{ extractor_label }}</strong></span>
       <span>Budget <strong>5 s per label</strong></span>
       <span>Rules <strong>27 CFR 16.21</strong></span>
     </div>
-  </div>
+    <p class="landing-disclaimer">A prototype built for a TTB take-home exercise. Not an official Alcohol and Tobacco Tax and Trade Bureau system.</p>
+  </footer>
+
+  <dialog id="signin" class="signin" {% if error %}data-open{% endif %}>
+    <form method="post" action="/login" class="auth-form" autocomplete="on">
+      <div class="signin-head">
+        <h2>Sign in</h2>
+        <button type="button" class="icon-btn" data-close-signin aria-label="Close"><svg class="icon"><use href="#i-x"></use></svg></button>
+      </div>
+      <input type="hidden" name="next" value="{{ next }}">
+      {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" name="email" id="email" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" name="password" id="password" required autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+
+      {% if demo_users %}
+      <div class="auth-demo">
+        <div class="auth-demo-title">Demo accounts <span class="muted">· password <code>{{ demo_password }}</code></span></div>
+        <div class="auth-demo-grid">
+          {% for u in demo_users %}
+          <button type="button" class="demo-user" data-email="{{ u.email }}">
+            <span class="avatar">{{ u.name.split(' ') | map('first') | join('') }}</span>
+            <span class="demo-user-text">
+              <strong>{{ u.name }}</strong>
+              <small>{{ 'Labeling specialist' if u.role == 'specialist' else 'Applicant' }} · {{ u.organization }}</small>
+            </span>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <p class="muted small signin-note">Reviewer accounts are listed in the <a href="{{ repo_url }}#run-it-locally" target="_blank" rel="noopener">project README</a>.</p>
+      {% endif %}
+    </form>
+  </dialog>
 </div>
 {% endblock %}

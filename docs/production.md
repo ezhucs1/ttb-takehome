@@ -11,8 +11,9 @@ need. Ordered roughly by how soon each would matter.
 - **Session secret.** With `SECRET_KEY` unset, a key is generated once and stored beside
   the database, which is enough for one machine. A deployment with more than one instance,
   or one that must survive losing its volume, sets `SECRET_KEY` from its secret store.
-- **Rate limiting and upload scanning.** None. Add a reverse-proxy limit on the upload
-  endpoints and antivirus scanning of uploaded files.
+- **Rate limiting and upload scanning.** Only a process-wide daily cap on model reads.
+  Add per-account quotas, a reverse-proxy limit on the upload endpoints, and antivirus
+  scanning of uploaded files.
 - **Audit trail.** Status events record who did what and when, but comments and notices
   are editable only by insertion, not deletion; a production system needs a formal,
   immutable audit log and records-retention policy.

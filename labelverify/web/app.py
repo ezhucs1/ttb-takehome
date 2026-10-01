@@ -59,6 +59,7 @@ def create_app(
     app.state.samples = load_manifest()
     app.state.samples_by_id = {s["id"]: s for s in app.state.samples}
     app.state.render = Renderer(build_templates())
+    app.state.asset_version = _asset_version()
 
     def resolve_extractor() -> Extractor:
         if app.state.extractor is None:
@@ -100,6 +101,17 @@ def create_app(
     app.include_router(specialist.router)
     app.include_router(api.router)
     return app
+
+
+def _asset_version() -> str:
+    """Short hash of the stylesheet and script, appended to their URLs so a deploy never
+    serves a stale cached copy from the previous version."""
+    import hashlib
+
+    digest = hashlib.sha1()
+    for name in ("app.css", "app.js"):
+        digest.update((HERE / "static" / name).read_bytes())
+    return digest.hexdigest()[:10]
 
 
 def _wants_json(request: Request) -> bool:

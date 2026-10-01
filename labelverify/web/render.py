@@ -148,6 +148,7 @@ class Renderer:
         context.setdefault("extractor_label", self.extractor_label(request))
         context.setdefault("demo_mode", self.extractor_label(request) == "Demo mode")
         context.setdefault("path", request.url.path)
+        context.setdefault("asset_version", getattr(request.app.state, "asset_version", ""))
         if context["user"] is not None and "unread_total" not in context:
             with request.app.state.session_factory() as db:
                 context["unread_total"] = services.unread_total(db, context["user"])

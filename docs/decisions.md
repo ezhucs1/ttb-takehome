@@ -213,7 +213,24 @@ the default suits long review sessions and lets label photographs read as the on
 saturated thing on the page. The restyle changed no markup or class names, so every
 server and browser check from before it still applies.
 
-## 11. Bold detection is a reviewed judgment, not a hard fail
+## 11. A public URL gets a daily read budget, not a login wall
+
+**Chose:** two environment switches for deployment. ``LABELVERIFY_DEMO_ACCOUNTS=false``
+removes the credential list from the sign-in dialog, and ``LABELVERIFY_DAILY_READ_LIMIT``
+caps paid model reads per UTC day, after which uploads return a clear message while the
+bundled samples keep working. The landing page also says it is a prototype and not an
+official TTB system, because it carries the agency's seal.
+
+**Considered:** a captcha; per-account quotas; keeping the account list and trusting the
+URL to stay private.
+
+**Why:** the brief asks for a deployed URL that reviewers can use, and the credentials
+are in the README by design, so hiding them from the page only keeps them off search
+engines and casual visitors. The thing that actually bounds the cost is the cap: a
+process-local counter is enough for one always-on machine and adds no datastore.
+Per-account quotas would be the production answer and are noted in production.md.
+
+## 12. Bold detection is a reviewed judgment, not a hard fail
 
 **Chose:** the model reports whether the warning heading looks bolder than the body; a
 "no" or "unsure" produces "needs review", never "mismatch".

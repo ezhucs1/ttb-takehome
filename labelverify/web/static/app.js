@@ -419,5 +419,17 @@
     document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });
   }
 
-  document.addEventListener("DOMContentLoaded", () => { wire(document); wizard(); decisionPanel(); unreadBadge(); });
+  // Landing page: the sign-in form lives in a native <dialog>, opened from the bar or
+  // the headline button, and reopened automatically after a failed attempt.
+  function signin() {
+    const dialog = $("#signin");
+    if (!dialog) return;
+    const open = () => { if (!dialog.open) dialog.showModal(); const first = $("#email", dialog); if (first) first.focus(); };
+    $$("[data-open-signin]").forEach((btn) => btn.addEventListener("click", open));
+    $$("[data-close-signin]", dialog).forEach((btn) => btn.addEventListener("click", () => dialog.close()));
+    dialog.addEventListener("click", (e) => { if (e.target === dialog) dialog.close(); });
+    if (dialog.hasAttribute("data-open")) open();
+  }
+
+  document.addEventListener("DOMContentLoaded", () => { wire(document); wizard(); decisionPanel(); unreadBadge(); signin(); });
 })();

@@ -66,7 +66,8 @@ cp .env.example .env                                          # optional: add AN
 .venv/bin/uvicorn labelverify.web.app:serve --factory --reload  # http://127.0.0.1:8000
 ```
 
-Sign in with one of the demo accounts shown on the login page (password `labelverify`):
+Open the landing page, choose Sign in, and use one of the demo accounts (password
+`labelverify`). Locally the dialog lists them; a public deployment hides the list.
 
 | Role | Account | What to try |
 | --- | --- | --- |
@@ -160,6 +161,11 @@ docker run -p 8000:8000 -v labelverify-data:/app/data -e ANTHROPIC_API_KEY=... -
 the same way; use a paid or always-on tier so the demo does not hit a cold start, which is
 exactly the vendor-pilot failure from the interviews.
 
+`fly.toml` sets two guards for a public URL: the sign-in dialog shows no demo credentials
+(reviewers take them from this README), and paid model reads are capped per day so an
+open link cannot run up the API bill. Both are plain environment variables, so any host
+can set them.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -172,6 +178,9 @@ exactly the vendor-pilot failure from the interviews.
 | `LABELVERIFY_MODEL` | `claude-sonnet-5-5` | Extraction model. Measured: Sonnet 5.5 4.1 s, Opus 5.5 6.0 s on the hardest sample; `claude-haiku-4-5` is faster if its reads hold up |
 | `LABELVERIFY_NOTICE_MODEL` | `claude-opus-5-5` | Claude model for the notice rewrite when the provider is `claude` |
 | `LABELVERIFY_EXTRACT_TIMEOUT` | `20` | Seconds before an extraction call is abandoned |
+| `LABELVERIFY_DAILY_READ_LIMIT` | unlimited | Paid model reads allowed per UTC day; after that uploads get a clear message and the sample labels still work. Set it on any public URL |
+| `LABELVERIFY_DEMO_ACCOUNTS` | `true` | Show the demo account list in the sign-in dialog. Set `false` on a public URL; reviewers use the accounts in this README |
+| `LABELVERIFY_REPO_URL` | this repository | GitHub link on the landing page |
 | `LABELVERIFY_IMAGE_MAX_EDGE` | `1500` | Long edge in pixels after preprocessing; smaller is faster, larger keeps more small-print detail |
 | `DATABASE_URL` | `sqlite:///./data/labelverify.db` | SQLAlchemy URL; Postgres works unchanged |
 | `SECRET_KEY` | generated once, kept beside the database | Signs session cookies; set it explicitly in any shared deployment |

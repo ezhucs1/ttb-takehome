@@ -96,6 +96,26 @@ class TestAuth:
         assert resp.status_code == 403 and "Not your page" in resp.text
         assert "signed in as Sarah Chen" in resp.text and 'href="/"' in resp.text
 
+    def test_landing_page_has_the_sign_in_dialog_and_versioned_assets(self, anon):
+        page = anon.get("/login").text
+        assert '<dialog id="signin"' in page and "data-open-signin" in page
+        assert "Not an official" in page  # the prototype disclaimer next to the seal
+        assert re.search(r'/static/app\.css\?v=[0-9a-f]{10}', page)
+        assert "Sarah Chen" in page and 'data-open' not in page.split("<dialog")[1].split(">")[0]
+
+    def test_failed_login_reopens_the_dialog(self, anon):
+        resp = anon.post("/login", data={"email": SPECIALIST["email"], "password": "nope"})
+        assert resp.status_code == 401
+        assert '<dialog id="signin" class="signin" data-open>' in resp.text
+
+    def test_demo_accounts_can_be_hidden_for_a_public_deployment(self, anon, monkeypatch):
+        monkeypatch.setenv("LABELVERIFY_DEMO_ACCOUNTS", "false")
+        page = anon.get("/login").text
+        assert "Sarah Chen" not in page and "labelverify</code>" not in page
+        assert "project README" in page and "github.com/ezhucs1/ttb-takehome" in page
+        # Hiding the list does not disable the accounts themselves.
+        assert anon.post("/login", data=SPECIALIST, follow_redirects=False).status_code == 303
+
     def test_bad_password(self, anon):
         resp = anon.post("/login", data={"email": SPECIALIST["email"], "password": "nope"})
         assert resp.status_code == 401 and "do not match" in resp.text
