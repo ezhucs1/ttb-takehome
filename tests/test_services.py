@@ -454,6 +454,72 @@ class TestBatch:
                 if i.application
             )
 
+    def test_slow_reads_hold_no_database_lock_and_the_batch_always_finishes(
+        self, session_factory, users, db, extraction
+    ):
+        """Reproduces the production failure: a real model read takes seconds, five rows
+        run at once, and SQLite allows one writer. The read must happen with no
+        transaction open, and a crashing row must not leave the batch 'working'."""
+        import sqlite3
+        import threading
+        import time
+
+        from labelverify.web.models import Batch
+
+        lock_errors: list[str] = []
+        calls = {"n": 0}
+        counter_lock = threading.Lock()
+
+        class SlowReader:
+            """A reader that takes a while and, during the wait, proves another connection
+            can still write. The seventh row blows up with a non-extraction error."""
+
+            name = "slow"
+
+            def extract(self, image, media_type):
+                return self.extract_panels([(image, media_type)])
+
+            def extract_panels(self, panels):
+                with counter_lock:
+                    calls["n"] += 1
+                    n = calls["n"]
+                time.sleep(0.25)
+                path = str(session_factory.kw["bind"].url).removeprefix("sqlite:///")
+                conn = sqlite3.connect(path, timeout=0.05)  # 50 ms: fails fast if locked
+                try:
+                    conn.execute("UPDATE users SET organization = organization WHERE 1 = 0")
+                    conn.commit()
+                except sqlite3.OperationalError as exc:
+                    lock_errors.append(str(exc))
+                finally:
+                    conn.close()
+                if n == 7:
+                    raise RuntimeError("reader crashed on this row")
+                return extraction.model_copy(deep=True)
+
+        rows = []
+        for i in range(8):
+            row = dict(sample("old-tom-bourbon")["application"])
+            row["image"] = "old-tom-bourbon.png"
+            row["is_import"] = "false"
+            row["brand_name"] = f"Row {i + 1}"
+            rows.append(row)
+        parsed = services.parse_batch(self._csv(rows), self._zip(["old-tom-bourbon.png"]))
+        assert parsed.errors == []
+        batch = services.create_batch(db, users["maria@alvarezlabels.com"], "slow.csv", parsed)
+        db.commit()
+
+        services.process_batch(session_factory, batch.id, parsed, SlowReader())
+
+        assert lock_errors == [], f"a write was blocked during a model read: {lock_errors}"
+        with session_factory() as fresh:
+            done = fresh.get(Batch, batch.id)
+            assert done.status == "done" and done.finished_at is not None
+            assert (done.completed, done.failed) == (7, 1)
+            crashed = [i for i in done.items if i.status == "error"]
+            assert len(crashed) == 1 and "reader crashed" in crashed[0].error
+            assert all(i.status != "pending" for i in done.items)
+
     def test_parse_errors(self):
         parsed = services.parse_batch(b"brand_name\nX", b"not a zip")
         assert any("missing required column" in e for e in parsed.errors)

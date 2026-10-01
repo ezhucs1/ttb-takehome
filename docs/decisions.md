@@ -141,6 +141,15 @@ its own database session, with atomic counters for progress.
 under typical API rate limits. The first version lost counter updates across threads;
 switching to `UPDATE ... SET completed = completed + 1` fixed it.
 
+A second fault only appeared with a real model: each worker inserted the application and
+its images, then called the model while still inside that write transaction. SQLite has
+one writer, a read takes seconds, and the other workers timed out with "database is
+locked"; when that error hit the handler's own commit, the batch never closed and rows
+sat at "pending". The worker now runs three steps in two short transactions, with the
+model call in between holding no lock, and a finalizer closes the batch whatever happens.
+A test drives five slow readers at once and checks, from a separate connection during
+each read, that a write is never blocked.
+
 ## 8. Notices are drafted from findings, then edited by a human
 
 **Chose:** a deterministic template that lists each flagged field, what the label shows,

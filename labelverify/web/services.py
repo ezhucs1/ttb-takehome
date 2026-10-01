@@ -219,43 +219,81 @@ def prefill_fields(extraction: LabelExtraction) -> dict[str, str]:
     }
 
 
-def record_run(
-    db: Session,
-    app: Application,
-    extractor: Extractor,
-    trigger: str,
-) -> VerificationRun:
-    """Run verification on the application's current label set and store the result."""
+@dataclass(frozen=True)
+class LabelSet:
+    """The bytes of an application's current label set, detached from any session, so a
+    model call can run with no database transaction open (SQLite has one writer)."""
+
+    application_id: str
+    image_id: str
+    image_version: int
+    media_type: str
+    panels: tuple[bytes, ...]
+    data: ApplicationData
+
+
+def label_set_of(app: Application) -> LabelSet:
     images = app.current_images
     if not images:
         raise WorkflowError("This application has no label image.")
-    image = images[0]
+    first = images[0]
+    return LabelSet(
+        application_id=app.id,
+        image_id=first.id,
+        image_version=first.version,
+        media_type=first.media_type,
+        panels=tuple(img.data for img in images),
+        data=to_application_data(app),
+    )
+
+
+def verify_label_set(
+    label_set: LabelSet, extractor: Extractor
+) -> tuple[VerificationResult | None, str | None]:
+    """The model call. Returns (result, None) or (None, error message)."""
     try:
-        result = run_verification(
-            [img.data for img in images],
-            to_application_data(app),
-            extractor=extractor,
-            prepare=False,
-            media_type=image.media_type,
+        return (
+            run_verification(
+                list(label_set.panels),
+                label_set.data,
+                extractor=extractor,
+                prepare=False,
+                media_type=label_set.media_type,
+            ),
+            None,
         )
     except ExtractionError as exc:
+        return None, str(exc)
+
+
+def store_run(
+    db: Session,
+    app: Application,
+    label_set: LabelSet,
+    extractor_name: str,
+    trigger: str,
+    result: VerificationResult | None,
+    error: str | None,
+) -> VerificationRun:
+    """Persist the outcome of ``verify_label_set`` on the application."""
+    if result is None:
         run = VerificationRun(
             application_id=app.id,
-            image_id=image.id,
-            image_version=image.version,
+            image_id=label_set.image_id,
+            image_version=label_set.image_version,
             trigger=trigger,
-            extractor=extractor.name,
+            extractor=extractor_name,
             recommendation="error",
             result_json="",
-            error=str(exc),
+            error=error or "The label could not be read.",
         )
         app.runs.append(run)
         db.flush()
         return run
     run = VerificationRun(
         application_id=app.id,
-        image_id=image.id,
-        image_version=image.version,
+        image_id=label_set.image_id,
+        image_version=label_set.image_version,
         trigger=trigger,
         extractor=result.extractor,
         recommendation=result.recommendation.value,
@@ -269,6 +307,22 @@ def record_run(
     app.recommendation = run.recommendation
     app.risk_score = risk_score(result)
     return run
+
+
+def record_run(
+    db: Session,
+    app: Application,
+    extractor: Extractor,
+    trigger: str,
+) -> VerificationRun:
+    """Run verification on the application's current label set and store the result.
+
+    Single-request paths use this. The batch worker splits the same three steps across
+    two short transactions so the model call never holds the database's write lock.
+    """
+    label_set = label_set_of(app)
+    result, error = verify_label_set(label_set, extractor)
+    return store_run(db, app, label_set, extractor.name, trigger, result, error)
 
 
 # --------------------------------------------------------------------------- applicant actions
@@ -1086,56 +1140,88 @@ def process_batch(
         applicant = db.get(User, batch.applicant_id)
         items = [(item.id, item.row_number) for item in batch.items]
 
-    def work(item_id: str, row_number: int) -> None:
-        row = parsed.rows[row_number - 1]
-        ok = False
+    def row_inputs(row: dict) -> tuple[ApplicationData, list[Upload]]:
+        names = split_image_names(row.get("image", ""))
+        if not names:
+            raise WorkflowError("The image column is empty.")
+        uploads: list[Upload] = []
+        for name in names:
+            image = parsed.images.get(name)
+            if image is None:
+                raise WorkflowError(f"Image '{name}' was not found in the zip.")
+            uploads.append((image, name))
+        data = ApplicationData(
+            beverage_type=row.get("beverage_type", ""),
+            brand_name=row.get("brand_name", ""),
+            class_type=row.get("class_type", ""),
+            alcohol_content=row.get("alcohol_content", ""),
+            net_contents=row.get("net_contents", ""),
+            producer_name=row.get("producer_name", ""),
+            producer_address=row.get("producer_address", ""),
+            is_import=row.get("is_import", "").lower() in ("true", "yes", "1", "y"),
+            country_of_origin=row.get("country_of_origin", ""),
+        )
+        return data, uploads
+
+    def mark(item_id: str, *, application_id: str | None, error: str | None) -> None:
+        """Record a row's outcome and bump the batch counter, in one short transaction."""
         with session_factory() as db:
             item = db.get(BatchItem, item_id)
-            try:
-                names = split_image_names(row.get("image", ""))
-                if not names:
-                    raise WorkflowError("The image column is empty.")
-                uploads = []
-                for name in names:
-                    image = parsed.images.get(name)
-                    if image is None:
-                        raise WorkflowError(f"Image '{name}' was not found in the zip.")
-                    uploads.append((image, name))
-                data = ApplicationData(
-                    beverage_type=row.get("beverage_type", ""),
-                    brand_name=row.get("brand_name", ""),
-                    class_type=row.get("class_type", ""),
-                    alcohol_content=row.get("alcohol_content", ""),
-                    net_contents=row.get("net_contents", ""),
-                    producer_name=row.get("producer_name", ""),
-                    producer_address=row.get("producer_address", ""),
-                    is_import=row.get("is_import", "").lower() in ("true", "yes", "1", "y"),
-                    country_of_origin=row.get("country_of_origin", ""),
-                )
-                app = create_draft(db, applicant, data, uploads)
-                app.batch_id = batch_id
-                record_run(db, app, extractor, "batch")
-                submit(db, app, applicant)
-                item.application_id = app.id
-                item.status = "done"
-                ok = True
-            except Exception as exc:  # one bad row must not sink the batch
-                log.exception("batch row %s failed", row_number)
-                db.rollback()
-                item = db.get(BatchItem, item_id)
-                item.status = "error"
-                item.error = str(exc)
-            db.commit()
-        with session_factory() as db:  # atomic counter so concurrent rows never lose an update
-            column = Batch.completed if ok else Batch.failed
+            item.status = "error" if error else "done"
+            item.error = error
+            if application_id:
+                item.application_id = application_id
+            column = Batch.failed if error else Batch.completed
             db.execute(update(Batch).where(Batch.id == batch_id).values({column.key: column + 1}))
             db.commit()
 
-    with ThreadPoolExecutor(max_workers=BATCH_CONCURRENCY) as pool:
-        list(pool.map(lambda pair: work(*pair), items))
+    def work(item_id: str, row_number: int) -> None:
+        """Three steps, two short transactions: the model call in the middle holds no lock.
+        SQLite allows one writer at a time, and a model read takes seconds."""
+        try:
+            data, uploads = row_inputs(parsed.rows[row_number - 1])
+            with session_factory() as db:  # 1. the draft and its images
+                app = create_draft(db, applicant, data, uploads)
+                app.batch_id = batch_id
+                label_set = label_set_of(app)
+                app_id = app.id
+                db.commit()
+            result, error = verify_label_set(label_set, extractor)  # 2. no transaction open
+            with session_factory() as db:  # 3. the result, then into the queue
+                app = db.get(Application, app_id)
+                store_run(db, app, label_set, extractor.name, "batch", result, error)
+                submit(db, app, applicant)
+                db.commit()
+            mark(item_id, application_id=app_id, error=None)
+        except Exception as exc:  # one bad row must not sink the batch
+            log.exception("batch row %s failed", row_number)
+            try:
+                mark(item_id, application_id=None, error=str(exc))
+            except Exception:  # the finalizer below still accounts for this row
+                log.exception("batch row %s could not record its failure", row_number)
 
+    try:
+        with ThreadPoolExecutor(max_workers=BATCH_CONCURRENCY) as pool:
+            futures = [pool.submit(work, item_id, row_number) for item_id, row_number in items]
+            for future in futures:
+                future.result()  # work() never raises; this surfaces anything unexpected
+    finally:
+        _finish_batch(session_factory, batch_id)
+
+
+def _finish_batch(session_factory: sessionmaker, batch_id: str) -> None:
+    """Close the batch whatever happened: rows still pending are marked, counters are
+    recomputed from the rows, and the page stops saying 'working'."""
     with session_factory() as db:
         batch = db.get(Batch, batch_id)
+        if batch is None:
+            return
+        for item in batch.items:
+            if item.status == "pending":
+                item.status = "error"
+                item.error = "This row did not finish; start the batch again for it."
+        batch.completed = sum(1 for i in batch.items if i.status == "done")
+        batch.failed = sum(1 for i in batch.items if i.status == "error")
         batch.status = "done"
         batch.finished_at = utcnow()
         db.commit()
