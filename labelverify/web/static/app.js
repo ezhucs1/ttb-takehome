@@ -370,6 +370,7 @@
           const el = detailsForm.elements[key];
           if (el) el.value = value;
         }
+        lastRead = data.label_read || {};
         renderChecklist((data.prefill || {}).beverage_type ? "label" : "none");
         if (data.prefill && data.prefill.country_of_origin) $("#is_import").checked = true;
         $("#prefill-hint").textContent = data.warning ? data.warning : "Filled from the label. Check every value against your application.";
@@ -401,7 +402,29 @@
   }
 
   // Step 2 of the wizard: the requirements for the detected class, from the engine's
-  // own rulebook (embedded in the page), re-rendered whenever the type changes.
+  // own rulebook (embedded in the page), re-rendered whenever the type changes. Each
+  // item says where it comes from: a form field the applicant fills, or the label
+  // itself, in which case the last read's finding is shown so it can be reviewed here.
+  const FORM_ITEMS = ["brand_name", "class_type", "alcohol_content", "net_contents",
+    "producer_name", "producer_address", "country_of_origin"];
+  let lastRead = {};
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  function checklistSource(i) {
+    if (FORM_ITEMS.includes(i.field)) {
+      return `<button type="button" class="pill pill-neutral pill-xs pill-btn" data-focus="${i.field}" title="Enter this in the form above">on the form</button>`;
+    }
+    if (i.checked_by === "specialist") {
+      return `<span class="pill pill-neutral pill-xs" title="A visual judgment the specialist makes">specialist checks</span>`;
+    }
+    if (!(i.field in lastRead)) return `<span class="pill pill-neutral pill-xs">read from the label</span>`;
+    const value = lastRead[i.field];
+    if (value) return `<span class="read-found" title="Read from the label">&#10003; ${esc(value)}</span>`;
+    return i.requirement === "required"
+      ? `<span class="read-missing">not found on the label</span>`
+      : `<span class="muted">not on the label</span>`;
+  }
+
   function renderChecklist(source) {
     const host = $("#rules-checklist");
     if (!host) return;
@@ -412,18 +435,25 @@
     const empty = $("[data-checklist-empty]", host);
     if (!chosen) { body.hidden = true; empty.hidden = false; return; }
     const items = chosen.checklist.map((i) =>
-      `<li><strong>${i.label}</strong>` +
+      `<li><strong>${esc(i.label)}</strong>` +
       `<span class="pill pill-${i.requirement === "required" ? "info" : "neutral"} pill-xs">${i.requirement}</span>` +
-      (i.checked_by === "specialist" ? `<span class="pill pill-neutral pill-xs" title="A visual judgment the specialist makes">specialist</span>` : "") +
-      `<span class="cite">${i.citation}</span></li>`
+      checklistSource(i) +
+      `<span class="cite">${esc(i.citation)}</span></li>`
     ).join("");
     const how = source === "label" ? "Detected from the label. Change it above if that is wrong."
       : source === "user" ? "Chosen by you." : "";
+    const legend = Object.keys(lastRead).length
+      ? "Items marked on the form are yours to enter; the others are printed on the label, and the check mark shows what the read found. Run the check below to compare everything against the rules."
+      : "";
     body.innerHTML =
-      `<div class="checklist-title">${chosen.name} · 27 CFR part ${chosen.part}</div>` +
+      `<div class="checklist-title">${esc(chosen.name)} · 27 CFR part ${chosen.part}</div>` +
       `<ul>${items}</ul>` +
-      (how ? `<p class="muted small checklist-note">${how}</p>` : "");
+      (how || legend ? `<p class="muted small checklist-note">${[how, legend].filter(Boolean).join(" ")}</p>` : "");
     body.hidden = false; empty.hidden = true;
+    $$("[data-focus]", body).forEach((b) => b.addEventListener("click", () => {
+      const input = document.getElementById(b.dataset.focus);
+      if (input) { input.focus(); input.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    }));
   }
 
   function checklist() {

@@ -435,6 +435,10 @@ class TestApplicantWorkflow:
         payload = created.json()
         assert payload["prefill"]["brand_name"] == "OLD TOM DISTILLERY"
         assert payload["prefill"]["net_contents"] == "750 mL"
+        # Label-only items the applicant never types are reported so step 2 can show them.
+        assert payload["label_read"]["qualifying_phrase"] == "Distilled and Bottled by"
+        assert payload["label_read"]["health_warning"].lower().startswith("government warning")
+        assert payload["label_read"]["sulfite_declaration"] is None
         app_id = payload["id"]
 
         check = applicant.post(

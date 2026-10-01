@@ -352,3 +352,15 @@ samples that passed before still pass: their kickers are appellations. One sampl
 added, a red wine with a 2022 vintage and no appellation, so the batch demo shows a
 wine-specific finding. The reader's prompt tells the model that the bottler's city and
 state are not an appellation.
+
+## 16. The step-2 checklist says where each item comes from, and what the read found
+
+A manual test showed the problem: the checklist in step 2 listed items such as the
+qualifying phrase and the sulfite declaration with no way to enter or review them, while
+the read had in fact captured them. Those items are never typed; the engine reads them
+off the label and checks them against the rule. The checklist now marks each item as
+"on the form" (a button that focuses the matching field) or shows the label-read value
+with a check mark, "not found on the label" for a required item, or "not on the label"
+for a conditional one. The read response carries these values alongside the form
+prefill. The form's name and address labels now use the checklist's wording, so the
+same item is called the same thing in both places.

@@ -643,3 +643,26 @@ def test_secret_key_is_generated_once_and_reused(tmp_path, monkeypatch):
     assert secret_key(tmp_path) == first  # survives a restart
     monkeypatch.setenv("SECRET_KEY", "configured")
     assert secret_key(tmp_path) == "configured"  # the environment always wins
+
+
+def test_label_carries_covers_every_label_only_checklist_item():
+    """Every checklist item that is not a form field and not a specialist judgment has a
+    value the step-2 checklist can show, keyed by the rulebook's field name."""
+    from labelverify.engine.extractors.demo import load_manifest
+    from labelverify.engine.models import LabelExtraction
+    from labelverify.engine.rules import all_rules
+
+    form_items = {"brand_name", "class_type", "alcohol_content", "net_contents",
+                  "producer_name", "producer_address", "country_of_origin"}
+    label_only = {
+        i["field"]
+        for entry in all_rules()
+        for i in entry["checklist"]
+        if i["field"] not in form_items and i["checked_by"] == "engine"
+    }
+    wine = next(s for s in load_manifest() if s["id"] == "stones-throw-wine")
+    found = services.label_carries(LabelExtraction.model_validate(wine["extraction"]))
+    assert label_only <= set(found)
+    assert found["appellation"] == "NAPA VALLEY" and found["vintage_year"] == "2021"
+    assert found["estate_bottled"] == "ESTATE BOTTLED" and found["sulfite_declaration"]
+    assert found["age_statement"] is None and found["health_warning"]

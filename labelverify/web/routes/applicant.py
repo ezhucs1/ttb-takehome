@@ -130,11 +130,13 @@ def _read_label(request: Request, db: Session, app) -> dict:
     extractor = request.app.state.get_extractor()
     started = time.perf_counter()
     prefill: dict[str, str] = {}
+    label_read: dict[str, str | None] = {}
     warning = None
     read_failed = False
     try:
         extraction = services.extract_for_prefill(extractor, app.current_images)
         prefill = services.prefill_fields(extraction)
+        label_read = services.label_carries(extraction)
         services.remember_extraction(
             app, extraction, extractor.name, int((time.perf_counter() - started) * 1000)
         )
@@ -155,6 +157,7 @@ def _read_label(request: Request, db: Session, app) -> dict:
             "image_url": image_urls[0],
             "image_urls": image_urls,
             "prefill": prefill,
+            "label_read": label_read,
             "warning": warning,
             "read_failed": read_failed,
             "extractor": extractor.name,

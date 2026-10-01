@@ -243,6 +243,34 @@ def prefill_fields(extraction: LabelExtraction) -> dict[str, str]:
     }
 
 
+# Checklist items the applicant never types: the engine reads them off the label itself.
+# Checklist field -> attribute of the read.
+LABEL_ONLY_ITEMS = {
+    "qualifying_phrase": "qualifying_phrase",
+    "sulfite_declaration": "sulfite_declaration",
+    "age_statement": "age_statement",
+    "bottled_in_bond": "bottled_in_bond_claim",
+    "blend_percentage": "blend_percentage",
+    "appellation": "appellation",
+    "vintage_year": "vintage_year",
+    "estate_bottled": "estate_bottled_claim",
+}
+
+
+def label_carries(extraction: LabelExtraction) -> dict[str, str | None]:
+    """What the read found for every label-only checklist item, so the applicant can see
+    it in step 2 before running the check; None when nothing was printed."""
+    found = {
+        item: (getattr(extraction, attr).value or "").strip() or None
+        for item, attr in LABEL_ONLY_ITEMS.items()
+    }
+    warning = extraction.health_warning
+    found["health_warning"] = (
+        (warning.text or "GOVERNMENT WARNING")[:40].rstrip() + "…" if warning.present else None
+    )
+    return found
+
+
 @dataclass(frozen=True)
 class LabelSet:
     """The bytes of an application's current label set, detached from any session, so a
