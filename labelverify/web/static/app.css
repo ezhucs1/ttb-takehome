@@ -265,6 +265,7 @@ a.stat:hover { text-decoration: none; transform: translateY(-2px); border-color:
 .badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; line-height: 1.6; }
 .badge-match { background: var(--success-bg); border-color: var(--success-line); color: var(--success-fg); }
 .badge-needs_review { background: var(--warning-bg); border-color: var(--warning-line); color: var(--warning-fg); }
+.badge-uncertain { background: transparent; border-color: var(--warning-line); color: var(--warning-fg); border-style: dashed; }
 .badge-mismatch { background: var(--danger-bg); border-color: var(--danger-line); color: var(--danger-fg); }
 .badge-not_applicable { background: var(--neutral-bg); border-color: var(--line); color: var(--muted); }
 

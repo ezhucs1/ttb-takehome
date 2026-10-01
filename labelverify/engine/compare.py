@@ -697,9 +697,15 @@ def compare_country_of_origin(
 
 
 def _apply_confidence_gate(result: FieldResult) -> FieldResult:
-    """A match from a low-confidence read is never an unattended match."""
+    """A match from a low-confidence read is never an unattended match.
+
+    The row keeps the verdict the comparison found (the values do agree) and is marked
+    uncertain, which the roll-up treats as a review item. Showing "match, unverified
+    read" rather than "review" keeps the table honest about what was compared and what
+    was merely read badly, which matters most on an OCR read where every row is uncertain.
+    """
     if result.verdict is Verdict.MATCH and result.confidence < LOW_CONFIDENCE:
-        result.verdict = Verdict.NEEDS_REVIEW
+        result.uncertain = True
         result.notes.append(
             f"Low read confidence ({result.confidence:.0%}). Confirm the label text visually."
         )
@@ -1107,11 +1113,21 @@ def _verify_with(
         for f in fields:
             if f.verdict is Verdict.MISMATCH:
                 summary.append(f"{f.label}: {f.reason}")
-    elif Verdict.NEEDS_REVIEW in verdicts or not extraction.image_quality.readable:
+    elif (
+        Verdict.NEEDS_REVIEW in verdicts
+        or any(f.uncertain for f in fields)
+        or not extraction.image_quality.readable
+    ):
         recommendation = Recommendation.NEEDS_REVIEW
         for f in fields:
             if f.verdict is Verdict.NEEDS_REVIEW:
                 summary.append(f"{f.label}: {f.reason}")
+        uncertain = [f.label for f in fields if f.uncertain]
+        if uncertain:
+            summary.append(
+                f"{len(uncertain)} matching field{'s' if len(uncertain) != 1 else ''} came from "
+                f"a low-confidence read ({', '.join(uncertain)}); confirm against the image."
+            )
     else:
         recommendation = Recommendation.APPROVE
         summary.append("All required fields match the application.")

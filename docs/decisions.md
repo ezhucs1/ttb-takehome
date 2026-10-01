@@ -481,3 +481,35 @@ The reader interface is one method and the field assignment takes any block of t
 a PaddleOCR reader is a small optional extra when a deployment can bundle its models and
 has tested it on its own hardware. That is the next step for an offline installation,
 after the submission, not before it.
+
+## 21. An uncertain match is shown as a match, and the OCR reader learned where the brand is
+
+Running the app on Tesseract alone showed two things on the result table. Every row said
+"review", including rows whose two values were identical, because the confidence gate
+turned a low-confidence match into a review verdict. And the brand row compared "NAPA
+VALLEY" to "NAPA VALLEY": the OCR field assignment had taken the first line of text, the
+kicker above the brand, and the form had been filled from that read, so the comparison
+agreed with itself.
+
+Two changes. The gate now keeps the verdict the comparison found and marks the row
+"unverified read"; the roll-up still sends the application to review and the summary
+says how many matching rows came from a poor read. A table of identical values that says
+"match, unverified" is honest about what was compared; a table that says "review" on every
+row is not, and it hid the real mismatches among them. A genuine difference on a poor read
+stays a mismatch.
+
+The OCR field assignment no longer takes the first line as the brand. Tesseract's word
+boxes give the height of every line, and the brand is the text set in the largest type on
+the front panel: the tallest line seeds it and adjacent lines nearly as tall join it, so a
+two-line brand is one candidate and the kicker, a medal, or a footer are not. The brand is
+allowed to equal the producer's name, which it often does. Dark labels, where the brand is
+light type on a dark ground, are read a second time inverted when the first pass reads
+little. Address lines that name a state without a zip code now count as addresses.
+Measured on the fourteen samples, the brand went from 3 to 12 of 14 right, the address
+from 5 to 8, at about one second per label. The two misses are the steeply angled photo,
+where Tesseract reads nothing, and a dark can where only the warning box is legible to it.
+
+The result page also now says, in a banner, when a read came from local OCR and that the
+field assignment itself can be wrong, so a mismatch may be the reader rather than the
+label. The step-2 hint on a fallback read tells the applicant to correct the form to match
+their application before checking.

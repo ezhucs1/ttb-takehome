@@ -14,7 +14,7 @@ from collections.abc import Sequence
 from io import BytesIO
 
 from ..models import ExtractedField, HealthWarningExtraction, ImageQuality, LabelExtraction
-from ..normalize import VOLUME_RE
+from ..normalize import STATE_NAMES, VOLUME_RE
 from .base import ExtractionError, Panel
 
 _WARNING_RE = re.compile(
@@ -36,7 +36,12 @@ _PRODUCER_RE = re.compile(
     r"\s+by\s+(?P<name>[^\n]+)",
     re.IGNORECASE,
 )
-_ADDRESS_HINT_RE = re.compile(r"\b[A-Z]{2}\b\s*\d{5}|\b\d{5}\b|,\s*[A-Z]{2}\b")
+_ADDRESS_HINT_RE = re.compile(
+    r"\b[A-Z]{2}\b\s*\d{5}|\b\d{5}\b|,\s*[A-Z]{2}\b|,\s*(?:"
+    + "|".join(sorted((n for n in STATE_NAMES), key=len, reverse=True))
+    + r")\b",
+    re.IGNORECASE,
+)
 
 _CLASS_KEYWORDS = (
     "bourbon",
@@ -129,14 +134,97 @@ class TesseractExtractor:
             )
         pytesseract.pytesseract.tesseract_cmd = command
         texts: list[str] = []
-        for image, _ in panels:
+        prominent: list[str] = []
+        for n, (image, _) in enumerate(panels):
             try:
-                texts.append(pytesseract.image_to_string(Image.open(BytesIO(image))))
+                text, data = _best_ocr(Image.open(BytesIO(image)))
+                texts.append(text)
+                if n == 0:  # the brand is on the front panel
+                    prominent = prominent_lines(data)
             except pytesseract.TesseractNotFoundError as exc:
                 raise ExtractionError(
                     f"The tesseract binary at {command} could not be run ({exc})."
                 ) from exc
-        return classify_text("\n\n".join(texts))
+        return classify_text("\n\n".join(texts), prominent_lines=prominent)
+
+
+def _best_ocr(image) -> tuple[str, dict]:
+    """OCR the panel as is and inverted: Tesseract wants dark text on a light ground, and
+    cans and dark labels print the other way round, often only for the brand. The text
+    comes from the pass that read more confident words; the word boxes for the brand
+    come from the pass whose largest type is larger, since that is where the brand is."""
+    import pytesseract
+    from PIL import ImageOps
+
+    def run(img) -> tuple[str, dict, int, float]:
+        data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
+        good = 0
+        tallest = 0.0
+        for word, conf, height in zip(data["text"], data["conf"], data["height"], strict=True):
+            if str(word).strip() and float(conf) >= 60:
+                good += 1
+                tallest = max(tallest, float(height))
+        return pytesseract.image_to_string(img), data, good, tallest
+
+    plain = run(image)
+    if plain[2] >= 40:  # a full read of a light label; the inverse pass would only cost time
+        return plain[0], plain[1]
+    inverted = run(ImageOps.invert(image.convert("RGB")))
+    text = (inverted if inverted[2] > plain[2] else plain)[0]
+    data = (inverted if inverted[3] > plain[3] else plain)[1]
+    return text, data
+
+
+def prominent_lines(data: dict, *, ratio: float = 0.72) -> list[str]:
+    """The text set in the largest type, in reading order, from Tesseract's word boxes.
+
+    Words are grouped into the lines Tesseract found; a line's size is the mean height of
+    its words. The tallest line seeds the brand; lines directly above or below it that are
+    nearly as tall join it, so a two-line brand ("OLD TOM" / "DISTILLERY") comes back as
+    one candidate while the kicker above it, a medal, or a footer do not. The remaining
+    lines follow, tallest first, as further candidates.
+    """
+    lines: dict[tuple[int, int, int], list[tuple[str, int, int]]] = {}
+    for i, word in enumerate(data.get("text", [])):
+        if not str(word).strip() or int(float(data["conf"][i])) < 0:
+            continue
+        key = (data["block_num"][i], data["par_num"][i], data["line_num"][i])
+        lines.setdefault(key, []).append((str(word), int(data["height"][i]), int(data["top"][i])))
+    sized = []
+    for words in lines.values():
+        tokens = [w for w, _, _ in words if re.search(r"[A-Za-z]{2,}", w)]  # OCR noise out
+        if not tokens:
+            continue
+        sized.append(
+            (
+                " ".join(tokens),
+                sum(h for _, h, _ in words) / len(words),
+                min(t for _, _, t in words),
+            )
+        )
+    if not sized:
+        return []
+    sized.sort(key=lambda item: item[2])  # top to bottom
+    seed = max(range(len(sized)), key=lambda i: sized[i][1])
+    tallest = sized[seed][1]
+    lo = hi = seed
+    while (
+        lo > 0
+        and sized[lo - 1][1] >= ratio * tallest
+        and sized[lo][2] - sized[lo - 1][2] < 2.2 * tallest
+    ):
+        lo -= 1
+    while (
+        hi + 1 < len(sized)
+        and sized[hi + 1][1] >= ratio * tallest
+        and sized[hi + 1][2] - sized[hi][2] < 2.2 * tallest
+    ):
+        hi += 1
+    brand = " ".join(text for text, _, _ in sized[lo : hi + 1])
+    rest = sorted(
+        (item for i, item in enumerate(sized) if not lo <= i <= hi), key=lambda item: -item[1]
+    )
+    return [brand] + [text for text, _, _ in rest]
 
 
 _SULFITE_RE = re.compile(r"contains\s+sulf(?:ph)?ites", re.IGNORECASE)
@@ -185,8 +273,13 @@ def _category_from_text(text: str) -> str | None:
     return best if scores[best] > 0 else None
 
 
-def classify_text(text: str) -> LabelExtraction:
-    """Assign raw OCR text to TTB fields using regexes and keyword heuristics."""
+def classify_text(text: str, *, prominent_lines: list[str] | None = None) -> LabelExtraction:
+    """Assign raw OCR text to TTB fields using regexes and keyword heuristics.
+
+    ``prominent_lines`` (largest type first, from the word boxes) names the brand when
+    it is given; without it the first unclaimed line is taken, which on many labels is
+    the kicker above the brand rather than the brand itself.
+    """
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     consumed: set[str] = set()
 
@@ -225,18 +318,22 @@ def classify_text(text: str) -> LabelExtraction:
     if class_line:
         consumed.add(class_line)
 
-    brand_line = next(
-        (
-            ln
-            for ln in lines
-            if ln not in consumed
-            and re.search(r"[A-Za-z]{2,}", ln)
+    def could_be_brand(ln: str) -> bool:
+        lowered = ln.lower()
+        return bool(
+            re.search(r"[A-Za-z]{2,}", ln)
             and not _ALCOHOL_RE.search(ln)
             and not VOLUME_RE.search(ln)
-            and "warning" not in ln.lower()
-        ),
-        None,
-    )
+            and "warning" not in lowered
+            and not _BOND_RE.search(ln)
+            and not _APPELLATION_RE.fullmatch(ln.strip(" ·.-"))
+            and (class_line is None or ln.lower() != class_line.lower())
+            and (producer_address is None or ln.lower() != producer_address.lower())
+        )  # the brand may equal the producer's name ("Old Tom Distillery" is both)
+
+    brand_line = next((ln for ln in (prominent_lines or []) if could_be_brand(ln)), None)
+    if brand_line is None:
+        brand_line = next((ln for ln in lines if ln not in consumed and could_be_brand(ln)), None)
 
     def field(value: str | None, confidence: float = _LOW) -> ExtractedField:
         return ExtractedField(value=value, confidence=confidence if value else 0.0)

@@ -32,6 +32,15 @@
   </div>
 </div>
 
+{% if 'tesseract' in (result.extractor or '') %}
+<div class="banner banner-warn ocr-banner">
+  <div class="banner-main">
+    <strong>Read with local OCR{% if 'fallback' in result.extractor %}: the vision model was unavailable{% endif %}.</strong>
+    <span>Every value was read by Tesseract at low confidence. Rows marked <em>unverified read</em> agree with the application but need a look at the image; the field assignment can be wrong, so a mismatch here may be the reader, not the label.</span>
+  </div>
+</div>
+{% endif %}
+
 {% if result.summary and rec != 'approve' %}
 <ul class="findings">
   {% for line in result.summary %}<li>{{ line }}</li>{% endfor %}
@@ -77,7 +86,7 @@
       </td>
       <td>
         <div class="verdict">
-          {{ m.verdict_badge(f.verdict.value) }}
+          {{ m.verdict_badge(f.verdict.value, f.uncertain) }}
           {% if can_comment or thread %}
           <button type="button" class="thread-toggle {% if open_count %}has-open{% endif %} {% if new_count %}has-new{% endif %}" data-toggle="#thread-{{ f.field }}" title="{% if new_count %}{{ new_count }} new comment{{ 's' if new_count != 1 }} on this field{% else %}Comments on this field{% endif %}">
             <svg class="icon" aria-hidden="true"><use href="#i-comment"></use></svg>{{ thread | length if thread else '' }}{% if new_count %}<span class="unread-dot" aria-label="new"></span>{% endif %}

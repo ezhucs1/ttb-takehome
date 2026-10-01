@@ -468,13 +468,19 @@ class TestVerify:
         result = verify(application, extraction)
         assert result.recommendation is Recommendation.NEEDS_REVIEW
 
-    def test_low_confidence_match_is_downgraded(self, application, extraction):
+    def test_low_confidence_match_stays_a_match_but_is_flagged(self, application, extraction):
+        """The values agree, so the row says match; the read was poor, so it is marked
+        unverified and the application still goes to review."""
         extraction.brand_name = make_field("OLD TOM DISTILLERY", confidence=0.4)
         result = verify(application, extraction)
         brand = result.field("brand_name")
-        assert brand.verdict is Verdict.NEEDS_REVIEW
+        assert brand.verdict is Verdict.MATCH and brand.uncertain
         assert any("Low read confidence" in n for n in brand.notes)
         assert result.recommendation is Recommendation.NEEDS_REVIEW
+        assert any("low-confidence read" in line for line in result.summary)
+        # A real difference on a poor read is still a mismatch, not softened to review.
+        extraction.brand_name = make_field("SOMETHING ELSE", confidence=0.4)
+        assert verify(application, extraction).field("brand_name").verdict is Verdict.MISMATCH
 
     def test_unreadable_image_never_approves(self, application, extraction):
         extraction.image_quality.readable = False

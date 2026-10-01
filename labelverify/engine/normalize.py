@@ -237,6 +237,7 @@ _STATE_NAMES: dict[str, str] = {
 }
 
 
+STATE_NAMES = _STATE_NAMES  # name -> abbreviation, for readers that need the list
 _STATE_NAME_RE = re.compile(r"\b(" + "|".join(sorted(_STATE_NAMES, key=len, reverse=True)) + r")\b")
 
 

@@ -260,7 +260,8 @@ def fallback_note(fallback_name: str, failure: str) -> str:
     return (
         f"The vision model was unavailable ({failure}), so the label was read with "
         f"{EXTRACTOR_NOTE_NAMES.get(fallback_name, fallback_name)}, which is less accurate. "
-        "Check every value before submitting, or use Read again once the model is back."
+        "The form below is filled from that read: correct every field to match your "
+        "application before checking, or use Read again once the model is back."
     )
 
 

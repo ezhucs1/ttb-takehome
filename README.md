@@ -84,9 +84,10 @@ phrase, sulfites, appellation, vintage, age statement) with what the read found,
 are reviewed before the check. Changing the type re-applies the rules.
 | Health warning | Word for word against 27 CFR 16.21; `GOVERNMENT WARNING` must be all caps; bold is a visual judgment that goes to review when uncertain | exact statutory text |
 
-Per-field verdicts are match, needs review, mismatch, or not applicable. A match read at
-low confidence is downgraded to needs review. The roll-up is approve, needs review, or
-request correction.
+Per-field verdicts are match, needs review, mismatch, or not applicable. A match from a
+low-confidence read keeps its verdict (the values do agree) but is marked "unverified
+read", and the application goes to review rather than approval. The roll-up is approve,
+needs review, or request correction.
 
 ## Run it locally
 
@@ -177,6 +178,26 @@ ANTHROPIC_API_KEY=sk-ant-not-a-real-key .venv/bin/uvicorn labelverify.web.app:se
 
 `LABELVERIFY_FALLBACK=none` turns the automatic fallback off, for a deployment that
 would rather report the outage than show a lower-quality read.
+
+What to expect from an OCR read, measured on the fourteen bundled samples (artwork and
+three simulated photos), after the brand is taken from the largest type on the front
+panel and dark labels are read inverted:
+
+| Field | Right | Notes |
+| --- | --- | --- |
+| Brand name | 12 of 14 | misses the steeply angled photo and one dark can |
+| Class / type | 12 of 14 | the same two |
+| Net contents | 12 of 14 | |
+| Alcohol content | 10 of 14 | small print on the photos |
+| Producer name | 9 of 14 | |
+| Address | 8 of 14 | |
+| Warning present | 13 of 14 | the word-for-word check still runs on what was read |
+
+About one second per label. Every OCR value is reported at low confidence, so the rows
+that agree with the application show "match · unverified read", the ones that differ show
+a mismatch, and the application goes to review either way. The form in step 2 is filled
+from the read: correct the fields that are wrong before checking, exactly as you would
+check a model read against your application.
 
 Compare extractors on the same label from the command line:
 

@@ -204,6 +204,11 @@ class FieldResult(BaseModel):
     similarity: float | None = None
     notes: list[str] = Field(default_factory=list)
     diff: list[WordDiff] | None = None
+    uncertain: bool = Field(
+        default=False,
+        description="The values agree but the read was low confidence, so the row still "
+        "needs a human look; the verdict stays what the comparison found.",
+    )
     citation: str | None = Field(default=None, description="The CFR section the row rests on.")
     requirement: str = Field(
         default="",
