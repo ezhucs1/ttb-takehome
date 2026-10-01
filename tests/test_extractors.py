@@ -297,3 +297,13 @@ class TestDailyBudget:
         inner.name = "gemini"
         wrapped = with_budget(inner)
         assert isinstance(wrapped, BudgetedExtractor) and wrapped.limit == 5
+
+
+def test_prompted_json_shape_names_every_extraction_field():
+    """The reply shape in the prompt and the pydantic model cannot drift apart: a field
+    added to one without the other would be silently null on every read."""
+    from labelverify.engine.extractors.claude import _FIELD_KEYS
+
+    per_field = set(LabelExtraction.model_fields) - {"health_warning", "image_quality"}
+    assert set(_FIELD_KEYS) == per_field
+    assert len(_FIELD_KEYS) == len(set(_FIELD_KEYS))

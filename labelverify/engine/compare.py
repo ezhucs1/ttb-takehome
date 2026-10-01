@@ -15,6 +15,7 @@ Nothing here calls a model. All judgment calls are thresholds that can be tuned 
 from __future__ import annotations
 
 import re
+from datetime import date
 
 from rapidfuzz import fuzz
 
@@ -436,16 +437,41 @@ def compare_alcohol_content(
         elif notes:
             verdict = Verdict.NEEDS_REVIEW
     elif difference <= rules.abv_tolerance(label_abv.abv):
-        verdict = Verdict.NEEDS_REVIEW
-        reason = (
-            f"Application states {app_abv.abv:g}% but the label shows {label_abv.abv:g}%. The "
-            f"difference is within the ±{rules.abv_tolerance(label_abv.abv):g} labeling tolerance "
-            f"({rules.rule('alcohol_content').citation}), but the application should carry the labeled figure."
-        )
+        line = _wine_tax_class_line(rules, app_abv.abv, label_abv.abv)
+        if line is not None:
+            verdict = Verdict.MISMATCH
+            reason = (
+                f"Application states {app_abv.abv:g}% but the label shows {label_abv.abv:g}%: "
+                f"the two fall on different sides of the {line:g} percent tax class line, which "
+                f"the ±{rules.abv_tolerance(label_abv.abv):g} tolerance "
+                f"({rules.rule('alcohol_content').citation}) does not bridge."
+            )
+        else:
+            verdict = Verdict.NEEDS_REVIEW
+            reason = (
+                f"Application states {app_abv.abv:g}% but the label shows {label_abv.abv:g}%. The "
+                f"difference is within the ±{rules.abv_tolerance(label_abv.abv):g} labeling tolerance "
+                f"({rules.rule('alcohol_content').citation}), but the application should carry the labeled figure."
+            )
     else:
         verdict = Verdict.MISMATCH
         reason = f"Application states {app_abv.abv:g}% but the label shows {label_abv.abv:g}%."
     return FieldResult(verdict=verdict, reason=reason, notes=notes, **base)
+
+
+# Wine is taxed in classes divided at these percentages; a labeling tolerance that
+# straddled one would change the tax class, so it is not allowed to.
+_WINE_TAX_CLASS_LINES = (14.0, 21.0, 24.0)
+
+
+def _wine_tax_class_line(rules: ClassRules, filed: float, labeled: float) -> float | None:
+    """The tax class line, if any, that the filed and labeled percentages straddle."""
+    if rules.beverage_type is not BeverageType.WINE:
+        return None
+    for line in _WINE_TAX_CLASS_LINES:
+        if (filed <= line) != (labeled <= line):
+            return line
+    return None
 
 
 def compare_net_contents(application: ApplicationData, extraction: LabelExtraction) -> FieldResult:
@@ -780,7 +806,136 @@ def compare_blend_percentage(
     )
 
 
-_CONDITIONAL_COMPARATORS = (compare_age_statement, compare_bottled_in_bond, compare_blend_percentage)
+_YEAR_RE = re.compile(r"\b((?:18|19|20)\d{2})\b")
+_RECORDS_NOTE = "The grape-source percentages behind the statement are checked from records."
+
+
+def _wine_rule(application: ApplicationData, extraction: LabelExtraction, field: str):
+    """The wine rule for ``field``, or None when the class does not carry the rule."""
+    rules = _class_of(application, extraction)
+    if rules.requirement(field) is Requirement.NOT_APPLICABLE:
+        return None
+    return rules
+
+
+def compare_appellation(
+    application: ApplicationData, extraction: LabelExtraction
+) -> FieldResult | None:
+    """Wine only, when the label names an origin: shown with its citation. Whether enough
+    of the grapes came from there (27 CFR 4.25) is a records check, so the row informs."""
+    rules = _wine_rule(application, extraction, "appellation")
+    name = (extraction.appellation.value or "").strip()
+    if rules is None or not name:
+        return None
+    return FieldResult(
+        verdict=Verdict.MATCH,
+        reason=f"The label names '{name}' as the appellation of origin.",
+        notes=[_RECORDS_NOTE],
+        field="appellation",
+        label="Appellation of Origin",
+        application_value="Named origin (75% of grapes; 85% for a viticultural area)",
+        label_value=name,
+        confidence=extraction.appellation.confidence,
+    )
+
+
+def compare_vintage_year(
+    application: ApplicationData, extraction: LabelExtraction
+) -> FieldResult | None:
+    """Wine only, when the label states a vintage: a vintage date needs an appellation of
+    origin beside it (27 CFR 4.27), and the year must be a real past year."""
+    rules = _wine_rule(application, extraction, "vintage_year")
+    stated = (extraction.vintage_year.value or "").strip()
+    if rules is None or not stated:
+        return None
+    citation = rules.rule("vintage_year").citation
+    base = dict(
+        field="vintage_year",
+        label="Vintage Year",
+        application_value="Requires an appellation of origin",
+        label_value=stated,
+        confidence=min(extraction.vintage_year.confidence, extraction.appellation.confidence)
+        if (extraction.appellation.value or "").strip()
+        else extraction.vintage_year.confidence,
+    )
+    match = _YEAR_RE.search(stated)
+    if not match:
+        return FieldResult(
+            verdict=Verdict.NEEDS_REVIEW,
+            reason=f"'{stated}' could not be read as a year. Confirm visually.",
+            **base,
+        )
+    year = int(match.group(1))
+    if year > date.today().year:
+        return FieldResult(
+            verdict=Verdict.MISMATCH,
+            reason=f"The label states a {year} vintage, which has not happened yet.",
+            **base,
+        )
+    appellation = (extraction.appellation.value or "").strip()
+    if not appellation:
+        return FieldResult(
+            verdict=Verdict.MISMATCH,
+            reason=(
+                f"The label states a {year} vintage but names no appellation of origin; a "
+                f"vintage date may be used only with one ({citation})."
+            ),
+            **base,
+        )
+    return FieldResult(
+        verdict=Verdict.MATCH,
+        reason=f"The {year} vintage is paired with the '{appellation}' appellation, as {citation} requires.",
+        notes=[_RECORDS_NOTE],
+        **base,
+    )
+
+
+def compare_estate_bottled(
+    application: ApplicationData, extraction: LabelExtraction
+) -> FieldResult | None:
+    """Wine only, when the label claims 'Estate Bottled': the claim needs a viticultural
+    area appellation on the label (27 CFR 4.26); the rest is a records check."""
+    rules = _wine_rule(application, extraction, "estate_bottled")
+    claim = (extraction.estate_bottled_claim.value or "").strip()
+    if rules is None or not claim:
+        return None
+    citation = rules.rule("estate_bottled").citation
+    appellation = (extraction.appellation.value or "").strip()
+    base = dict(
+        field="estate_bottled",
+        label="Estate Bottled",
+        application_value="Requires a viticultural area appellation",
+        label_value=f"{claim} · {appellation}" if appellation else claim,
+        confidence=extraction.estate_bottled_claim.confidence,
+    )
+    if not appellation:
+        return FieldResult(
+            verdict=Verdict.MISMATCH,
+            reason=(
+                f"The label claims '{claim}' but names no appellation of origin; the claim "
+                f"requires a viticultural area appellation ({citation})."
+            ),
+            **base,
+        )
+    return FieldResult(
+        verdict=Verdict.MATCH,
+        reason=f"'{claim}' appears with the '{appellation}' appellation.",
+        notes=[
+            f"Confirm '{appellation}' is a viticultural area and that the winery grew, made, "
+            f"and bottled the wine within it ({citation}); both are records checks."
+        ],
+        **base,
+    )
+
+
+_CONDITIONAL_COMPARATORS = (
+    compare_age_statement,
+    compare_bottled_in_bond,
+    compare_blend_percentage,
+    compare_appellation,
+    compare_vintage_year,
+    compare_estate_bottled,
+)
 
 
 def verify(application: ApplicationData, extraction: LabelExtraction) -> VerificationResult:

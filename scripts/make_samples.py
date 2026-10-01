@@ -691,6 +691,52 @@ SAMPLES: list[dict] = [
         },
     },
     {
+        "id": "harvest-moon-vintage-no-appellation",
+        "title": "Harvest Moon Red · vintage without appellation",
+        "description": "States a 2022 vintage but names no appellation of origin; a vintage date requires one (27 CFR 4.27).",
+        "expected": "request_correction",
+        "seed": 13,
+        "label": {
+            "style": "wine",
+            "paper": (250, 246, 238),
+            "kicker": "FAMILY RESERVE",
+            "brand_lines": ["HARVEST MOON"],
+            "vintage": "2022",
+            "class_line": "Red Wine",
+            "tagline": "SMALL LOT · UNFINED",
+            "alcohol_line": "13.2% Alc. by Vol.",
+            "net_line": "750 mL",
+            "producer_lines": [
+                "Produced and Bottled by Harvest Moon Winery",
+                "Lodi, California",
+            ],
+            "warning_heading": "GOVERNMENT WARNING:",
+        },
+        "application": {
+            "beverage_type": "wine",
+            "brand_name": "Harvest Moon",
+            "class_type": "Red Wine",
+            "alcohol_content": "13.2%",
+            "net_contents": "750 mL",
+            "producer_name": "Harvest Moon Winery",
+            "producer_address": "Lodi, CA",
+            "is_import": False,
+            "country_of_origin": "",
+        },
+        "extraction": {
+            "brand_name": field("HARVEST MOON"),
+            "class_type": field("Red Wine"),
+            "alcohol_content": field("13.2% Alc. by Vol."),
+            "net_contents": field("750 mL"),
+            "producer_name": field("Harvest Moon Winery"),
+            "producer_address": field("Lodi, California"),
+            "country_of_origin": field(None),
+            "appellation": field(None),  # "FAMILY RESERVE" is not a place
+            "health_warning": warning("GOVERNMENT WARNING:"),
+            "image_quality": clear(),
+        },
+    },
+    {
         "id": "glen-aldie-scotch",
         "title": "Glen Aldie Scotch · import",
         "description": "Imported single malt with 'Product of Scotland'; the application lists United Kingdom.",
@@ -973,6 +1019,14 @@ def main() -> None:
             field("BOTTLED IN BOND") if "BOND" in spec.get("kicker", "").upper() else field(None),
         )
         extraction.setdefault("blend_percentage", field(None))
+        # Wine: the kicker above the brand is the appellation, the big number the vintage.
+        is_wine = spec["style"] == "wine"
+        extraction.setdefault("appellation", field(spec.get("kicker") if is_wine else None))
+        extraction.setdefault("vintage_year", field(spec.get("vintage", "2021") if is_wine else None))
+        extraction.setdefault(
+            "estate_bottled_claim",
+            field("ESTATE BOTTLED") if is_wine and "ESTATE BOTTLED" in spec.get("tagline", "").upper() else field(None),
+        )
         importer = next(
             (ln for ln in spec["producer_lines"] if ln.lower().startswith("imported by")), None
         )

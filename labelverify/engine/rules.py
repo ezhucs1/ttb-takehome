@@ -3,7 +3,9 @@
 TTB regulates the three classes under separate parts of Title 27: wine under part 4,
 distilled spirits under part 5, malt beverages under part 7. The Government Health
 Warning in part 16 applies to all three. The parts agree on most of the seven fields in
-the brief but differ on alcohol content, net contents, and one wine-only declaration.
+the brief but differ on alcohol content, net contents, and the statements only one class
+carries: sulfites, appellation, vintage, and estate bottling for wine; age, bottled in
+bond, and blend percentages for spirits.
 Everything class-specific the engine does comes from this module, so a change to a rule
 is one edit here, and the applicant's checklist and the specialist's citations come from
 the same table the comparisons use.
@@ -100,6 +102,9 @@ FIELD_LABELS = {
     "qualifying_phrase": "Qualifying phrase before the name",
     "country_of_origin": "Country of origin",
     "sulfite_declaration": "Sulfite declaration",
+    "appellation": "Appellation of origin",
+    "vintage_year": "Vintage year",
+    "estate_bottled": "Estate Bottled claim",
     "age_statement": "Age statement",
     "bottled_in_bond": "Bottled in Bond claim",
     "blend_percentage": "Percentage statement for blends",
@@ -198,20 +203,30 @@ RULES: dict[BeverageType, ClassRules] = {
         ),
         table_wine_exemption=True,
         fields={
-            "brand_name": FieldRule(Requirement.REQUIRED, "27 CFR 4.33"),
+            "brand_name": FieldRule(
+                Requirement.REQUIRED,
+                "27 CFR 4.33",
+                "On the brand label; a geographic or varietal-sounding name must not mislead "
+                "about origin or type (a specialist judgment).",
+            ),
             "class_type": FieldRule(
                 Requirement.REQUIRED,
                 "27 CFR 4.34",
-                "A class or type designation; a grape variety may serve as the type.",
+                "A class or type designation; a grape variety may serve as the type. "
+                "Semi-generic names such as 'Champagne' need the true place of origin beside them.",
             ),
             "alcohol_content": FieldRule(
                 Requirement.REQUIRED,
                 "27 CFR 4.36",
                 "Percent alcohol by volume. 'Table Wine' or 'Light Wine' may stand in for the "
-                "number between 7 and 14 percent. Tolerance ±1.5 up to 14 percent, ±1.0 above.",
+                "number between 7 and 14 percent. Tolerance ±1.5 up to 14 percent, ±1.0 above; "
+                "the tolerance does not bridge the 14 percent tax class line.",
             ),
             "net_contents": FieldRule(
-                Requirement.REQUIRED, "27 CFR 4.37", "Metric units; a standard of fill (27 CFR 4.72)."
+                Requirement.REQUIRED,
+                "27 CFR 4.37",
+                "Metric units; a standard of fill (27 CFR 4.72). Minimum type size by container "
+                "size is a visual check.",
             ),
             "producer_name": FieldRule(Requirement.REQUIRED, "27 CFR 4.35"),
             "producer_address": FieldRule(Requirement.REQUIRED, "27 CFR 4.35", "City and state."),
@@ -228,6 +243,25 @@ RULES: dict[BeverageType, ClassRules] = {
                 Requirement.CONDITIONAL,
                 "27 CFR 4.32(e)",
                 "'Contains sulfites' when sulfur dioxide is 10 parts per million or more.",
+            ),
+            "appellation": FieldRule(
+                Requirement.CONDITIONAL,
+                "27 CFR 4.25",
+                "A named origin (country, state, county, or viticultural area) needs 75 percent "
+                "of the grapes from it, 85 percent for a viticultural area; the percentages are "
+                "a records check.",
+            ),
+            "vintage_year": FieldRule(
+                Requirement.CONDITIONAL,
+                "27 CFR 4.27",
+                "A vintage date may be used only with an appellation of origin; 95 percent of "
+                "the grapes from that year, 85 percent under a viticultural area.",
+            ),
+            "estate_bottled": FieldRule(
+                Requirement.CONDITIONAL,
+                "27 CFR 4.26",
+                "'Estate Bottled' requires a viticultural area appellation and a winery that "
+                "grew, made, and bottled the wine within it.",
             ),
             "health_warning": _HEALTH_WARNING,
         },

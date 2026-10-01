@@ -137,6 +137,21 @@ class LabelExtraction(BaseModel):
         default_factory=ExtractedField,
         description="A percentage statement for a blend as printed, for example '51% Straight Bourbon Whiskey', or null.",
     )
+    appellation: ExtractedField = Field(
+        default_factory=ExtractedField,
+        description=(
+            "Wine: the appellation of origin printed as the wine's origin, for example "
+            "'Napa Valley' or 'California'; not the city and state in the bottler's address."
+        ),
+    )
+    vintage_year: ExtractedField = Field(
+        default_factory=ExtractedField,
+        description="Wine: the vintage year as printed, for example '2021', or null.",
+    )
+    estate_bottled_claim: ExtractedField = Field(
+        default_factory=ExtractedField,
+        description="Wine: 'Estate Bottled' as printed when the label makes that claim, else null.",
+    )
     product_category: ExtractedField = Field(
         default_factory=ExtractedField,
         description=(

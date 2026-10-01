@@ -484,3 +484,96 @@ class TestVerify:
         payload = verify(application, extraction).model_dump(mode="json")
         assert payload["recommendation"] == "approve"
         assert payload["fields"][0]["verdict"] == "match"
+
+
+class TestWineRules:
+    """Part 4 checks beyond the seven fields: appellation, vintage, estate bottling, and
+    the tax class line the alcohol tolerance may not cross."""
+
+    @pytest.fixture
+    def wine(self, application, extraction):
+        application.beverage_type = BeverageType.WINE
+        application.class_type = "Cabernet Sauvignon"
+        application.alcohol_content = "14.5"
+        extraction.class_type = make_field("Cabernet Sauvignon")
+        extraction.alcohol_content = make_field("14.5% Alc. by Vol.")
+        extraction.qualifying_phrase = make_field("Produced and Bottled by")
+        extraction.age_statement = make_field(None)
+        extraction.sulfite_declaration = make_field("Contains Sulfites")
+        extraction.appellation = make_field("Napa Valley")
+        extraction.vintage_year = make_field("2021")
+        return application, extraction
+
+    def test_vintage_needs_an_appellation_beside_it(self, wine):
+        from labelverify.engine.compare import compare_vintage_year
+
+        application, extraction = wine
+        result = compare_vintage_year(application, extraction)
+        assert result.verdict is Verdict.MATCH and "4.27" in result.reason
+        extraction.appellation = make_field(None)
+        result = compare_vintage_year(application, extraction)
+        assert result.verdict is Verdict.MISMATCH and "no appellation" in result.reason
+        assert verify(application, extraction).recommendation is Recommendation.REQUEST_CORRECTION
+        extraction.vintage_year = make_field(None)  # no vintage: nothing to check, no row
+        assert compare_vintage_year(application, extraction) is None
+
+    def test_a_future_or_unreadable_vintage(self, wine):
+        from datetime import date
+
+        from labelverify.engine.compare import compare_vintage_year
+
+        application, extraction = wine
+        extraction.vintage_year = make_field(str(date.today().year + 1))
+        assert compare_vintage_year(application, extraction).verdict is Verdict.MISMATCH
+        extraction.vintage_year = make_field("MMXXI")
+        assert compare_vintage_year(application, extraction).verdict is Verdict.NEEDS_REVIEW
+
+    def test_appellation_row_informs_and_cites(self, wine):
+        from labelverify.engine.compare import compare_appellation
+
+        application, extraction = wine
+        row = compare_appellation(application, extraction)
+        assert row.verdict is Verdict.MATCH and row.label_value == "Napa Valley"
+        assert any("records" in n for n in row.notes)
+        result = verify(application, extraction)
+        by_field = {f.field: f for f in result.fields}
+        assert by_field["appellation"].citation == "27 CFR 4.25"
+        assert by_field["vintage_year"].citation == "27 CFR 4.27"
+        assert result.recommendation is Recommendation.APPROVE
+
+    def test_estate_bottled_needs_an_appellation(self, wine):
+        from labelverify.engine.compare import compare_estate_bottled
+
+        application, extraction = wine
+        assert compare_estate_bottled(application, extraction) is None  # no claim, no row
+        extraction.estate_bottled_claim = make_field("ESTATE BOTTLED")
+        row = compare_estate_bottled(application, extraction)
+        assert row.verdict is Verdict.MATCH and "4.26" in row.notes[0]
+        extraction.appellation = make_field(None)
+        row = compare_estate_bottled(application, extraction)
+        assert row.verdict is Verdict.MISMATCH and "4.26" in row.reason
+
+    def test_wine_rows_never_appear_for_other_classes(self, application, extraction):
+        from labelverify.engine.compare import (
+            compare_appellation,
+            compare_estate_bottled,
+            compare_vintage_year,
+        )
+
+        extraction.appellation = make_field("Kentucky")
+        extraction.vintage_year = make_field("2019")
+        extraction.estate_bottled_claim = make_field("Estate Bottled")
+        for fn in (compare_appellation, compare_vintage_year, compare_estate_bottled):
+            assert fn(application, extraction) is None  # a bourbon
+        fields = {f.field for f in verify(application, extraction).fields}
+        assert not fields & {"appellation", "vintage_year", "estate_bottled"}
+
+    def test_alcohol_tolerance_does_not_cross_the_tax_class_line(self, wine):
+        application, extraction = wine
+        application.alcohol_content = "13.8"
+        extraction.alcohol_content = make_field("14.2% Alc. by Vol.")  # 0.4 apart, within ±1.5
+        result = compare_alcohol_content(application, extraction)
+        assert result.verdict is Verdict.MISMATCH and "14 percent tax class" in result.reason
+        application.alcohol_content = "13.0"
+        extraction.alcohol_content = make_field("13.8% Alc. by Vol.")  # same class: review
+        assert compare_alcohol_content(application, extraction).verdict is Verdict.NEEDS_REVIEW

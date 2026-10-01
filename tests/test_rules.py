@@ -41,3 +41,13 @@ def test_checklists_are_plain_data_with_citations():
     wine_fields = {i["field"] for i in rules_for("wine").checklist()}
     assert "sulfite_declaration" in wine_fields
     assert "sulfite_declaration" not in {i["field"] for i in rules_for("malt_beverage").checklist()}
+
+
+def test_wine_carries_the_part_4_statements_the_other_classes_do_not():
+    wine = {i["field"]: i for i in rules_for("wine").checklist()}
+    for field, section in (("appellation", "4.25"), ("vintage_year", "4.27"), ("estate_bottled", "4.26")):
+        assert wine[field]["requirement"] == "conditional" and section in wine[field]["citation"]
+    for other in ("distilled_spirits", "malt_beverage"):
+        assert not {"appellation", "vintage_year", "estate_bottled"} & {
+            i["field"] for i in rules_for(other).checklist()
+        }

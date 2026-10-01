@@ -111,6 +111,16 @@ _IMPORTER_RE = re.compile(r"\b(imported\s+by\s+[^\n]{3,80})", re.IGNORECASE)
 _AGE_RE = re.compile(r"\b(aged\s+\w+\s+(?:years?|months?)|\d+\s+years?\s+old)\b", re.IGNORECASE)
 _BOND_RE = re.compile(r"\b(bottled[\s-]+in[\s-]+bond|bonded)\b", re.IGNORECASE)
 _BLEND_PCT_RE = re.compile(r"\b(\d{1,3}\s*%\s+(?:straight\s+)?\w+(?:\s+\w+){0,3}whisk(?:e)?y)\b", re.IGNORECASE)
+_VINTAGE_RE = re.compile(r"(?im)^\s*(?:vintage\s+)?((?:19|20)\d{2})\s*$")  # a year on its own line
+_ESTATE_RE = re.compile(r"\b(estate\s+bottled)\b", re.IGNORECASE)
+# A short list of well-known appellations; OCR cannot tell a place name from any other
+# capitalized words, so this is a best-effort fallback the model reader does properly.
+_APPELLATION_RE = re.compile(
+    r"\b(napa valley|sonoma (?:coast|county|valley)|russian river valley|paso robles|"
+    r"santa barbara county|central coast|willamette valley|columbia valley|finger lakes|"
+    r"lodi|california|oregon|washington|new york|texas|virginia)\b",
+    re.IGNORECASE,
+)
 _CATEGORY_CUES = (
     ("distilled_spirits", re.compile(r"\b(distilled|proof|whisk(e)?y|bourbon|vodka|gin|rum|tequila)\b", re.I)),
     ("wine", re.compile(r"\b(wine|vint(ed|age)|sulfites|cabernet|chardonnay|merlot|ros[eé])\b", re.I)),
@@ -197,6 +207,9 @@ def classify_text(text: str) -> LabelExtraction:
         age_statement=field(_first_match(_AGE_RE, text), 0.5),
         bottled_in_bond_claim=field(_first_match(_BOND_RE, text), 0.5),
         blend_percentage=field(_first_match(_BLEND_PCT_RE, text), 0.5),
+        appellation=field(_first_match(_APPELLATION_RE, text), 0.4),
+        vintage_year=field(_first_match(_VINTAGE_RE, text), 0.5),
+        estate_bottled_claim=field(_first_match(_ESTATE_RE, text), 0.5),
         product_category=field(category, 0.6 if category else 0.0),
         health_warning=warning,
         image_quality=ImageQuality(

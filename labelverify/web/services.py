@@ -71,6 +71,9 @@ FIELD_LABELS = {
     "age_statement": "Age Statement",
     "bottled_in_bond": "Bottled in Bond",
     "blend_percentage": "Blend Percentage",
+    "appellation": "Appellation of Origin",
+    "vintage_year": "Vintage Year",
+    "estate_bottled": "Estate Bottled",
     "health_warning": "Government Health Warning",
     "general": "General",
 }

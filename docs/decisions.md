@@ -315,3 +315,40 @@ sentence is still parsed, and a reply that is not label JSON is an `ExtractionEr
 any other failed read. `LABELVERIFY_STRUCTURED_OUTPUT=true` restores the constrained call
 for comparison. The CLI prints the token counts and request id of each read so a slow call
 can be reported with its id.
+
+## 15. Part 4 walked section by section: appellation, vintage, estate bottling, tax class
+
+The same walk as part 5, against Excisely's summary cards for 27 CFR 4.25 through 4.37
+(the live eCFR was again unreachable from the build environment). Sections 4.32 through
+4.37 were already covered: the required items, brand name, class or type with a grape
+variety allowed as the type, name and address with a qualifying phrase, alcohol content
+with the table-wine exemption and the two tolerances, and metric net contents with
+standards of fill. Three statements were not, and each is checkable from the label alone:
+
+- **Vintage year (4.27).** A vintage date may be used only with an appellation of origin.
+  A label that states a vintage and names no appellation is a hard finding; a vintage
+  that has not happened yet is too. The harvest percentages are a records check and are
+  noted, not judged.
+- **Appellation of origin (4.25).** When the label names one, the row shows it with its
+  citation. The grape-source percentages cannot be seen on a label, so the row informs
+  rather than judges.
+- **Estate Bottled (4.26; Excisely lists it under 4.35).** The claim requires a
+  viticultural area appellation on the label, so a claim with no appellation is a hard
+  finding. Whether the named area is a viticultural area, and whether the winery grew,
+  made, and bottled the wine within it, are records checks and are noted.
+
+One sharpening to an existing check: the ±1.5 and ±1.0 tolerances in 4.36 are not allowed
+to bridge a tax class line (14, 21, and 24 percent), so a filed 13.8 against a labeled
+14.2 is a mismatch with that reason rather than a within-tolerance review item. That
+clause is from the section as remembered, not re-read; it only ever sharpens a row that
+was already going to review, and the reason names the line so a specialist can disagree.
+
+Nothing was added on the application side. The COLA form carries appellation, vintage,
+and varietal "if on label", and comparing them would be the next step, but it means new
+columns, form fields, and CSV columns, which is more change than the deliverable needs
+at this point. Rows for the three checks appear only when the label gives the engine
+something to check, so spirits and malt beverage results are unchanged, and the wine
+samples that passed before still pass: their kickers are appellations. One sample was
+added, a red wine with a 2022 vintage and no appellation, so the batch demo shows a
+wine-specific finding. The reader's prompt tells the model that the bottler's city and
+state are not an appellation.
