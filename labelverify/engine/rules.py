@@ -5,7 +5,7 @@ distilled spirits under part 5, malt beverages under part 7. The Government Heal
 Warning in part 16 applies to all three. The parts agree on most of the seven fields in
 the brief but differ on alcohol content, net contents, and the statements only one class
 carries: sulfites, appellation, vintage, and estate bottling for wine; age, bottled in
-bond, and blend percentages for spirits.
+bond, and blend percentages for spirits; statements of strength for malt beverages.
 Everything class-specific the engine does comes from this module, so a change to a rule
 is one edit here, and the applicant's checklist and the specialist's citations come from
 the same table the comparisons use.
@@ -105,6 +105,7 @@ FIELD_LABELS = {
     "appellation": "Appellation of origin",
     "vintage_year": "Vintage year",
     "estate_bottled": "Estate Bottled claim",
+    "strength_claim": "Statement of alcoholic strength",
     "age_statement": "Age statement",
     "bottled_in_bond": "Bottled in Bond claim",
     "blend_percentage": "Percentage statement for blends",
@@ -275,21 +276,29 @@ RULES: dict[BeverageType, ClassRules] = {
         standards_of_fill_ml=None,
         qualifying_phrases=("Brewed by", "Brewed and bottled by", "Brewed and canned by", "Imported by"),
         fields={
-            "brand_name": FieldRule(Requirement.REQUIRED, "27 CFR 7.63"),
+            "brand_name": FieldRule(
+                Requirement.REQUIRED,
+                "27 CFR 7.63",
+                "On the brand label; must not mislead about identity or origin, or simulate a "
+                "government stamp or approval (a specialist judgment).",
+            ),
             "class_type": FieldRule(
                 Requirement.REQUIRED,
                 "27 CFR 7.64",
-                "A class designation such as beer, ale, lager, stout, porter, or malt liquor.",
+                "A recognized class designation such as beer, ale, lager, stout, porter, or malt "
+                "liquor; a flavored malt beverage also carries a statement of composition.",
             ),
             "alcohol_content": FieldRule(
                 Requirement.OPTIONAL,
                 "27 CFR 7.65",
-                "Optional at the federal level; some states require it. When stated, tolerance ±0.3.",
+                "Optional at the federal level; some states require it. When stated: 'Alc. __% "
+                "by Vol.' or similar, tolerance ±0.3, never in proof.",
             ),
             "net_contents": FieldRule(
                 Requirement.REQUIRED,
                 "27 CFR 7.70",
-                "U.S. fluid ounces or metric units; no standards of fill.",
+                "U.S. fluid ounces or metric units; no standards of fill. May be blown into the "
+                "glass instead of printed; minimum type size by container size is a visual check.",
             ),
             "producer_name": FieldRule(Requirement.REQUIRED, "27 CFR 7.66"),
             "producer_address": FieldRule(Requirement.REQUIRED, "27 CFR 7.66", "City and state."),
@@ -302,6 +311,13 @@ RULES: dict[BeverageType, ClassRules] = {
                 Requirement.CONDITIONAL, "27 CFR 7.61; 19 CFR 134", _COUNTRY_NOTE
             ),
             "sulfite_declaration": FieldRule(Requirement.NOT_APPLICABLE, ""),
+            "strength_claim": FieldRule(
+                Requirement.CONDITIONAL,
+                "27 CFR 7.65",
+                "Wording that emphasizes alcoholic strength ('strong', 'extra strength', 'high "
+                "test', 'full strength') is not permitted; 'strong' inside a recognized style "
+                "name is a specialist judgment.",
+            ),
             "health_warning": _HEALTH_WARNING,
         },
     ),

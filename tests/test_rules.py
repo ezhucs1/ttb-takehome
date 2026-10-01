@@ -51,3 +51,11 @@ def test_wine_carries_the_part_4_statements_the_other_classes_do_not():
         assert not {"appellation", "vintage_year", "estate_bottled"} & {
             i["field"] for i in rules_for(other).checklist()
         }
+
+
+def test_malt_beverages_carry_the_strength_rule_and_nothing_wine_or_spirits_specific():
+    malt = {i["field"]: i for i in rules_for("malt_beverage").checklist()}
+    assert malt["strength_claim"]["requirement"] == "conditional" and "7.65" in malt["strength_claim"]["citation"]
+    assert "blown into the glass" in malt["net_contents"]["note"]
+    assert "strength_claim" not in {i["field"] for i in rules_for("wine").checklist()}
+    assert "strength_claim" not in {i["field"] for i in rules_for("distilled_spirits").checklist()}

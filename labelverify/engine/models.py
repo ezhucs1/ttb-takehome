@@ -152,6 +152,13 @@ class LabelExtraction(BaseModel):
         default_factory=ExtractedField,
         description="Wine: 'Estate Bottled' as printed when the label makes that claim, else null.",
     )
+    strength_claim: ExtractedField = Field(
+        default_factory=ExtractedField,
+        description=(
+            "Malt beverage: any wording that emphasizes alcoholic strength as printed, such "
+            "as 'Extra Strength', 'Strong', or 'High Test'; null if none."
+        ),
+    )
     product_category: ExtractedField = Field(
         default_factory=ExtractedField,
         description=(

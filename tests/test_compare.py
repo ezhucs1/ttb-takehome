@@ -577,3 +577,65 @@ class TestWineRules:
         application.alcohol_content = "13.0"
         extraction.alcohol_content = make_field("13.8% Alc. by Vol.")  # same class: review
         assert compare_alcohol_content(application, extraction).verdict is Verdict.NEEDS_REVIEW
+
+
+class TestMaltRules:
+    """Part 7 checks: a recognized class designation, the alcohol statement's wording, a
+    statement of strength, and net contents that may be blown into the glass."""
+
+    @pytest.fixture
+    def malt(self, application, extraction):
+        application.beverage_type = BeverageType.MALT_BEVERAGE
+        application.class_type = "Lager"
+        application.alcohol_content = "5.2"
+        application.net_contents = "12 fl oz"
+        extraction.class_type = make_field("Lager")
+        extraction.alcohol_content = make_field("5.2% ALC/VOL")
+        extraction.net_contents = make_field("12 FL OZ")
+        extraction.qualifying_phrase = make_field("Brewed by")
+        extraction.age_statement = make_field(None)
+        return application, extraction
+
+    def test_strength_claims_go_to_review_and_only_on_malt(self, malt):
+        from labelverify.engine.compare import compare_strength_claim
+
+        application, extraction = malt
+        assert compare_strength_claim(application, extraction) is None  # nothing claimed
+        extraction.strength_claim = make_field("EXTRA STRENGTH")
+        row = compare_strength_claim(application, extraction)
+        assert row.verdict is Verdict.NEEDS_REVIEW and "7.65" in row.reason
+        assert verify(application, extraction).recommendation is Recommendation.NEEDS_REVIEW
+        # The brand, class, and alcohol statement are scanned when the reader reported none.
+        extraction.strength_claim = make_field(None)
+        extraction.class_type = make_field("High Test Lager")
+        application.class_type = "High Test Lager"
+        assert compare_strength_claim(application, extraction).label_value == "High Test"
+        application.beverage_type = BeverageType.WINE  # no such rule for wine
+        extraction.class_type = make_field("Strong Red Wine")
+        application.class_type = "Strong Red Wine"
+        assert compare_strength_claim(application, extraction) is None
+
+    def test_class_designation_must_contain_a_recognized_term(self, malt):
+        application, extraction = malt
+        assert compare_class_type(application, extraction).verdict is Verdict.MATCH
+        application.class_type = "Imperial Reserve"
+        extraction.class_type = make_field("Imperial Reserve")
+        result = compare_class_type(application, extraction)
+        assert result.verdict is Verdict.NEEDS_REVIEW and "7.64" in result.notes[0]
+
+    def test_alcohol_statement_needs_the_words_alcohol_by_volume(self, malt):
+        application, extraction = malt
+        assert compare_alcohol_content(application, extraction).verdict is Verdict.MATCH
+        extraction.alcohol_content = make_field("5.2%")
+        result = compare_alcohol_content(application, extraction)
+        assert result.verdict is Verdict.NEEDS_REVIEW and "Alc./Vol." in result.notes[0]
+
+    def test_net_contents_may_be_blown_into_the_glass(self, malt, application, extraction):
+        application, extraction = malt
+        extraction.net_contents = make_field(None)
+        result = compare_net_contents(application, extraction)
+        assert result.verdict is Verdict.NEEDS_REVIEW and "blown into the glass" in result.reason
+        application.beverage_type = BeverageType.DISTILLED_SPIRITS  # printed or nothing
+        application.class_type = "Vodka"
+        extraction.class_type = make_field("Vodka")
+        assert compare_net_contents(application, extraction).verdict is Verdict.MISMATCH

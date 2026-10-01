@@ -737,6 +737,53 @@ SAMPLES: list[dict] = [
         },
     },
     {
+        "id": "north-shore-extra-strength-lager",
+        "title": "North Shore Lager · strength claim",
+        "description": "A lager sold as 'Extra Strength'; a malt beverage label may not emphasize alcoholic strength (27 CFR 7.65).",
+        "expected": "needs_review",
+        "seed": 14,
+        "label": {
+            "style": "beer",
+            "paper": (64, 30, 22),
+            "accent": (232, 190, 92),
+            "kicker": "NORTH SHORE BREWING CO. · DULUTH, MINNESOTA",
+            "brand_lines": ["NORTH", "SHORE"],
+            "class_line": "Extra Strength Lager",
+            "tagline": "Brewed bold on the big lake",
+            "alcohol_line": "9.5% ALC/VOL",
+            "net_line": "16 FL OZ (473 mL)",
+            "producer_lines": [
+                "Brewed and Canned by North Shore Brewing Co.",
+                "Duluth, Minnesota 55802",
+            ],
+            "warning_heading": "GOVERNMENT WARNING:",
+            "footer": "16 FL OZ (473 mL)  ·  PLEASE RECYCLE",
+        },
+        "application": {
+            "beverage_type": "malt_beverage",
+            "brand_name": "North Shore",
+            "class_type": "Extra Strength Lager",
+            "alcohol_content": "9.5",
+            "net_contents": "16 fl oz",
+            "producer_name": "North Shore Brewing Co.",
+            "producer_address": "Duluth, MN 55802",
+            "is_import": False,
+            "country_of_origin": "",
+        },
+        "extraction": {
+            "brand_name": field("NORTH SHORE"),
+            "class_type": field("Extra Strength Lager"),
+            "alcohol_content": field("9.5% ALC/VOL"),
+            "net_contents": field("16 FL OZ (473 mL)"),
+            "producer_name": field("North Shore Brewing Co."),
+            "producer_address": field("Duluth, Minnesota 55802"),
+            "country_of_origin": field(None),
+            "strength_claim": field("EXTRA STRENGTH"),
+            "health_warning": warning("GOVERNMENT WARNING:"),
+            "image_quality": clear(),
+        },
+    },
+    {
         "id": "glen-aldie-scotch",
         "title": "Glen Aldie Scotch · import",
         "description": "Imported single malt with 'Product of Scotland'; the application lists United Kingdom.",
@@ -1019,6 +1066,7 @@ def main() -> None:
             field("BOTTLED IN BOND") if "BOND" in spec.get("kicker", "").upper() else field(None),
         )
         extraction.setdefault("blend_percentage", field(None))
+        extraction.setdefault("strength_claim", field(None))
         # Wine: the kicker above the brand is the appellation, the big number the vintage.
         is_wine = spec["style"] == "wine"
         extraction.setdefault("appellation", field(spec.get("kicker") if is_wine else None))

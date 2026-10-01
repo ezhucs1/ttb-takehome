@@ -121,6 +121,10 @@ _APPELLATION_RE = re.compile(
     r"lodi|california|oregon|washington|new york|texas|virginia)\b",
     re.IGNORECASE,
 )
+_STRENGTH_RE = re.compile(
+    r"\b(extra[\s-]+strength|full[\s-]+strength|high[\s-]+test|high[\s-]+proof|strong)\b",
+    re.IGNORECASE,
+)
 _CATEGORY_CUES = (
     ("distilled_spirits", re.compile(r"\b(distilled|proof|whisk(e)?y|bourbon|vodka|gin|rum|tequila)\b", re.I)),
     ("wine", re.compile(r"\b(wine|vint(ed|age)|sulfites|cabernet|chardonnay|merlot|ros[eé])\b", re.I)),
@@ -210,6 +214,7 @@ def classify_text(text: str) -> LabelExtraction:
         appellation=field(_first_match(_APPELLATION_RE, text), 0.4),
         vintage_year=field(_first_match(_VINTAGE_RE, text), 0.5),
         estate_bottled_claim=field(_first_match(_ESTATE_RE, text), 0.5),
+        strength_claim=field(_first_match(_STRENGTH_RE, text), 0.5),
         product_category=field(category, 0.6 if category else 0.0),
         health_warning=warning,
         image_quality=ImageQuality(

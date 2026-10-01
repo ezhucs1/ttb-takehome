@@ -74,6 +74,7 @@ FIELD_LABELS = {
     "appellation": "Appellation of Origin",
     "vintage_year": "Vintage Year",
     "estate_bottled": "Estate Bottled",
+    "strength_claim": "Statement of Strength",
     "health_warning": "Government Health Warning",
     "general": "General",
 }
@@ -254,6 +255,7 @@ LABEL_ONLY_ITEMS = {
     "appellation": "appellation",
     "vintage_year": "vintage_year",
     "estate_bottled": "estate_bottled_claim",
+    "strength_claim": "strength_claim",
 }
 
 

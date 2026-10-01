@@ -365,3 +365,33 @@ read from the label" list under the fields shows what the read found for the ite
 applicant never types, with "not found on the label" for a required one. The full
 rulebook stays one click away as "Reference". The resubmit form carries the same marks.
 The form's name and address labels use the rulebook's wording.
+
+## 17. Part 7 walked section by section: designation, strength, wording, the glass
+
+The same walk for malt beverages, against Excisely's cards for 27 CFR 7.61 through 7.70
+(eCFR still unreachable from the build environment). The required items in 7.61, the
+optional alcohol content with its ±0.3 tolerance (7.65), the qualifying phrase (7.66),
+and fluid-ounce-or-metric net contents with no standards of fill (7.70) were already in
+the rulebook. Four things were not:
+
+- **Class designation (7.64).** A malt beverage must use a recognized designation. A
+  class/type with none of beer, ale, lager, stout, porter, malt liquor and the other
+  terms the category detector already knows goes to review with that note, even when it
+  matches the application word for word. Wine and spirits designations are not policed
+  this way; a grape variety or a standard of identity is too open a list.
+- **Statements of strength (7.65).** Wording that emphasizes alcoholic strength is not
+  permitted on a malt beverage. The reader reports such wording as its own field, and the
+  engine also scans the brand, class, and alcohol statement. The row is a review item,
+  not a finding, because "strong" inside a recognized style name (a Belgian strong ale)
+  is a judgment the specialist makes. One sample was added: a lager sold as "Extra
+  Strength".
+- **The alcohol statement's wording.** All three parts prescribe the form "Alc. __% by
+  Vol." or an abbreviation. A bare percentage with none of the words alcohol, alc, or
+  abv now carries a note and goes to review. This applies to every class.
+- **Net contents on the container (7.70).** A malt beverage's statement may be blown
+  into the glass rather than printed, so a label with no net contents is a review item
+  for a malt beverage and a finding for the other two classes.
+
+Brand-name restrictions (misleading identity or origin, simulating a government stamp)
+and the statement of composition on a flavored malt beverage are listed as notes for the
+specialist; neither can be settled from a transcription.

@@ -51,6 +51,7 @@ Rules:
 - appellation (wine) is the appellation of origin printed as the wine's origin, such as "Napa Valley", "Sonoma Coast", or "California", usually near the brand or vintage; it is not the city and state in the bottler's address. Null if none.
 - vintage_year (wine) is the vintage year as printed, such as "2021"; null if none.
 - estate_bottled_claim (wine) is "Estate Bottled" as printed when the label makes that claim; null otherwise.
+- strength_claim (malt beverages) is any wording that emphasizes alcoholic strength as printed, such as "Extra Strength", "Strong", "High Test", or "Full Strength", wherever it appears on the label; null if none.
 - product_category is your judgment of which TTB class the product is, from every cue (the class/type words, "Distilled by" or "Brewed by", proof, vintage, grape variety, "Contains sulfites"): exactly one of "distilled_spirits", "wine", or "malt_beverage", with your confidence; null if the label gives no basis.
 - health_warning.text must be the complete Government Health Warning Statement transcribed verbatim starting at the words "GOVERNMENT WARNING", preserving the capitalization used on the label.
 - health_warning.heading_all_caps is true only if the words GOVERNMENT WARNING are printed entirely in capital letters.
@@ -76,6 +77,7 @@ _FIELD_KEYS = (
     "appellation",
     "vintage_year",
     "estate_bottled_claim",
+    "strength_claim",
     "product_category",
 )
 JSON_SHAPE = (

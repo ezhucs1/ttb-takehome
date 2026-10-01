@@ -696,10 +696,10 @@ class TestBatch:
         """The two downloads on the batch page are enough to exercise the whole flow."""
         csv_resp = applicant.get("/applicant/batches/sample.csv")
         zip_resp = applicant.get("/applicant/batches/sample-images.zip")
-        assert csv_resp.status_code == 200 and len(csv_resp.text.strip().splitlines()) == 16  # header + 15 rows
+        assert csv_resp.status_code == 200 and len(csv_resp.text.strip().splitlines()) == 17  # header + 16 rows
         assert zip_resp.status_code == 200 and zip_resp.headers["content-type"] == "application/zip"
         names = zipfile.ZipFile(io.BytesIO(zip_resp.content)).namelist()
-        assert len(names) == 14 and "not-a-label.jpg" in names and "missing-photo.jpg" not in names
+        assert len(names) == 15 and "not-a-label.jpg" in names and "missing-photo.jpg" not in names
 
         page = applicant.get("/applicant/batches").text
         assert "/applicant/batches/sample.csv" in page and "sample-images.zip" in page
@@ -715,9 +715,9 @@ class TestBatch:
         assert resp.status_code == 303
         rows = applicant.get(resp.headers["location"] + "/rows")
         assert rows.headers["X-Batch-Status"] == "done"
-        assert "15 of 15 checked" in rows.text
+        assert "16 of 16 checked" in rows.text
         assert ",," in csv_resp.text  # two rows leave the type blank on purpose
-        assert "3 all fields match" in rows.text and "3 need a look" in rows.text
+        assert "3 all fields match" in rows.text and "4 need a look" in rows.text
         assert "7 corrections needed" in rows.text and "2 could not be checked" in rows.text
         assert "missing-photo.jpg" in rows.text and "Not checked" in rows.text
         assert "was not found in the zip" in rows.text  # the missing image, explained

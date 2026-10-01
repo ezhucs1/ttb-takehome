@@ -143,7 +143,7 @@ def compare_brand_name(application: ApplicationData, extraction: LabelExtraction
 
 
 def compare_class_type(application: ApplicationData, extraction: LabelExtraction) -> FieldResult:
-    return _fuzzy_field(
+    result = _fuzzy_field(
         field="class_type",
         label="Class / Type",
         application_value=application.class_type,
@@ -151,6 +151,22 @@ def compare_class_type(application: ApplicationData, extraction: LabelExtraction
         review_at=CLASS_REVIEW,
         normalizer=lambda s: _apply_synonyms(normalize_text(s)),
     )
+    # A malt beverage must use a recognized class designation (27 CFR 7.64): beer, ale,
+    # lager, stout, porter, malt liquor ... A designation with none of them goes to review.
+    rules = _class_of(application, extraction)
+    designation = normalize_text(extraction.class_type.value)
+    if (
+        rules.beverage_type is BeverageType.MALT_BEVERAGE
+        and designation
+        and not _CATEGORY_PATTERNS[2][1].search(designation)
+    ):
+        result.notes.append(
+            f"'{extraction.class_type.value}' contains no recognized class designation (beer, "
+            f"ale, lager, stout, porter, malt liquor ...) ({rules.rule('class_type').citation})."
+        )
+        if result.verdict is Verdict.MATCH:
+            result.verdict = Verdict.NEEDS_REVIEW
+    return result
 
 
 # Words in a class/type designation that settle which TTB category the product is in.
@@ -419,6 +435,11 @@ def compare_alcohol_content(
         return FieldResult(verdict=Verdict.NEEDS_REVIEW, reason=reason, **base)
 
     notes: list[str] = []
+    if label_abv.source == "percent" and not _ALC_WORDS_RE.search(label_text):
+        notes.append(
+            f"The label shows '{label_text}' without the words 'alcohol by volume' or an "
+            f"abbreviation such as 'Alc./Vol.' or 'ABV' ({rules.rule('alcohol_content').citation})."
+        )
     if label_abv.proof is not None:
         if not rules.proof_permitted:
             notes.append(
@@ -459,6 +480,8 @@ def compare_alcohol_content(
     return FieldResult(verdict=verdict, reason=reason, notes=notes, **base)
 
 
+_ALC_WORDS_RE = re.compile(r"alc|abv|alcohol", re.IGNORECASE)
+
 # Wine is taxed in classes divided at these percentages; a labeling tolerance that
 # straddled one would change the tax class, so it is not allowed to.
 _WINE_TAX_CLASS_LINES = (14.0, 21.0, 24.0)
@@ -485,13 +508,25 @@ def compare_net_contents(application: ApplicationData, extraction: LabelExtracti
     )
     app_vol = parse_net_contents(application.net_contents)
     label_vol = parse_net_contents(extracted.value)
+    rules = _class_of(application, extraction)
+    # On a malt beverage the statement may be blown into the glass rather than printed
+    # (27 CFR 7.70), so a label without one is a review item, not a finding.
+    on_container = rules.beverage_type is BeverageType.MALT_BEVERAGE
+    missing_note = (
+        f" On a malt beverage it may be blown into the glass instead "
+        f"({rules.rule('net_contents').citation}); confirm on the container."
+        if on_container
+        else ""
+    )
 
     if app_vol is None and label_vol is None:
         if application.net_contents.strip() or (extracted.value or "").strip():
             reason = "Could not read a volume. Confirm visually."
             return FieldResult(verdict=Verdict.NEEDS_REVIEW, reason=reason, **base)
         return FieldResult(
-            verdict=Verdict.MISMATCH, reason="Net contents are required and were not found.", **base
+            verdict=Verdict.NEEDS_REVIEW if on_container else Verdict.MISMATCH,
+            reason="Net contents are required and were not found." + missing_note,
+            **base,
         )
     if app_vol is None:
         return FieldResult(
@@ -507,12 +542,12 @@ def compare_net_contents(application: ApplicationData, extraction: LabelExtracti
                 **base,
             )
         return FieldResult(
-            verdict=Verdict.MISMATCH,
-            reason=f"Application states {_fmt_ml(app_vol.milliliters)} but no net contents were found on the label.",
+            verdict=Verdict.NEEDS_REVIEW if on_container else Verdict.MISMATCH,
+            reason=f"Application states {_fmt_ml(app_vol.milliliters)} but no net contents were found on the label."
+            + missing_note,
             **base,
         )
 
-    rules = _class_of(application, extraction)
     notes = _standard_of_fill_notes(rules, label_vol.milliliters)
     metric_missing = rules.metric_required and label_vol.original_unit not in METRIC_UNITS
     if metric_missing:
@@ -811,7 +846,7 @@ _RECORDS_NOTE = "The grape-source percentages behind the statement are checked f
 
 
 def _wine_rule(application: ApplicationData, extraction: LabelExtraction, field: str):
-    """The wine rule for ``field``, or None when the class does not carry the rule."""
+    """The class's rule for ``field``, or None when the class does not carry the rule."""
     rules = _class_of(application, extraction)
     if rules.requirement(field) is Requirement.NOT_APPLICABLE:
         return None
@@ -928,6 +963,47 @@ def compare_estate_bottled(
     )
 
 
+_STRENGTH_RE = re.compile(
+    r"\b(extra[\s-]+strength|full[\s-]+strength|high[\s-]+test|high[\s-]+proof|"
+    r"pre[\s-]*war[\s-]+strength|full old[\s-]+time alcoholic strength|strong)\b",
+    re.IGNORECASE,
+)
+
+
+def compare_strength_claim(
+    application: ApplicationData, extraction: LabelExtraction
+) -> FieldResult | None:
+    """Malt beverages only: wording that emphasizes alcoholic strength is not permitted
+    (27 CFR 7.65). The reader reports such wording; the brand, class, and alcohol
+    statement are scanned as well. A row appears only when something was found."""
+    rules = _wine_rule(application, extraction, "strength_claim")
+    if rules is None:
+        return None
+    claim = (extraction.strength_claim.value or "").strip()
+    confidence = extraction.strength_claim.confidence
+    if not claim:
+        for part in (extraction.brand_name, extraction.class_type, extraction.alcohol_content):
+            match = _STRENGTH_RE.search(part.value or "")
+            if match:
+                claim, confidence = match.group(1), part.confidence
+                break
+    if not claim:
+        return None
+    return FieldResult(
+        verdict=Verdict.NEEDS_REVIEW,
+        reason=(
+            f"The label says '{claim}'. A malt beverage label may not emphasize alcoholic "
+            f"strength ({rules.rule('strength_claim').citation}); 'strong' inside a recognized "
+            "style name is a judgment for the specialist."
+        ),
+        field="strength_claim",
+        label="Statement of Strength",
+        application_value="Not permitted",
+        label_value=claim,
+        confidence=confidence,
+    )
+
+
 _CONDITIONAL_COMPARATORS = (
     compare_age_statement,
     compare_bottled_in_bond,
@@ -935,6 +1011,7 @@ _CONDITIONAL_COMPARATORS = (
     compare_appellation,
     compare_vintage_year,
     compare_estate_bottled,
+    compare_strength_claim,
 )
 
 

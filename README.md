@@ -59,6 +59,7 @@ nothing on any page loads from a CDN.
 | Appellation of origin | Wine only, when the label names one: shown with its citation; the grape-source percentages are a records check | "Napa Valley" |
 | Vintage year | Wine only, when the label states one: it must sit beside an appellation of origin and be a real past year | a 2022 vintage with no appellation |
 | Estate Bottled | Wine only, when the label claims it: there must be a viticultural area appellation on the label | "Estate Bottled" with no appellation |
+| Statement of strength | Malt beverages only, when the label emphasizes alcoholic strength: goes to review | "Extra Strength Lager" |
 
 **The rules differ by class**, and the engine applies the class's own (27 CFR part 5 for
 distilled spirits, part 4 for wine, part 7 for malt beverages; part 16 for the warning):
@@ -66,9 +67,10 @@ distilled spirits, part 4 for wine, part 7 for malt beverages; part 16 for the w
 | | Distilled spirits | Wine | Malt beverage |
 | --- | --- | --- | --- |
 | Alcohol content | Required; proof allowed; ±0.15 | Required; "Table Wine" may replace the number at 7 to 14%; ±1.5 up to 14%, ±1.0 above, never across the 14% tax class line | Optional federally; ±0.3 when stated |
-| Net contents | Metric; standards of fill | Metric; standards of fill | Fluid ounces or metric; no standards of fill |
+| Net contents | Metric; standards of fill | Metric; standards of fill | Fluid ounces or metric; no standards of fill; may be blown into the glass, so a label without one goes to review |
 | Sulfites | Not applicable | Required at 10 ppm or more | Not applicable |
-| Class-specific statements | Age, bottled in bond, blend percentage | Appellation, vintage, estate bottled | None beyond the seven fields |
+| Class / type | A class or type from the standards of identity | A class or type; a grape variety may serve | Must contain a recognized designation (beer, ale, lager, stout, porter, malt liquor ...) or it goes to review |
+| Class-specific statements | Age, bottled in bond, blend percentage | Appellation, vintage, estate bottled | Statements of strength |
 
 A difference inside the class's labeling tolerance is a review item rather than a
 mismatch, because the application should carry the labeled figure. Standards of fill are
@@ -113,18 +115,18 @@ The `beverage_type` column may be left blank in a batch CSV, and the type may be
 type was taken from the label.
 
 **Trying the batch upload** needs a CSV and a zip of images. The batch page offers both
-ready-made: a fifteen-row CSV and a zip of the sample labels. Thirteen rows are the bundled
+ready-made: a sixteen-row CSV and a zip of the sample labels. Fourteen rows are the bundled
 samples; two are deliberately broken, a photo that is not a label and a row whose image is
 missing from the zip, so the summary shows failures next to the AI's findings. Download
 them, choose them in the form, and start the batch; the page shows progress and every
 readable row lands in the specialist's queue. In demo mode it finishes in a second or two. With a real API key the
-same batch makes thirteen model reads, which is a fair test of the concurrency and the
+same batch makes fourteen model reads, which is a fair test of the concurrency and the
 per-label timing.
 
-The database is seeded on first start with thirteen sample applications in a mix of states
+The database is seeded on first start with fourteen sample applications in a mix of states
 so every screen has content.
 
-**Without an API key** the app runs in demo mode: the thirteen bundled sample labels work end
+**Without an API key** the app runs in demo mode: the fourteen bundled sample labels work end
 to end, and uploading your own image gives a clear message instead of a made-up result.
 
 **With `ANTHROPIC_API_KEY` in `.env`** (or the environment) the vision extractor reads any label you upload, and the
@@ -162,7 +164,7 @@ waited. `--timeout` and `--model` apply to that run only and override `.env`.
 
 ### Sample labels
 
-Thirteen labels rendered in four visual styles, three of them passed through a photo
+Fourteen labels rendered in four visual styles, three of them passed through a photo
 simulation (bottle curvature, perspective, glare, grain, blur). Each demonstrates one
 outcome:
 

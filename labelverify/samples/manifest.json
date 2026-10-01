@@ -80,6 +80,10 @@
         "value": null,
         "confidence": 0.0
       },
+      "strength_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
       "appellation": {
         "value": null,
         "confidence": 0.0
@@ -176,6 +180,10 @@
         "confidence": 0.0
       },
       "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "strength_claim": {
         "value": null,
         "confidence": 0.0
       },
@@ -280,6 +288,10 @@
         "value": null,
         "confidence": 0.0
       },
+      "strength_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
       "appellation": {
         "value": null,
         "confidence": 0.0
@@ -378,6 +390,10 @@
         "confidence": 0.0
       },
       "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "strength_claim": {
         "value": null,
         "confidence": 0.0
       },
@@ -480,6 +496,10 @@
         "value": null,
         "confidence": 0.0
       },
+      "strength_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
       "appellation": {
         "value": "NAPA VALLEY",
         "confidence": 0.97
@@ -576,6 +596,10 @@
         "confidence": 0.0
       },
       "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "strength_claim": {
         "value": null,
         "confidence": 0.0
       },
@@ -682,9 +706,116 @@
         "value": null,
         "confidence": 0.0
       },
+      "strength_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
       "vintage_year": {
         "value": "2022",
         "confidence": 0.97
+      },
+      "estate_bottled_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "importer_statement": {
+        "value": null,
+        "confidence": 0.0
+      }
+    }
+  },
+  {
+    "id": "north-shore-extra-strength-lager",
+    "title": "North Shore Lager · strength claim",
+    "description": "A lager sold as 'Extra Strength'; a malt beverage label may not emphasize alcoholic strength (27 CFR 7.65).",
+    "file": "north-shore-extra-strength-lager.jpg",
+    "expected": "needs_review",
+    "application": {
+      "beverage_type": "malt_beverage",
+      "brand_name": "North Shore",
+      "class_type": "Extra Strength Lager",
+      "alcohol_content": "9.5",
+      "net_contents": "16 fl oz",
+      "producer_name": "North Shore Brewing Co.",
+      "producer_address": "Duluth, MN 55802",
+      "is_import": false,
+      "country_of_origin": ""
+    },
+    "extraction": {
+      "brand_name": {
+        "value": "NORTH SHORE",
+        "confidence": 0.97
+      },
+      "class_type": {
+        "value": "Extra Strength Lager",
+        "confidence": 0.97
+      },
+      "alcohol_content": {
+        "value": "9.5% ALC/VOL",
+        "confidence": 0.97
+      },
+      "net_contents": {
+        "value": "16 FL OZ (473 mL)",
+        "confidence": 0.97
+      },
+      "producer_name": {
+        "value": "North Shore Brewing Co.",
+        "confidence": 0.97
+      },
+      "producer_address": {
+        "value": "Duluth, Minnesota 55802",
+        "confidence": 0.97
+      },
+      "country_of_origin": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "strength_claim": {
+        "value": "EXTRA STRENGTH",
+        "confidence": 0.97
+      },
+      "health_warning": {
+        "present": true,
+        "text": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "heading_all_caps": true,
+        "heading_bold": true,
+        "confidence": 0.96
+      },
+      "image_quality": {
+        "readable": true,
+        "issues": []
+      },
+      "product_category": {
+        "value": "malt_beverage",
+        "confidence": 0.97
+      },
+      "sulfite_declaration": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "qualifying_phrase": {
+        "value": "Brewed and Canned by",
+        "confidence": 0.97
+      },
+      "age_statement": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "bottled_in_bond_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "appellation": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "vintage_year": {
+        "value": null,
+        "confidence": 0.0
       },
       "estate_bottled_claim": {
         "value": null,
@@ -774,6 +905,10 @@
         "confidence": 0.0
       },
       "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "strength_claim": {
         "value": null,
         "confidence": 0.0
       },
@@ -873,6 +1008,10 @@
         "confidence": 0.0
       },
       "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "strength_claim": {
         "value": null,
         "confidence": 0.0
       },
@@ -977,6 +1116,10 @@
         "value": null,
         "confidence": 0.0
       },
+      "strength_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
       "appellation": {
         "value": null,
         "confidence": 0.0
@@ -1073,6 +1216,10 @@
         "confidence": 0.0
       },
       "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "strength_claim": {
         "value": null,
         "confidence": 0.0
       },
@@ -1175,6 +1322,10 @@
         "value": null,
         "confidence": 0.0
       },
+      "strength_claim": {
+        "value": null,
+        "confidence": 0.0
+      },
       "appellation": {
         "value": null,
         "confidence": 0.0
@@ -1271,6 +1422,10 @@
         "confidence": 0.97
       },
       "blend_percentage": {
+        "value": null,
+        "confidence": 0.0
+      },
+      "strength_claim": {
         "value": null,
         "confidence": 0.0
       },
