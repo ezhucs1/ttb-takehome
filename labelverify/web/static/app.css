@@ -525,6 +525,12 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--acce
 .batch-progress-text { font-size: 0.88rem; color: var(--ink-2); }
 .batch-summary { display: flex; gap: 8px; flex-wrap: wrap; }
 
+/* Try-it batch box ------------------------------------------------------------ */
+.try-batch { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--line-strong); }
+.try-batch .card-title { margin-bottom: 6px; }
+.try-batch-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.try-batch-note { margin: 10px 0 0; }
+
 /* Landing and sign-in ------------------------------------------------------- */
 .auth { min-height: 100vh; background: #06080a; color: #fff; }
 .landing { position: relative; min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; overflow: hidden; }

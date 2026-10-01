@@ -956,6 +956,39 @@ def batch_template_csv() -> str:
     return buffer.getvalue()
 
 
+def sample_batch_csv(samples) -> str:
+    """One row per bundled sample label, in the batch template's columns."""
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(BATCH_COLUMNS)
+    for s in samples:
+        a = s["application"]
+        writer.writerow(
+            [
+                s["file"],
+                a.get("beverage_type", ""),
+                a.get("brand_name", ""),
+                a.get("class_type", ""),
+                a.get("alcohol_content", ""),
+                a.get("net_contents", ""),
+                a.get("producer_name", ""),
+                a.get("producer_address", ""),
+                "true" if a.get("is_import") else "false",
+                a.get("country_of_origin", "") or "",
+            ]
+        )
+    return buffer.getvalue()
+
+
+def sample_batch_zip(samples, samples_dir) -> bytes:
+    """The bundled sample images, zipped under the names the sample CSV refers to."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for s in samples:
+            archive.write(samples_dir / s["file"], arcname=s["file"])
+    return buffer.getvalue()
+
+
 @dataclass
 class ParsedBatch:
     rows: list[dict]

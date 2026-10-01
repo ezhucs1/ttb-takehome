@@ -26,6 +26,15 @@
       </div>
       <div><button class="btn btn-primary" type="submit"><svg class="icon"><use href="#i-upload"></use></svg> Start batch</button></div>
     </form>
+    <div class="try-batch">
+      <div class="card-title">No data of your own yet?</div>
+      <p class="small">Download both files, pick them in the form above, and start the batch. It covers the ten bundled sample labels, so every outcome appears: clean approvals, items for review, and corrections.</p>
+      <div class="try-batch-links">
+        <a class="btn btn-secondary btn-sm" href="/applicant/batches/sample.csv" download><svg class="icon"><use href="#i-file"></use></svg> Sample CSV (10 rows)</a>
+        <a class="btn btn-secondary btn-sm" href="/applicant/batches/sample-images.zip" download><svg class="icon"><use href="#i-layers"></use></svg> Sample images (.zip)</a>
+      </div>
+      {% if not demo_mode %}<p class="muted small try-batch-note">The reader is live, so this batch makes ten model calls.</p>{% endif %}
+    </div>
   </div>
 
   <div class="card card-flush">

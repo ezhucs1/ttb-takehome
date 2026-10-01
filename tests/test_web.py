@@ -588,6 +588,33 @@ class TestBatch:
         assert "peak.csv" in applicant.get("/applicant/batches").text
         assert "OLD TOM DISTILLERY" in specialist.get("/specialist").text  # the batch rows are queued
 
+    def test_sample_batch_downloads_and_runs_end_to_end(self, applicant, specialist):
+        """The two downloads on the batch page are enough to exercise the whole flow."""
+        csv_resp = applicant.get("/applicant/batches/sample.csv")
+        zip_resp = applicant.get("/applicant/batches/sample-images.zip")
+        assert csv_resp.status_code == 200 and len(csv_resp.text.strip().splitlines()) == 11
+        assert zip_resp.status_code == 200 and zip_resp.headers["content-type"] == "application/zip"
+        names = zipfile.ZipFile(io.BytesIO(zip_resp.content)).namelist()
+        assert len(names) == 10 and all(n.endswith(".jpg") for n in names)
+
+        page = applicant.get("/applicant/batches").text
+        assert "/applicant/batches/sample.csv" in page and "sample-images.zip" in page
+
+        resp = applicant.post(
+            "/applicant/batches",
+            files={
+                "csv_file": ("sample.csv", csv_resp.content, "text/csv"),
+                "zip_file": ("images.zip", zip_resp.content, "application/zip"),
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        rows = applicant.get(resp.headers["location"] + "/rows")
+        assert rows.headers["X-Batch-Status"] == "done"
+        assert "10 of 10 checked" in rows.text and "failed" not in rows.text
+        assert "3 match" in rows.text and "2 need a look" in rows.text and "5 need fixes" in rows.text
+        assert "Sunset Ridge" in specialist.get("/specialist").text
+
     def test_batch_validation_errors_render(self, applicant):
         resp = applicant.post(
             "/applicant/batches",

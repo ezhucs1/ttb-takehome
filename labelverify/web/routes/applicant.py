@@ -287,6 +287,29 @@ def batch_template():
     )
 
 
+@router.get("/batches/sample.csv")
+def sample_batch_csv(request: Request, user: User = Depends(require_applicant)):
+    """A CSV covering the ten bundled samples, to try the batch flow without own data."""
+    return PlainTextResponse(
+        services.sample_batch_csv(request.app.state.samples),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="labelverify-sample-batch.csv"'},
+    )
+
+
+@router.get("/batches/sample-images.zip")
+def sample_batch_zip(request: Request, user: User = Depends(require_applicant)):
+    from fastapi.responses import Response
+
+    from ...engine.extractors.demo import SAMPLES_DIR
+
+    return Response(
+        services.sample_batch_zip(request.app.state.samples, SAMPLES_DIR),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="labelverify-sample-images.zip"'},
+    )
+
+
 @router.post("/batches")
 async def create_batch(
     request: Request,

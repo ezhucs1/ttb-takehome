@@ -77,6 +77,13 @@ Open the landing page, choose Sign in, and use one of the demo accounts (passwor
 Maria is a label-compliance agent filing for several producers, so her one account holds
 all ten sample cases.
 
+**Trying the batch upload** needs a CSV and a zip of images. The batch page offers both
+ready-made: a ten-row CSV and a zip of the ten sample labels. Download them, choose them
+in the form, and start the batch; the page shows progress and every row lands in the
+specialist's queue. In demo mode it finishes in a second or two. With a real API key the
+same batch makes ten model reads, which is a fair test of the concurrency and the
+per-label timing.
+
 The database is seeded on first start with ten sample applications in a mix of states so
 every screen has content.
 
