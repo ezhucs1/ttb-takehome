@@ -154,8 +154,12 @@ confidence, so more rows land in review than with the model, which is the right 
 a degraded read.
 
 The fallback needs the `tesseract` binary (`apt install tesseract-ocr` or `brew install
-tesseract`; the Docker image installs it). Without the binary there is no fallback and the
-failure is reported with a "Read again" button.
+tesseract`; the Docker image installs it). The app looks on its PATH, then in the usual
+install locations (Homebrew, snap, apt, the Windows installer). If it still says the
+binary was not found, the process that runs the app has a different PATH from your
+shell: put the full path in `LABELVERIFY_TESSERACT_CMD` (what `which tesseract` prints).
+Without the binary there is no fallback and the failure is reported with a "Read again"
+button.
 
 To try it:
 
@@ -270,6 +274,7 @@ can set them.
 | `LABELVERIFY_DAILY_READ_LIMIT` | unlimited | Paid model reads allowed per UTC day; after that uploads get a clear message and the sample labels still work. Set it on any public URL |
 | `LABELVERIFY_DEMO_ACCOUNTS` | `true` | Show the demo account list in the sign-in dialog. Set `false` on a public URL; reviewers use the accounts in this README |
 | `LABELVERIFY_REPO_URL` | this repository | GitHub link on the landing page |
+| `LABELVERIFY_TESSERACT_CMD` | found on PATH | Full path of the tesseract executable when the app cannot find it on its own |
 | `LABELVERIFY_FALLBACK` | `tesseract` | Reader used when the configured one fails on a read; `none` turns the fallback off |
 | `LABELVERIFY_SECURE_COOKIES` | `false` | `true` marks the session cookie Secure; set it behind HTTPS (the Fly config does) |
 | `LABELVERIFY_STRUCTURED_OUTPUT` | `false` | `true` asks the API to constrain the reply to the extraction schema. Off by default: the API compiles a new schema into a grammar on first use, and that compile can take longer than a read is allowed to. The default asks for JSON in the prompt and validates it here |

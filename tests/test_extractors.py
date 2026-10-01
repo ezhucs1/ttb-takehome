@@ -307,3 +307,22 @@ def test_prompted_json_shape_names_every_extraction_field():
     per_field = set(LabelExtraction.model_fields) - {"health_warning", "image_quality"}
     assert set(_FIELD_KEYS) == per_field
     assert len(_FIELD_KEYS) == len(set(_FIELD_KEYS))
+
+
+def test_tesseract_command_lookup(monkeypatch, tmp_path):
+    from labelverify.engine.extractors import tesseract as t
+
+    fake = tmp_path / "tesseract"
+    fake.write_text("#!/bin/sh\n")
+    monkeypatch.setenv("LABELVERIFY_TESSERACT_CMD", str(fake))
+    assert t.tesseract_command() == str(fake) and t.TesseractExtractor.available()
+    monkeypatch.setenv("LABELVERIFY_TESSERACT_CMD", str(tmp_path / "nowhere"))
+    assert t.tesseract_command() is None
+    monkeypatch.delenv("LABELVERIFY_TESSERACT_CMD")
+    monkeypatch.setattr(t.shutil, "which", lambda name: None)
+    monkeypatch.setattr(t, "_USUAL_PLACES", (str(fake),))
+    assert t.tesseract_command() == str(fake)
+    monkeypatch.setattr(t, "_USUAL_PLACES", ())
+    assert t.tesseract_command() is None
+    with pytest.raises(ExtractionError, match="LABELVERIFY_TESSERACT_CMD"):
+        t.TesseractExtractor().extract(b"x", "image/png")

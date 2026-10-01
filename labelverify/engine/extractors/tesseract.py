@@ -7,6 +7,7 @@ it produces carries a low confidence and lands in the "needs review" band.
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 from collections.abc import Sequence
@@ -78,13 +79,36 @@ _CLASS_KEYWORDS = (
 _LOW = 0.45
 
 
+# Where the binary usually lands when it is not on the service's PATH: Homebrew on
+# Apple silicon and Intel Macs, snap, and the apt and Windows installers.
+_USUAL_PLACES = (
+    "/opt/homebrew/bin/tesseract",
+    "/usr/local/bin/tesseract",
+    "/usr/bin/tesseract",
+    "/snap/bin/tesseract",
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+)
+
+
+def tesseract_command() -> str | None:
+    """The tesseract executable: LABELVERIFY_TESSERACT_CMD, else PATH, else the usual
+    install locations. None when nothing is found."""
+    configured = os.environ.get("LABELVERIFY_TESSERACT_CMD", "").strip()
+    if configured:
+        return configured if os.path.exists(configured) else shutil.which(configured)
+    found = shutil.which("tesseract")
+    if found:
+        return found
+    return next((place for place in _USUAL_PLACES if os.path.exists(place)), None)
+
+
 class TesseractExtractor:
     name = "tesseract"
 
     @staticmethod
     def available() -> bool:
-        """True when the tesseract binary can be found on PATH."""
-        return shutil.which("tesseract") is not None
+        """True when the tesseract binary can be found."""
+        return tesseract_command() is not None
 
     def extract(self, image: bytes, media_type: str) -> LabelExtraction:
         return self.extract_panels([(image, media_type)])
@@ -96,13 +120,21 @@ class TesseractExtractor:
             from PIL import Image
         except ImportError as exc:  # pragma: no cover - dependency is declared
             raise ExtractionError("pytesseract is not installed.") from exc
+        command = tesseract_command()
+        if command is None:
+            raise ExtractionError(
+                "The tesseract binary was not found on this machine's PATH "
+                f"({os.environ.get('PATH', '')}). Install tesseract-ocr, or set "
+                "LABELVERIFY_TESSERACT_CMD to the full path of the executable."
+            )
+        pytesseract.pytesseract.tesseract_cmd = command
         texts: list[str] = []
         for image, _ in panels:
             try:
                 texts.append(pytesseract.image_to_string(Image.open(BytesIO(image))))
             except pytesseract.TesseractNotFoundError as exc:
                 raise ExtractionError(
-                    "The tesseract binary is not installed on this machine."
+                    f"The tesseract binary at {command} could not be run ({exc})."
                 ) from exc
         return classify_text("\n\n".join(texts))
 
