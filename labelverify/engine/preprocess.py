@@ -13,7 +13,7 @@ from io import BytesIO
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-MAX_LONG_EDGE = 1500
+MAX_LONG_EDGE = 1200  # measured: the same reads as 1500 px, a little faster, fewer image tokens
 
 
 def configured_max_edge() -> int:

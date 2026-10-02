@@ -421,7 +421,7 @@ session cookie is Secure.
 | `LABELVERIFY_FALLBACK` | `tesseract` | Reader used when the configured one fails on a read; `none` turns the fallback off |
 | `LABELVERIFY_SECURE_COOKIES` | `false` | `true` marks the session cookie Secure; set it behind HTTPS (the Fly config does) |
 | `LABELVERIFY_STRUCTURED_OUTPUT` | `false` | `true` asks the API to constrain the reply to the extraction schema. Off by default: the API compiles a new schema into a grammar on first use, and that compile can take longer than a read is allowed to. The default asks for JSON in the prompt and validates it here |
-| `LABELVERIFY_IMAGE_MAX_EDGE` | `1500` | Long edge in pixels after preprocessing; smaller is faster, larger keeps more small-print detail |
+| `LABELVERIFY_IMAGE_MAX_EDGE` | `1200` | Long edge in pixels after preprocessing; smaller is faster and cheaper, larger keeps more small-print detail (1500 measured as no more accurate on the samples) |
 | `DATABASE_URL` | `sqlite:///./data/labelverify.db` | SQLAlchemy URL; Postgres works unchanged |
 | `SECRET_KEY` | generated once, kept beside the database | Signs session cookies; set it explicitly in any shared deployment |
 
@@ -435,7 +435,7 @@ labelverify/
     normalize.py          text, ABV, volume, producer name, address, country normalizers
     warning.py            health warning rules and word diff
     compare.py            per-field rules and roll-up; nothing here calls a model
-    preprocess.py         EXIF rotation, 1500 px downscale, JPEG re-encode
+    preprocess.py         EXIF rotation, 1200 px downscale, JPEG re-encode
     notices.py            correction notice template and optional model rewrite
     verify.py             orchestration with timing and fallback
     extractors/           claude and gemini (vision), tesseract (local OCR), demo (samples), fixture (tests), budget (daily cap)
