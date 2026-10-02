@@ -533,3 +533,26 @@ once, so twenty threads fought over four cores (load average 20). The reader now
 
 Also measured and rejected: upscaling the image two times before OCR. It lifted three
 fields by one sample each and made every read six times slower.
+
+## 23. A difference the reader is unsure of asks for a better image
+
+Running Excisely's real bottle photographs through the app gave "corrections needed" on
+most rows: glare, curved glass and stylized type produce misreads, and a misread that
+differs from the application was a mismatch. The brief addresses exactly this case. Jenny
+Park: "I've seen labels that are photographed at weird angles, or the lighting is bad, or
+there's glare on the bottle. Right now if an agent can't read the label they just reject
+it and ask for a better image. But if AI could handle some of that..." The practice for an
+unreadable label is to ask for a better image, not to reject it for a mismatch.
+
+The verdict's strength now follows the read's confidence. A difference from a field read
+below ordinary confidence is a review item whose note says "confirm on the image, or ask
+for a clearer photo"; a difference read confidently is a mismatch; a low-confidence
+agreement is a match marked uncertain. On the model's reads this touches only the fields
+it flags as hard to read, which is what the brief asked the AI to help with. On the OCR
+path, where every value is low confidence, the engine never issues a correction request
+on its own: every difference goes to the specialist with the image beside it, and the
+specialist's eye, not the reader's slip, decides.
+
+The AI-generated labels in that set also have genuinely garbled warning text printed on
+them (a known trait of image generators), which the model reads confidently and the
+engine fails correctly; those are real defects, not reader slips.

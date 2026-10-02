@@ -478,8 +478,12 @@ class TestVerify:
         assert any("Low read confidence" in n for n in brand.notes)
         assert result.recommendation is Recommendation.NEEDS_REVIEW
         assert any("low-confidence read" in line for line in result.summary)
-        # A real difference on a poor read is still a mismatch, not softened to review.
+        # A difference on a poor read asks for a clearer image; the same difference read
+        # confidently is a finding.
         extraction.brand_name = make_field("SOMETHING ELSE", confidence=0.4)
+        poor = verify(application, extraction).field("brand_name")
+        assert poor.verdict is Verdict.NEEDS_REVIEW and poor.uncertain
+        extraction.brand_name = make_field("SOMETHING ELSE", confidence=0.95)
         assert verify(application, extraction).field("brand_name").verdict is Verdict.MISMATCH
 
     def test_unreadable_image_never_approves(self, application, extraction):
@@ -675,16 +679,19 @@ class TestUncertainRead:
         self._ocr_grade(extraction)
         assert read_is_uncertain(extraction)
         extraction.net_contents = make_field(None)  # OCR missed the volume line
-        extraction.alcohol_content = make_field(
-            "40% Alc./Vol.", confidence=0.45
-        )  # a real difference
+        extraction.alcohol_content = make_field("40% Alc./Vol.", confidence=0.45)  # read unsurely
         result = verify(application, extraction)
         net = result.field("net_contents")
         assert net.verdict is Verdict.NEEDS_REVIEW and net.uncertain
         assert "confirm on the image" in net.reason
-        assert result.field("alcohol_content").verdict is Verdict.MISMATCH
-        assert result.recommendation is Recommendation.REQUEST_CORRECTION
+        abv = result.field("alcohol_content")  # a difference the reader is unsure of: review
+        assert abv.verdict is Verdict.NEEDS_REVIEW and abv.uncertain
+        assert any("clearer photo" in n for n in abv.notes)
+        assert result.recommendation is Recommendation.NEEDS_REVIEW
         assert any("did not find: Net Contents" in line for line in result.summary)
+        # The same difference read confidently is a finding.
+        extraction.alcohol_content = make_field("40% Alc./Vol.", confidence=0.95)
+        assert verify(application, extraction).field("alcohol_content").verdict is Verdict.MISMATCH
 
     def test_a_confident_read_keeps_absences_as_findings(self, application, extraction):
         from labelverify.engine.compare import read_is_uncertain
@@ -719,4 +726,7 @@ class TestUncertainRead:
         extraction.health_warning.text = STATUTORY_TEXT.replace(
             "GOVERNMENT WARNING", "Government Warning"
         )
+        heading = verify(application, extraction).field("health_warning")
+        assert heading.verdict is Verdict.NEEDS_REVIEW and heading.uncertain  # unsure read
+        extraction.health_warning.confidence = 0.95
         assert verify(application, extraction).field("health_warning").verdict is Verdict.MISMATCH

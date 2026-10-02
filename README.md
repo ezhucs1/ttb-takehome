@@ -84,10 +84,15 @@ phrase, sulfites, appellation, vintage, age statement) with what the read found,
 are reviewed before the check. Changing the type re-applies the rules.
 | Health warning | Word for word against 27 CFR 16.21; `GOVERNMENT WARNING` must be all caps; bold is a visual judgment that goes to review when uncertain | exact statutory text |
 
-Per-field verdicts are match, needs review, mismatch, or not applicable. A match from a
-low-confidence read keeps its verdict (the values do agree) but is marked "unverified
-read", and the application goes to review rather than approval. The roll-up is approve,
-needs review, or request correction.
+Per-field verdicts are match, needs review, mismatch, or not applicable. The strength of
+a verdict follows the confidence of the read. A match from a low-confidence read keeps
+its verdict (the values do agree) but is marked "uncertain read", and the application
+goes to review rather than approval. A difference from a low-confidence read is a review
+item that says "confirm on the image, or ask for a clearer photo", not a mismatch: the
+interviews say that when an agent cannot read a label the practice is to ask for a better
+image, not to reject it for a mismatch, and a reader's slip must not become a correction
+request. A difference read with confidence is a mismatch. The roll-up is approve, needs
+review, or request correction.
 
 ## Run it locally
 
@@ -199,9 +204,13 @@ OCR value is reported at low confidence, so the rows that agree with the applica
 such a read, a required item the reader did not find is a review item with a note to
 confirm on the image, not a finding, because OCR misses text far more often than labels
 omit it; a difference in what was read (a wrong percentage, a changed warning) stays a
-mismatch. On the sample batch that leaves seven rows with corrections, five of them the
-label's own defects and two reader slips on a dark can and a photographed address, which
-the "Read with local OCR" banner on the result warns about. The form in step 2 is filled
+mismatch when read confidently. Because every OCR value is low confidence, a difference
+it reports is a review item asking for a look at the image or a clearer photo, not a
+correction request; only the specialist, looking at the image, turns it into one. On
+photographs of real bottles, with glare, curvature and stylized type, expect most rows to
+come back for review on the OCR path. That is the brief's own fallback ("ask for a better
+image"), with the reader's guess shown beside the image so the specialist decides in one
+look. The form in step 2 is filled
 from the read: correct the fields that are wrong before checking, exactly as you would
 check a model read against your application.
 

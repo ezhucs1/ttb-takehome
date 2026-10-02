@@ -753,6 +753,20 @@ def _apply_confidence_gate(result: FieldResult) -> FieldResult:
         result.notes.append(
             f"Low read confidence ({result.confidence:.0%}). Confirm the label text visually."
         )
+    elif (
+        result.verdict is Verdict.MISMATCH
+        and (result.label_value or "").strip()
+        and result.confidence < LOW_CONFIDENCE
+    ):
+        # A difference the reader itself is unsure of is not a finding yet. TTB's practice
+        # for a label that cannot be read is to ask for a better image, not to reject it
+        # for a mismatch, so the row asks for that instead of charging the label.
+        result.uncertain = True
+        result.verdict = Verdict.NEEDS_REVIEW
+        result.notes.append(
+            f"Read at {result.confidence:.0%} confidence, so this may be the reader rather "
+            "than the label. Confirm on the image, or ask for a clearer photo."
+        )
     return result
 
 
@@ -1167,11 +1181,21 @@ def _verify_with(
         for f in fields:
             if f.verdict is Verdict.NEEDS_REVIEW:
                 summary.append(f"{f.label}: {f.reason}")
-        uncertain = [f.label for f in fields if f.uncertain and f.label not in softened]
-        if uncertain:
+        unsure = [
+            f.label
+            for f in fields
+            if f.uncertain and f.label not in softened and f.verdict is Verdict.NEEDS_REVIEW
+        ]
+        agreeing = [f.label for f in fields if f.uncertain and f.verdict is Verdict.MATCH]
+        if unsure:
             summary.append(
-                f"{len(uncertain)} matching field{'s' if len(uncertain) != 1 else ''} came from "
-                f"a low-confidence read ({', '.join(uncertain)}); confirm against the image."
+                f"{len(unsure)} difference{'s' if len(unsure) != 1 else ''} on a low-confidence "
+                f"read ({', '.join(unsure)}): confirm on the image, or ask for a clearer photo."
+            )
+        if agreeing:
+            summary.append(
+                f"{len(agreeing)} matching field{'s' if len(agreeing) != 1 else ''} came from "
+                f"a low-confidence read ({', '.join(agreeing)}); confirm against the image."
             )
     else:
         recommendation = Recommendation.APPROVE

@@ -77,7 +77,7 @@ label, and the result.
 | REVIEW | Similar but not identical, within a labeling tolerance, or something only a person can settle; the reason says which, with the similarity percentage when there is one |
 | MISMATCH | A difference the rules do not allow, or a required item missing from the label |
 | N/A | Not applicable here, for example country of origin on a domestic product |
-| uncertain read | Added to a MATCH when the reader was not confident of its transcription (every OCR read, or a blurred photo). The values agree, but look at the image. The application goes to review, not approval |
+| uncertain read | The reader was not confident of its transcription (every OCR read; a blurred or glaring photo with the model). On a MATCH the values agree but need a look at the image. On a REVIEW the values differ, and the row asks you to confirm on the image or ask for a clearer photo before treating it as a mismatch. Either way the application goes to review, not approval |
 | conditional | In the small print under the field name: required only in a stated circumstance (imports, sulfites, a vintage date) |
 | 27 CFR x.xx | The regulation the row rests on; the Reference page has the text behind each |
 | the bar and "n% read" | How confident the reader was in that value, from the model's own estimate or the OCR engine's; it is not the similarity score |
