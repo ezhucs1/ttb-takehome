@@ -16,6 +16,7 @@ from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session, selectinload, sessionmaker
@@ -1280,6 +1281,27 @@ def sample_batch_zip(samples, samples_dir) -> bytes:
         for s in samples:
             archive.write(samples_dir / s["file"], arcname=s["file"])
     return buffer.getvalue()
+
+
+# Sixty approved labels from the TTB Public COLA Registry, with the registry's own
+# application values, bundled as a second batch to try (see labelverify/testdata/cola).
+COLA_DIR = Path(__file__).resolve().parents[1] / "testdata" / "cola"
+
+
+def cola_batch_csv() -> str:
+    return (COLA_DIR / "applications.csv").read_text()
+
+
+def cola_batch_zip() -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_STORED) as archive:  # JPEGs: no gain from deflate
+        for image in sorted((COLA_DIR / "images").iterdir()):
+            archive.write(image, arcname=image.name)
+    return buffer.getvalue()
+
+
+def cola_row_count() -> int:
+    return sum(1 for line in cola_batch_csv().splitlines()[1:] if line.strip())
 
 
 @dataclass

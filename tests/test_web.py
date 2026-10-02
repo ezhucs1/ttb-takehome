@@ -1043,3 +1043,29 @@ def test_a_second_read_in_the_wizard_replaces_the_first_draft(applicant, app):
     with app.state.session_factory() as db:
         assert db.get(Application, first["id"]) is None
         assert db.get(Application, second["id"]) is not None
+
+
+def test_cola_registry_batch_downloads_parse_as_a_batch(applicant):
+    import io
+    import zipfile
+
+    from labelverify.web import services
+
+    csv_resp = applicant.get("/applicant/batches/cola.csv")
+    zip_resp = applicant.get("/applicant/batches/cola-images.zip")
+    assert csv_resp.status_code == 200 and zip_resp.status_code == 200
+    rows = csv_resp.text.strip().splitlines()
+    assert rows[0].startswith("image,beverage_type") and len(rows) == 61  # header + 60 COLAs
+    names = zipfile.ZipFile(io.BytesIO(zip_resp.content)).namelist()
+    parsed = services.parse_batch(csv_resp.content, zip_resp.content)
+    assert parsed.errors == [] and len(parsed.rows) == 60
+    for row in parsed.rows:
+        for name in services.split_image_names(row["image"]):
+            assert name in names
+    assert {r["beverage_type"] for r in parsed.rows} == {
+        "distilled_spirits",
+        "wine",
+        "malt_beverage",
+    }
+    page = applicant.get("/applicant/batches").text
+    assert "public COLA registry" in page and "/applicant/batches/cola.csv" in page

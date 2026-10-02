@@ -556,3 +556,15 @@ specialist's eye, not the reader's slip, decides.
 The AI-generated labels in that set also have genuinely garbled warning text printed on
 them (a known trait of image generators), which the model reads confidently and the
 engine fails correctly; those are real defects, not reader slips.
+
+## 24. Sixty real COLA labels ship with the app as a second batch
+
+The brief says to source additional test labels. The bundled samples are synthetic and
+exist to show each outcome; they say nothing about real artwork. Sixty approved labels
+fetched from TTB's public COLA registry (twenty per class, 97 panels) are bundled under
+`labelverify/testdata/cola/` with the registry's own application values and a README
+stating the provenance, and the batch page offers them beside the synthetic set. Images
+are resized and re-encoded to keep the set at 15 MB. Two limits are stated rather than
+papered over: the registry does not publish alcohol content or net contents, so those
+rows come back for review; and its class names are codes, not the label's wording, so
+the class row is usually a review item too. The set is for the reader, on real labels.

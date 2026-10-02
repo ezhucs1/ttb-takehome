@@ -1,0 +1,1544 @@
+[
+  {
+    "ttbid": "26166001000624",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "NEVER SAY DIE",
+    "fanciful_name": "",
+    "class_type": "STRAIGHT RYE WHISKY",
+    "class_code": "102",
+    "origin": "KENTUCKY",
+    "source": "Domestic",
+    "applicant": "Never Say Die, NSD Spirits, LLC, 249 W SHORT ST STE 200, Lexington KY 40507",
+    "status": "Approved",
+    "completed": "08/24/2026",
+    "images": [
+      {
+        "file": "26166001000624_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "5.65 inches W X 2.32 inches H",
+        "pixels": "1343x729"
+      },
+      {
+        "file": "26166001000624_other1.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "5.65 inches W X 0.78 inches H",
+        "pixels": "1486x396"
+      },
+      {
+        "file": "26166001000624_back.jpg",
+        "type": "Back",
+        "dimensions": "3.5 inches W X 2.36 inches H",
+        "pixels": "919x682"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26166001000624"
+  },
+  {
+    "ttbid": "26166001000629",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "NEVER SAY DIE",
+    "fanciful_name": "",
+    "class_type": "BOURBON WHISKY",
+    "class_code": "141",
+    "origin": "KENTUCKY",
+    "source": "Domestic",
+    "applicant": "Never Say Die, NSD Spirits, LLC, 249 W SHORT ST STE 200, Lexington KY 40507",
+    "status": "Approved",
+    "completed": "08/24/2026",
+    "images": [
+      {
+        "file": "26166001000629_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "5.65 inches W X 2.32 inches H",
+        "pixels": "1351x738"
+      },
+      {
+        "file": "26166001000629_other1.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "5.65 inches W X 0.78 inches H",
+        "pixels": "1455x393"
+      },
+      {
+        "file": "26166001000629_back.jpg",
+        "type": "Back",
+        "dimensions": "3.54 inches W X 2.36 inches H",
+        "pixels": "899x674"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26166001000629"
+  },
+  {
+    "ttbid": "26167001000445",
+    "beverage_type": "wine",
+    "brand_name": "MCKELVEY VINEYARDS",
+    "fanciful_name": "PATRICIA'S RESERVE",
+    "class_type": "TABLE WHITE WINE",
+    "class_code": "81",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "SVP Winery, SVP Winery, LLC, 111 CLARK RD, Shandon CA 93461",
+    "status": "Approved",
+    "completed": "08/11/2026",
+    "images": [
+      {
+        "file": "26167001000445_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "4 inches W X 3.3 inches H",
+        "pixels": "1200x975"
+      },
+      {
+        "file": "26167001000445_back.jpg",
+        "type": "Back",
+        "dimensions": "3.3 inches W X 3.3 inches H",
+        "pixels": "960x960"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26167001000445"
+  },
+  {
+    "ttbid": "26176001000014",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "TENHEAD",
+    "fanciful_name": "",
+    "class_type": "OTHER GIN",
+    "class_code": "219",
+    "origin": "WISCONSIN",
+    "source": "Domestic",
+    "applicant": "Knowlton House Distillery, Mullins Distillery LLC, 204575 COUNTY RD. DB, Mosinee WI 54455",
+    "status": "Approved",
+    "completed": "08/13/2026",
+    "images": [
+      {
+        "file": "26176001000014_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "5.3 inches W X 6.25 inches H",
+        "pixels": "1668x1973"
+      },
+      {
+        "file": "26176001000014_other1.jpg",
+        "type": "Neck",
+        "dimensions": "4.2 inches W X 0.9 inches H",
+        "pixels": "1261x278"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26176001000014"
+  },
+  {
+    "ttbid": "26176001000828",
+    "beverage_type": "wine",
+    "brand_name": "NOTRE DAME WINES",
+    "fanciful_name": "",
+    "class_type": "DESSERT /PORT/SHERRY/(COOKING) WINE",
+    "class_code": "88",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "VINOVAE, INC., 1620 CARNEROS MEADOWS LN STE 103, SONOMA CA 95476",
+    "status": "Approved",
+    "completed": "08/13/2026",
+    "images": [
+      {
+        "file": "26176001000828_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "3 inches W X 2 inches H",
+        "pixels": "750x600"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26176001000828"
+  },
+  {
+    "ttbid": "26177001000178",
+    "beverage_type": "wine",
+    "brand_name": "WOLFE HEIGHTS",
+    "fanciful_name": "PEACH MANGO",
+    "class_type": "TABLE FLAVORED WINE",
+    "class_code": "82",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "Rack & Riddle, Rb Wine Associates, LLC, 499 & 451 MOORE LN, Healdsburg CA 95448",
+    "status": "Approved",
+    "completed": "08/24/2026",
+    "images": [
+      {
+        "file": "26177001000178_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "5.25 inches W X 3 inches H",
+        "pixels": "640x378"
+      },
+      {
+        "file": "26177001000178_back.jpg",
+        "type": "Back",
+        "dimensions": "3 inches W X 2 inches H",
+        "pixels": "640x473"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26177001000178"
+  },
+  {
+    "ttbid": "26177001000522",
+    "beverage_type": "malt_beverage",
+    "brand_name": "GARAGE BEER",
+    "fanciful_name": "LIME",
+    "class_type": "MALT BEVERAGES SPECIALITIES - FLAVORED",
+    "class_code": "906",
+    "origin": "MICHIGAN",
+    "source": "Domestic",
+    "applicant": "FOUNDERS BREWING COMPANY, CANAL STREET BREWING CO., L.L.C., 235 GRANDVILLE AVE SW, GRAND RAPIDS MI 49503",
+    "status": "Approved",
+    "completed": "08/20/2026",
+    "images": [
+      {
+        "file": "26177001000522_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "5.04 inches W X 3 inches H",
+        "pixels": "893x639"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26177001000522"
+  },
+  {
+    "ttbid": "26180001000702",
+    "beverage_type": "wine",
+    "brand_name": "SOUNDS",
+    "fanciful_name": "BENTROCK",
+    "class_type": "TABLE WHITE WINE",
+    "class_code": "81",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "Sounds Vineyard, J & L Wine Co. LLC, 1181 LAS POSADAS RD, Angwin CA 94508",
+    "status": "Approved",
+    "completed": "08/04/2026",
+    "images": [
+      {
+        "file": "26180001000702_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "2.36 inches W X 2.36 inches H",
+        "pixels": "709x709"
+      },
+      {
+        "file": "26180001000702_back.png",
+        "type": "Back",
+        "dimensions": "4.96 inches W X 2.49 inches H",
+        "pixels": "702x366"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26180001000702"
+  },
+  {
+    "ttbid": "26183001000057",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "J. HENRY & SONS",
+    "fanciful_name": "BESPOKE BLEND",
+    "class_type": "STRAIGHT BOURBON WHISKY",
+    "class_code": "101",
+    "origin": "WISCONSIN",
+    "source": "Domestic",
+    "applicant": "Henry Farms Prairie Spirits, HENRY FARMS PRAIRIE SPIRITS LLC, 7794 PATTON RD, DANE WI 53529",
+    "status": "Approved",
+    "completed": "08/07/2026",
+    "images": [
+      {
+        "file": "26183001000057_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "3 inches W X 6 inches H",
+        "pixels": "427x800"
+      },
+      {
+        "file": "26183001000057_back.jpg",
+        "type": "Back",
+        "dimensions": "3 inches W X 6 inches H",
+        "pixels": "938x1745"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26183001000057"
+  },
+  {
+    "ttbid": "26184001000215",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "OLD TENNESSEE DISTILLING CO.",
+    "fanciful_name": "THE SPIRIT OF TENNESSEE",
+    "class_type": "OTHER GIN",
+    "class_code": "219",
+    "origin": "TENNESSEE",
+    "source": "Domestic",
+    "applicant": "Old Tennessee Distilling Co., Dumplin Creek Distillery, LLC, 3605 OUTDOOR SPORTSMANS PL STE A, Sevierville TN 37764",
+    "status": "Approved",
+    "completed": "08/10/2026",
+    "images": [
+      {
+        "file": "26184001000215_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "9.5 inches W X 4 inches H",
+        "pixels": "1456x601"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26184001000215"
+  },
+  {
+    "ttbid": "26184001000297",
+    "beverage_type": "wine",
+    "brand_name": "WINES FOR CHANGE",
+    "fanciful_name": "",
+    "class_type": "TABLE WHITE WINE",
+    "class_code": "81",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "Brick & Mortar Wines, Davis Wines LLC, 25 HEALDSBURG AVE 20, 21, 30, Healdsburg CA 95448",
+    "status": "Approved",
+    "completed": "08/10/2026",
+    "images": [
+      {
+        "file": "26184001000297_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "3.25 inches W X 3.25 inches H",
+        "pixels": "1013x1015"
+      },
+      {
+        "file": "26184001000297_back.png",
+        "type": "Back",
+        "dimensions": "3.75 inches W X 3.5 inches H",
+        "pixels": "1125x1050"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26184001000297"
+  },
+  {
+    "ttbid": "26184001000299",
+    "beverage_type": "wine",
+    "brand_name": "WINES FOR CHANGE",
+    "fanciful_name": "",
+    "class_type": "TABLE WHITE WINE",
+    "class_code": "81",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "Brick & Mortar Wines, Davis Wines LLC, 25 HEALDSBURG AVE 20, 21, 30, Healdsburg CA 95448",
+    "status": "Approved",
+    "completed": "08/10/2026",
+    "images": [
+      {
+        "file": "26184001000299_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "3.38 inches W X 3.38 inches H",
+        "pixels": "1014x1015"
+      },
+      {
+        "file": "26184001000299_back.png",
+        "type": "Back",
+        "dimensions": "3.75 inches W X 3.5 inches H",
+        "pixels": "900x839"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26184001000299"
+  },
+  {
+    "ttbid": "26187001000206",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "ABELHA ORIGINAL CACHACA",
+    "fanciful_name": "SILVER",
+    "class_type": "OTHER RUM GOLD FB",
+    "class_code": "493",
+    "origin": "BRAZIL",
+    "source": "Imported",
+    "applicant": "SOILAIR SELECTION, BACCHUS IMPORTS, INC., 150 W 30TH ST SUITE 706, NEW YORK NY 10001",
+    "status": "Approved",
+    "completed": "08/03/2026",
+    "images": [
+      {
+        "file": "26187001000206_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "4 inches W X 6 inches H",
+        "pixels": "724x1149"
+      },
+      {
+        "file": "26187001000206_back.png",
+        "type": "Back",
+        "dimensions": "4 inches W X 6 inches H",
+        "pixels": "568x922"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26187001000206"
+  },
+  {
+    "ttbid": "26187001000514",
+    "beverage_type": "wine",
+    "brand_name": "LES VINS JULIEN",
+    "fanciful_name": "",
+    "class_type": "TABLE WHITE WINE",
+    "class_code": "81",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "FAYARD WINEMAKING, Fayard Winemaking LLC, 190 CAMINO ORUGA STE 5,9,12, Napa CA 94558",
+    "status": "Approved",
+    "completed": "08/03/2026",
+    "images": [
+      {
+        "file": "26187001000514_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "4 inches W X 3.75 inches H",
+        "pixels": "1364x1038"
+      },
+      {
+        "file": "26187001000514_back.jpg",
+        "type": "Back",
+        "dimensions": "2.5 inches W X 4 inches H",
+        "pixels": "552x1020"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26187001000514"
+  },
+  {
+    "ttbid": "26187001000538",
+    "beverage_type": "malt_beverage",
+    "brand_name": "GO BREWING",
+    "fanciful_name": "COLD STANDARD",
+    "class_type": "CEREAL BEVERAGES - NEAR BEER (NON ALCOHOLIC)",
+    "class_code": "907",
+    "origin": "ILLINOIS",
+    "source": "Domestic",
+    "applicant": "Go Brewing, Go Brewing Opco, LLC, 1665 QUINCY AVE STE 151 & 155, NAPERVILLE IL 60540",
+    "status": "Approved",
+    "completed": "08/12/2026",
+    "images": [
+      {
+        "file": "26187001000538_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "12 inches W X 6.5 inches H",
+        "pixels": "2514x1355"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26187001000538"
+  },
+  {
+    "ttbid": "26188001000708",
+    "beverage_type": "malt_beverage",
+    "brand_name": "DAIKOKU BEER",
+    "fanciful_name": "",
+    "class_type": "BEER",
+    "class_code": "901",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "Nova Brewing Company, Nova Brewing LLC, 1580 W SAN BERNARDINO RD UNIT H&I, Covina CA 91722",
+    "status": "Approved",
+    "completed": "08/05/2026",
+    "images": [
+      {
+        "file": "26188001000708_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "8 inches W X 5 inches H",
+        "pixels": "2844x1794"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26188001000708"
+  },
+  {
+    "ttbid": "26188001000731",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "LEIPER'S FORK DISTILLERY",
+    "fanciful_name": "",
+    "class_type": "BLENDED WHISKY",
+    "class_code": "137",
+    "origin": "TENNESSEE",
+    "source": "Domestic",
+    "applicant": "Leiper's Fork Distillery, LLC, Leiper's Fork Distillery, LLC, 3381 SOUTHALL RD, Franklin TN 37064",
+    "status": "Approved",
+    "completed": "08/20/2026",
+    "images": [
+      {
+        "file": "26188001000731_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "8.5 inches W X 6 inches H",
+        "pixels": "2000x1412"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26188001000731"
+  },
+  {
+    "ttbid": "26189001000329",
+    "beverage_type": "wine",
+    "brand_name": "SANTORI WINES",
+    "fanciful_name": "",
+    "class_type": "DESSERT /PORT/SHERRY/(COOKING) WINE",
+    "class_code": "88",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "DEERFIELD RANCH WINERY, DEERFIELD RANCH WINERY LLC, 10200 SONOMA HWY, KENWOOD CA 95452",
+    "status": "Approved",
+    "completed": "08/14/2026",
+    "images": [
+      {
+        "file": "26189001000329_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "2.5 inches W X 4 inches H",
+        "pixels": "618x1000"
+      },
+      {
+        "file": "26189001000329_back.png",
+        "type": "Back",
+        "dimensions": "2.5 inches W X 4.05 inches H",
+        "pixels": "1501x2430"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26189001000329"
+  },
+  {
+    "ttbid": "26190001000603",
+    "beverage_type": "malt_beverage",
+    "brand_name": "MOUNT HOLLY BEER",
+    "fanciful_name": "FROSTY GOLD",
+    "class_type": "ALE",
+    "class_code": "902",
+    "origin": "NEW YORK",
+    "source": "Domestic",
+    "applicant": "Industrial Arts Brewing Company, Spectacle Brewing, LLC, 511 FISHKILL AVE, Beacon NY 12508",
+    "status": "Approved",
+    "completed": "09/03/2026",
+    "images": [
+      {
+        "file": "26190001000603_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "8 inches W X 5 inches H",
+        "pixels": "4876x3076"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26190001000603"
+  },
+  {
+    "ttbid": "26191001000488",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "BACKWOODS",
+    "fanciful_name": "",
+    "class_type": "OTHER WHISKY (FLAVORED)",
+    "class_code": "149",
+    "origin": "TEXAS",
+    "source": "Domestic",
+    "applicant": "Backwoods Craft Spirits, MBW BRANDS LLC, 1807 HOWARD RD, Waxahachie TX 75165",
+    "status": "Approved",
+    "completed": "08/05/2026",
+    "images": [
+      {
+        "file": "26191001000488_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "4 inches W X 5 inches H",
+        "pixels": "808x1007"
+      },
+      {
+        "file": "26191001000488_back.jpg",
+        "type": "Back",
+        "dimensions": "4.1 inches W X 4.1 inches H",
+        "pixels": "810x814"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26191001000488"
+  },
+  {
+    "ttbid": "26191001000549",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "NC'NEAN",
+    "fanciful_name": "QUIET REBELS MATTHEW'S",
+    "class_type": "SINGLE MALT SCOTCH WHISKY",
+    "class_code": "153",
+    "origin": "SCOTLAND",
+    "source": "Imported",
+    "applicant": "IMPEX BEVERAGES, INC., 360 SWIFT AVE SUITE 9 SI, SOUTH SAN FRANCISCO CA 94080",
+    "status": "Approved",
+    "completed": "08/14/2026",
+    "images": [
+      {
+        "file": "26191001000549_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "11.8 inches W X 4.5 inches H",
+        "pixels": "3778x1521"
+      },
+      {
+        "file": "26191001000549_other1.jpg",
+        "type": "Neck",
+        "dimensions": "3.96 inches W X 0.85 inches H",
+        "pixels": "1200x289"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26191001000549"
+  },
+  {
+    "ttbid": "26191001000561",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "KILCHOMAN",
+    "fanciful_name": "THE GOAT",
+    "class_type": "SINGLE MALT SCOTCH WHISKY",
+    "class_code": "153",
+    "origin": "SCOTLAND",
+    "source": "Imported",
+    "applicant": "IMPEX BEVERAGES, INC., 360 SWIFT AVE SUITE 9 SI, SOUTH SAN FRANCISCO CA 94080",
+    "status": "Approved",
+    "completed": "08/11/2026",
+    "images": [
+      {
+        "file": "26191001000561_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "4.92 inches W X 1.39 inches H",
+        "pixels": "787x267"
+      },
+      {
+        "file": "26191001000561_other1.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "4.92 inches W X 1.9 inches H",
+        "pixels": "1050x525"
+      },
+      {
+        "file": "26191001000561_back.jpg",
+        "type": "Back",
+        "dimensions": "3.78 inches W X 1.98 inches H",
+        "pixels": "1097x613"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26191001000561"
+  },
+  {
+    "ttbid": "26192001000073",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "RITTENHOUSE",
+    "fanciful_name": "",
+    "class_type": "STRAIGHT RYE WHISKY",
+    "class_code": "102",
+    "origin": "AMERICAN",
+    "source": "Domestic",
+    "applicant": "Connoisseur Wines & Spirits California, Connoisseur Wine Logistics West LLC, 1907 NORTH KELLY RD, Napa CA 94558",
+    "status": "Approved",
+    "completed": "08/20/2026",
+    "images": [
+      {
+        "file": "26192001000073_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "4.5 inches W X 2 inches H",
+        "pixels": "741x278"
+      },
+      {
+        "file": "26192001000073_back.jpg",
+        "type": "Back",
+        "dimensions": "3 inches W X 4 inches H",
+        "pixels": "1234x1763"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26192001000073"
+  },
+  {
+    "ttbid": "26194001000169",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "AUDECIOUS",
+    "fanciful_name": "",
+    "class_type": "VODKA 80-89 PROOF FB",
+    "class_code": "351",
+    "origin": "NETHERLANDS",
+    "source": "Imported",
+    "applicant": "PARK STREET IMPORTS LLC, 1000 BRICKELL AVE STE 215, MIAMI FL 33131",
+    "status": "Approved",
+    "completed": "08/13/2026",
+    "images": [
+      {
+        "file": "26194001000169_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "5 inches W X 4.5 inches H",
+        "pixels": "830x747"
+      },
+      {
+        "file": "26194001000169_back.jpg",
+        "type": "Back",
+        "dimensions": "4.5 inches W X 5.5 inches H",
+        "pixels": "617x847"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26194001000169"
+  },
+  {
+    "ttbid": "26194001000967",
+    "beverage_type": "wine",
+    "brand_name": "FRANCIS COPPOLA DIAMOND COLLECTION",
+    "fanciful_name": "LIGHT",
+    "class_type": "TABLE WHITE WINE",
+    "class_code": "81",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "DELICATO VINEYARDS, LLC, 12001 S 99 HWY, MANTECA CA 95336",
+    "status": "Approved",
+    "completed": "08/07/2026",
+    "images": [
+      {
+        "file": "26194001000967_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "2.99 inches W X 3 inches H",
+        "pixels": "898x900"
+      },
+      {
+        "file": "26194001000967_back.jpg",
+        "type": "Back",
+        "dimensions": "2.99 inches W X 4.72 inches H",
+        "pixels": "599x944"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26194001000967"
+  },
+  {
+    "ttbid": "26195001000186",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "ICELANDIC MOUNTAIN VODKA",
+    "fanciful_name": "",
+    "class_type": "VODKA 80-89 PROOF FB",
+    "class_code": "351",
+    "origin": "ICELAND",
+    "source": "Imported",
+    "applicant": "Alpha Liquor Distributors LLC, 951 POINSETTIA AVE STE 601, VISTA CA 92081",
+    "status": "Approved",
+    "completed": "08/17/2026",
+    "images": [
+      {
+        "file": "26195001000186_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "2.91 inches W X 3.62 inches H",
+        "pixels": "1240x1754"
+      },
+      {
+        "file": "26195001000186_other1.jpg",
+        "type": "Other",
+        "dimensions": "2.91 inches W X 3.62 inches H",
+        "pixels": "1655x1282"
+      },
+      {
+        "file": "26195001000186_back.jpg",
+        "type": "Back",
+        "dimensions": "2.91 inches W X 3.62 inches H",
+        "pixels": "3263x4158"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26195001000186"
+  },
+  {
+    "ttbid": "26195001000284",
+    "beverage_type": "wine",
+    "brand_name": "MUSE",
+    "fanciful_name": "",
+    "class_type": "DESSERT /PORT/SHERRY/(COOKING) WINE",
+    "class_code": "88",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "NOVA WINES, INC., 7838 -40 ST. HELENA HWY STE 14, OAKVILLE CA 94562",
+    "status": "Approved",
+    "completed": "08/20/2026",
+    "images": [
+      {
+        "file": "26195001000284_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "2.3 inches W X 3 inches H",
+        "pixels": "1512x1928"
+      },
+      {
+        "file": "26195001000284_back.jpg",
+        "type": "Back",
+        "dimensions": "3 inches W X 4 inches H",
+        "pixels": "660x1067"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26195001000284"
+  },
+  {
+    "ttbid": "26195001000387",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "PORT CHARLOTTE",
+    "fanciful_name": "HEAVILY PEATED 18 YEARS OLD",
+    "class_type": "SINGLE MALT SCOTCH WHISKY",
+    "class_code": "153",
+    "origin": "SCOTLAND",
+    "source": "Imported",
+    "applicant": "REMY COINTREAU USA, INC., 3 TIMES SQUARE 20TH FLR, NEW YORK NY 10036",
+    "status": "Approved",
+    "completed": "08/05/2026",
+    "images": [
+      {
+        "file": "26195001000387_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "4.41 inches W X 4.41 inches H",
+        "pixels": "1765x1764"
+      },
+      {
+        "file": "26195001000387_back.jpg",
+        "type": "Back",
+        "dimensions": "4.55 inches W X 1.46 inches H",
+        "pixels": "1820x584"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26195001000387"
+  },
+  {
+    "ttbid": "26195001000477",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "MOLAININ DISTILLING",
+    "fanciful_name": "",
+    "class_type": "OTHER GIN",
+    "class_code": "219",
+    "origin": "WASHINGTON",
+    "source": "Domestic",
+    "applicant": "Benson Spirits LLC, 8556 GREENWOOD AVE N, Seattle WA 98103",
+    "status": "Approved",
+    "completed": "08/25/2026",
+    "images": [
+      {
+        "file": "26195001000477_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "2.85 inches W X 4.55 inches H",
+        "pixels": "854x1364"
+      },
+      {
+        "file": "26195001000477_back.jpg",
+        "type": "Back",
+        "dimensions": "2.85 inches W X 4.55 inches H",
+        "pixels": "854x1364"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26195001000477"
+  },
+  {
+    "ttbid": "26195001000644",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "BURLEY",
+    "fanciful_name": "",
+    "class_type": "OTHER WHISKY (FLAVORED)",
+    "class_code": "149",
+    "origin": "PENNSYLVANIA",
+    "source": "Domestic",
+    "applicant": "Thistle Finch Distilling, Thistle Finch Distilling LLC, 417 W GRANT ST, Lancaster PA 17603",
+    "status": "Approved",
+    "completed": "08/03/2026",
+    "images": [
+      {
+        "file": "26195001000644_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "3 inches W X 4.75 inches H",
+        "pixels": "1363x1885"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26195001000644"
+  },
+  {
+    "ttbid": "26196001000383",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "GORAL VODKA",
+    "fanciful_name": "",
+    "class_type": "VODKA 80-89 PROOF FB",
+    "class_code": "351",
+    "origin": "SLOVAK REPUBLIC",
+    "source": "Imported",
+    "applicant": "MEDCO ATLANTIC, INC., 3121 OCEAN AVE STE 501, BROOKLYN NY 11235",
+    "status": "Approved",
+    "completed": "08/05/2026",
+    "images": [
+      {
+        "file": "26196001000383_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "9.6 inches W X 5.8 inches H",
+        "pixels": "1570x950"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26196001000383"
+  },
+  {
+    "ttbid": "26196001000389",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "GORAL VODKA",
+    "fanciful_name": "",
+    "class_type": "VODKA 80-89 PROOF FB",
+    "class_code": "351",
+    "origin": "SLOVAK REPUBLIC",
+    "source": "Imported",
+    "applicant": "MEDCO ATLANTIC, INC., 3121 OCEAN AVE STE 501, BROOKLYN NY 11235",
+    "status": "Approved",
+    "completed": "08/05/2026",
+    "images": [
+      {
+        "file": "26196001000389_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "4.26 inches W X 2.74 inches H",
+        "pixels": "1260x818"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26196001000389"
+  },
+  {
+    "ttbid": "26196001000621",
+    "beverage_type": "wine",
+    "brand_name": "WRONGFULLY RIGHT COCKTAILS",
+    "fanciful_name": "WINE AND DIET COLA - ORIGINAL",
+    "class_type": "TABLE FLAVORED WINE",
+    "class_code": "82",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "Oceanside Beverage, Oceanside Beverage Inc., 1334 ROCKY POINT DR, Oceanside CA 92056",
+    "status": "Approved",
+    "completed": "08/06/2026",
+    "images": [
+      {
+        "file": "26196001000621_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "5 inches W X 4 inches H",
+        "pixels": "1908x1550"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26196001000621"
+  },
+  {
+    "ttbid": "26196001000708",
+    "beverage_type": "wine",
+    "brand_name": "MUSCAT LOVE",
+    "fanciful_name": "",
+    "class_type": "TABLE WHITE WINE",
+    "class_code": "81",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "Red Cedar Wines, Red Cedar Wines, LLC, 115 W 4TH ST BLDG 115, Vinton IA 52349",
+    "status": "Approved",
+    "completed": "08/01/2026",
+    "images": [
+      {
+        "file": "26196001000708_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "6.38 inches W X 4 inches H",
+        "pixels": "975x600"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26196001000708"
+  },
+  {
+    "ttbid": "26196001000784",
+    "beverage_type": "wine",
+    "brand_name": "I'M MIXED",
+    "fanciful_name": "",
+    "class_type": "TABLE WHITE WINE",
+    "class_code": "81",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "Matt Crutchfield Wines, LLC, 6450 1ST ST UNIT DKL, Forestville CA 95436",
+    "status": "Approved",
+    "completed": "08/13/2026",
+    "images": [
+      {
+        "file": "26196001000784_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "3.75 inches W X 3.5 inches H",
+        "pixels": "548x363"
+      },
+      {
+        "file": "26196001000784_back.jpg",
+        "type": "Back",
+        "dimensions": "3.5 inches W X 3.75 inches H",
+        "pixels": "750x900"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26196001000784"
+  },
+  {
+    "ttbid": "26196001000791",
+    "beverage_type": "wine",
+    "brand_name": "SKIN CONTACT",
+    "fanciful_name": "",
+    "class_type": "TABLE WHITE WINE",
+    "class_code": "81",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "Matt Crutchfield Wines, LLC, 6450 1ST ST UNIT DKL, Forestville CA 95436",
+    "status": "Approved",
+    "completed": "08/28/2026",
+    "images": [
+      {
+        "file": "26196001000791_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "3.75 inches W X 3.5 inches H",
+        "pixels": "509x332"
+      },
+      {
+        "file": "26196001000791_back.jpg",
+        "type": "Back",
+        "dimensions": "3.5 inches W X 3.75 inches H",
+        "pixels": "750x900"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26196001000791"
+  },
+  {
+    "ttbid": "26196001000820",
+    "beverage_type": "wine",
+    "brand_name": "TAMAYO",
+    "fanciful_name": "",
+    "class_type": "DESSERT /PORT/SHERRY/(COOKING) WINE",
+    "class_code": "88",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "Sonoma Valley Custom Wine, LLC, 21481 E 8TH ST STE 25 & 30, Sonoma CA 95476",
+    "status": "Approved",
+    "completed": "08/04/2026",
+    "images": [
+      {
+        "file": "26196001000820_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "4 inches W X 3 inches H",
+        "pixels": "2405x1805"
+      },
+      {
+        "file": "26196001000820_back.jpg",
+        "type": "Back",
+        "dimensions": "4 inches W X 3 inches H",
+        "pixels": "2409x1809"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26196001000820"
+  },
+  {
+    "ttbid": "26197001000306",
+    "beverage_type": "malt_beverage",
+    "brand_name": "OUTER LIGHT",
+    "fanciful_name": "CAMPFIRE COCOA",
+    "class_type": "MALT BEVERAGES SPECIALITIES - FLAVORED",
+    "class_code": "906",
+    "origin": "CONNECTICUT",
+    "source": "Domestic",
+    "applicant": "Outer Light Brewing Company, LLC, 266 BRIDGE ST UNIT 1, 2 & 3, Groton CT 06340",
+    "status": "Approved",
+    "completed": "08/13/2026",
+    "images": [
+      {
+        "file": "26197001000306_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "7 inches W X 4.5 inches H",
+        "pixels": "2400x1500"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26197001000306"
+  },
+  {
+    "ttbid": "26197001000401",
+    "beverage_type": "malt_beverage",
+    "brand_name": "MAHOU",
+    "fanciful_name": "CINCO ESTRELLAS",
+    "class_type": "BEER",
+    "class_code": "901",
+    "origin": "MICHIGAN",
+    "source": "Domestic",
+    "applicant": "FOUNDERS BREWING COMPANY, CANAL STREET BREWING CO., L.L.C., 235 GRANDVILLE AVE SW, GRAND RAPIDS MI 49503",
+    "status": "Approved",
+    "completed": "08/07/2026",
+    "images": [
+      {
+        "file": "26197001000401_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "6.49 inches W X 6.38 inches H",
+        "pixels": "1121x1102"
+      },
+      {
+        "file": "26197001000401_other1.jpg",
+        "type": "Neck",
+        "dimensions": "6.49 inches W X 3.1 inches H",
+        "pixels": "1726x823"
+      },
+      {
+        "file": "26197001000401_back.jpg",
+        "type": "Back",
+        "dimensions": "6.5 inches W X 5.9 inches H",
+        "pixels": "651x787"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26197001000401"
+  },
+  {
+    "ttbid": "26197001000572",
+    "beverage_type": "wine",
+    "brand_name": "THE COMMERCE INN",
+    "fanciful_name": "",
+    "class_type": "TABLE WHITE WINE",
+    "class_code": "81",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "\u00c2mevive, Ame Wine Company, 2075 VINEYARD VIEW LN, Lompoc CA 93436",
+    "status": "Approved",
+    "completed": "08/05/2026",
+    "images": [
+      {
+        "file": "26197001000572_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "3.75 inches W X 3 inches H",
+        "pixels": "3943x3181"
+      },
+      {
+        "file": "26197001000572_back.png",
+        "type": "Back",
+        "dimensions": "3.75 inches W X 3 inches H",
+        "pixels": "1704x1374"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26197001000572"
+  },
+  {
+    "ttbid": "26198001000266",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "DARK ISLAND",
+    "fanciful_name": "",
+    "class_type": "OTHER GIN",
+    "class_code": "219",
+    "origin": "NEW YORK",
+    "source": "Domestic",
+    "applicant": "Eleanor Glen Distillery, DARK ISLAND SPIRITS INC., 42 CHURCH ST, Alexandria Bay NY 13607",
+    "status": "Approved",
+    "completed": "08/24/2026",
+    "images": [
+      {
+        "file": "26198001000266_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "1.25 inches W X 6.25 inches H",
+        "pixels": "376x1876"
+      },
+      {
+        "file": "26198001000266_back.png",
+        "type": "Back",
+        "dimensions": "2.25 inches W X 6.25 inches H",
+        "pixels": "563x1568"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26198001000266"
+  },
+  {
+    "ttbid": "26198001000415",
+    "beverage_type": "malt_beverage",
+    "brand_name": "NEW HOLLAND BREWING CO.",
+    "fanciful_name": "JUICE BOOST SPACE MACHINE",
+    "class_type": "MALT BEVERAGES SPECIALITIES - FLAVORED",
+    "class_code": "906",
+    "origin": "MICHIGAN",
+    "source": "Domestic",
+    "applicant": "NEW HOLLAND BREWING COMPANY, LLC, NEW HOLLAND BREWING COMPANY, L.L.C., 684 -690 COMMERCE CT, HOLLAND MI 49424",
+    "status": "Approved",
+    "completed": "08/03/2026",
+    "images": [
+      {
+        "file": "26198001000415_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "8.18 inches W X 4.4 inches H",
+        "pixels": "1702x957"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26198001000415"
+  },
+  {
+    "ttbid": "26198001000422",
+    "beverage_type": "malt_beverage",
+    "brand_name": "NEW HOLLAND BREWING CO.",
+    "fanciful_name": "TANGERINE SPACE MACHINE",
+    "class_type": "MALT BEVERAGES SPECIALITIES - FLAVORED",
+    "class_code": "906",
+    "origin": "MICHIGAN",
+    "source": "Domestic",
+    "applicant": "NEW HOLLAND BREWING COMPANY, LLC, NEW HOLLAND BREWING COMPANY, L.L.C., 684 -690 COMMERCE CT, HOLLAND MI 49424",
+    "status": "Approved",
+    "completed": "08/03/2026",
+    "images": [
+      {
+        "file": "26198001000422_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "8.18 inches W X 4.4 inches H",
+        "pixels": "2491x1372"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26198001000422"
+  },
+  {
+    "ttbid": "26198001000425",
+    "beverage_type": "malt_beverage",
+    "brand_name": "NEW HOLLAND BREWING CO.",
+    "fanciful_name": "TANGERINE SPACE MACHINE",
+    "class_type": "MALT BEVERAGES SPECIALITIES - FLAVORED",
+    "class_code": "906",
+    "origin": "MICHIGAN",
+    "source": "Domestic",
+    "applicant": "NEW HOLLAND BREWING COMPANY, LLC, NEW HOLLAND BREWING COMPANY, L.L.C., 684 -690 COMMERCE CT, HOLLAND MI 49424",
+    "status": "Approved",
+    "completed": "08/03/2026",
+    "images": [
+      {
+        "file": "26198001000425_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "8.25 inches W X 5.75 inches H",
+        "pixels": "2494x1761"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26198001000425"
+  },
+  {
+    "ttbid": "26198001000433",
+    "beverage_type": "malt_beverage",
+    "brand_name": "NEW HOLLAND BREWING CO.",
+    "fanciful_name": "UBER HAZE SPACE MACHINE",
+    "class_type": "MALT BEVERAGES SPECIALITIES - FLAVORED",
+    "class_code": "906",
+    "origin": "MICHIGAN",
+    "source": "Domestic",
+    "applicant": "NEW HOLLAND BREWING COMPANY, LLC, NEW HOLLAND BREWING COMPANY, L.L.C., 684 -690 COMMERCE CT, HOLLAND MI 49424",
+    "status": "Approved",
+    "completed": "08/03/2026",
+    "images": [
+      {
+        "file": "26198001000433_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "8.18 inches W X 4.4 inches H",
+        "pixels": "2502x1377"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26198001000433"
+  },
+  {
+    "ttbid": "26198001000436",
+    "beverage_type": "malt_beverage",
+    "brand_name": "NEW HOLLAND BREWING CO.",
+    "fanciful_name": "UBER HAZE SPACE MACHINE",
+    "class_type": "MALT BEVERAGES SPECIALITIES - FLAVORED",
+    "class_code": "906",
+    "origin": "MICHIGAN",
+    "source": "Domestic",
+    "applicant": "NEW HOLLAND BREWING COMPANY, LLC, NEW HOLLAND BREWING COMPANY, L.L.C., 684 -690 COMMERCE CT, HOLLAND MI 49424",
+    "status": "Approved",
+    "completed": "08/03/2026",
+    "images": [
+      {
+        "file": "26198001000436_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "8.18 inches W X 7 inches H",
+        "pixels": "2519x2110"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26198001000436"
+  },
+  {
+    "ttbid": "26198001000665",
+    "beverage_type": "malt_beverage",
+    "brand_name": "NORTH COAST BREWING CO. INC.",
+    "fanciful_name": "CHILL RASPUTIN",
+    "class_type": "STOUT",
+    "class_code": "904",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "NORTH COAST BREWING CO., NORTH COAST BREWING CO., INC., 455 N MAIN ST, FORT BRAGG CA 95437",
+    "status": "Approved",
+    "completed": "08/03/2026",
+    "images": [
+      {
+        "file": "26198001000665_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "8.12 inches W X 3.62 inches H",
+        "pixels": "1168x844"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26198001000665"
+  },
+  {
+    "ttbid": "26199001000070",
+    "beverage_type": "wine",
+    "brand_name": "POCO MONTA\u00d1A VINEYARDS & WINERY",
+    "fanciful_name": "",
+    "class_type": "TABLE FLAVORED WINE",
+    "class_code": "82",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "Poco Monta\u00f1a Vineyards & Winery, Poco Montana LLC, 23136 VISTA RAMONA RD, Ramona CA 92065",
+    "status": "Approved",
+    "completed": "08/19/2026",
+    "images": [
+      {
+        "file": "26199001000070_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "4 inches W X 4 inches H",
+        "pixels": "1238x1238"
+      },
+      {
+        "file": "26199001000070_back.jpg",
+        "type": "Back",
+        "dimensions": "3 inches W X 3 inches H",
+        "pixels": "938x938"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26199001000070"
+  },
+  {
+    "ttbid": "26199001000072",
+    "beverage_type": "wine",
+    "brand_name": "POCO MONTA\u00d1A VINEYARDS & WINERY",
+    "fanciful_name": "",
+    "class_type": "TABLE FLAVORED WINE",
+    "class_code": "82",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "Poco Monta\u00f1a Vineyards & Winery, Poco Montana LLC, 23136 VISTA RAMONA RD, Ramona CA 92065",
+    "status": "Approved",
+    "completed": "08/21/2026",
+    "images": [
+      {
+        "file": "26199001000072_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "5.38 inches W X 4.12 inches H",
+        "pixels": "1613x1238"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26199001000072"
+  },
+  {
+    "ttbid": "26201001000201",
+    "beverage_type": "distilled_spirits",
+    "brand_name": "UNENTITLED",
+    "fanciful_name": "",
+    "class_type": "OTHER GIN",
+    "class_code": "219",
+    "origin": "ILLINOIS",
+    "source": "Domestic",
+    "applicant": "Old Monroe Distilling Co., Stumpy's Spirits Co., 1727 CENTERVILLE RD, COLUMBIA IL 62236",
+    "status": "Approved",
+    "completed": "08/03/2026",
+    "images": [
+      {
+        "file": "26201001000201_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "3.5 inches W X 5 inches H",
+        "pixels": "821x1167"
+      },
+      {
+        "file": "26201001000201_back.png",
+        "type": "Back",
+        "dimensions": "2.25 inches W X 2 inches H",
+        "pixels": "1138x1012"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26201001000201"
+  },
+  {
+    "ttbid": "26201001000349",
+    "beverage_type": "wine",
+    "brand_name": "CALIMIST",
+    "fanciful_name": "",
+    "class_type": "TABLE WHITE WINE",
+    "class_code": "81",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "NELSON FAMILY VINEYARDS, NELSON AND SONS, INCORPORATED, 550 NELSON RANCH RD, UKIAH CA 95482",
+    "status": "Approved",
+    "completed": "08/03/2026",
+    "images": [
+      {
+        "file": "26201001000349_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "3 inches W X 3.5 inches H",
+        "pixels": "447x520"
+      },
+      {
+        "file": "26201001000349_back.jpg",
+        "type": "Back",
+        "dimensions": "4 inches W X 4.5 inches H",
+        "pixels": "592x670"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26201001000349"
+  },
+  {
+    "ttbid": "26201001000479",
+    "beverage_type": "wine",
+    "brand_name": "CAM X",
+    "fanciful_name": "LOT 92",
+    "class_type": "DESSERT /PORT/SHERRY/(COOKING) WINE",
+    "class_code": "88",
+    "origin": "CALIFORNIA",
+    "source": "Domestic",
+    "applicant": "Intergalactic Wine Company, LLC, 3354 COFFEY LN STE A, Santa Rosa CA 95403",
+    "status": "Approved",
+    "completed": "08/07/2026",
+    "images": [
+      {
+        "file": "26201001000479_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "3.62 inches W X 3.25 inches H",
+        "pixels": "1080x974"
+      },
+      {
+        "file": "26201001000479_back.jpg",
+        "type": "Back",
+        "dimensions": "4 inches W X 3.62 inches H",
+        "pixels": "1200x1093"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26201001000479"
+  },
+  {
+    "ttbid": "26202001000421",
+    "beverage_type": "malt_beverage",
+    "brand_name": "OFF COLOR BREWING",
+    "fanciful_name": "PISTACHIOS",
+    "class_type": "MALT BEVERAGES SPECIALITIES - FLAVORED",
+    "class_code": "906",
+    "origin": "ILLINOIS",
+    "source": "Domestic",
+    "applicant": "Off Color Brewing, Umlaut Brewing LLC, 3921 W DICKENS AVE, Chicago IL 60647",
+    "status": "Approved",
+    "completed": "08/04/2026",
+    "images": [
+      {
+        "file": "26202001000421_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "8 inches W X 6 inches H",
+        "pixels": "2040x1448"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26202001000421"
+  },
+  {
+    "ttbid": "26202001000425",
+    "beverage_type": "malt_beverage",
+    "brand_name": "OFF COLOR BREWING",
+    "fanciful_name": "PISTACHOS",
+    "class_type": "MALT BEVERAGES SPECIALITIES - FLAVORED",
+    "class_code": "906",
+    "origin": "ILLINOIS",
+    "source": "Domestic",
+    "applicant": "Off Color Brewing, Umlaut Brewing LLC, 3921 W DICKENS AVE, Chicago IL 60647",
+    "status": "Approved",
+    "completed": "08/04/2026",
+    "images": [
+      {
+        "file": "26202001000425_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "3.2 inches W X 2.8 inches H",
+        "pixels": "576x432"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26202001000425"
+  },
+  {
+    "ttbid": "26203001000652",
+    "beverage_type": "malt_beverage",
+    "brand_name": "FORBIDDEN ROOT",
+    "fanciful_name": "HONEY DEUCE HEFEWEIZEN",
+    "class_type": "MALT BEVERAGES SPECIALITIES - FLAVORED",
+    "class_code": "906",
+    "origin": "ILLINOIS",
+    "source": "Domestic",
+    "applicant": "DESTIHL BREWERY, LLC, 1200 GREENBRIAR DR, NORMAL IL 61761",
+    "status": "Approved",
+    "completed": "08/06/2026",
+    "images": [
+      {
+        "file": "26203001000652_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "5.75 inches W X 5.75 inches H",
+        "pixels": "1778x1729"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26203001000652"
+  },
+  {
+    "ttbid": "26203001000663",
+    "beverage_type": "malt_beverage",
+    "brand_name": "FORBIDDEN ROOT",
+    "fanciful_name": "HONEY DEUCE HEFEWEIZEN",
+    "class_type": "MALT BEVERAGES SPECIALITIES - FLAVORED",
+    "class_code": "906",
+    "origin": "ILLINOIS",
+    "source": "Domestic",
+    "applicant": "DESTIHL BREWERY, LLC, 1200 GREENBRIAR DR, NORMAL IL 61761",
+    "status": "Approved",
+    "completed": "08/12/2026",
+    "images": [
+      {
+        "file": "26203001000663_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "8.13 inches W X 5 inches H",
+        "pixels": "1880x1162"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26203001000663"
+  },
+  {
+    "ttbid": "26204001000524",
+    "beverage_type": "malt_beverage",
+    "brand_name": "BARN BREW CO.",
+    "fanciful_name": "FARMERS OKTOBERFEST",
+    "class_type": "BEER",
+    "class_code": "901",
+    "origin": "CONNECTICUT",
+    "source": "Domestic",
+    "applicant": "East Rock Brewing Company, EAST ROCK BREWING COMPANY LLC, 285 NICOLL ST, NEW HAVEN CT 06511",
+    "status": "Approved",
+    "completed": "08/06/2026",
+    "images": [
+      {
+        "file": "26204001000524_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "7 inches W X 7 inches H",
+        "pixels": "1050x1050"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26204001000524"
+  },
+  {
+    "ttbid": "26204001000669",
+    "beverage_type": "malt_beverage",
+    "brand_name": "SAUGATUCK BREWING CO.",
+    "fanciful_name": "HARPER'S SPARTAN SELECT",
+    "class_type": "BEER",
+    "class_code": "901",
+    "origin": "MICHIGAN",
+    "source": "Domestic",
+    "applicant": "SAUGATUCK BREWING COMPANY, INC., 2948 BLUE STAR HWY, DOUGLAS MI 49406",
+    "status": "Approved",
+    "completed": "08/19/2026",
+    "images": [
+      {
+        "file": "26204001000669_front.png",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "8.2 inches W X 5.8 inches H",
+        "pixels": "2000x1417"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26204001000669"
+  },
+  {
+    "ttbid": "26205001000228",
+    "beverage_type": "malt_beverage",
+    "brand_name": "CRAZY TURTLE",
+    "fanciful_name": "",
+    "class_type": "ALE",
+    "class_code": "902",
+    "origin": "FLORIDA",
+    "source": "Domestic",
+    "applicant": "Clearwater Brewing Company, CW BREWCO LLC, 1700 N FORT HARRISON AVE, Clearwater FL 33755",
+    "status": "Approved",
+    "completed": "08/28/2026",
+    "images": [
+      {
+        "file": "26205001000228_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "8 inches W X 5 inches H",
+        "pixels": "2000x1262"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26205001000228"
+  },
+  {
+    "ttbid": "26206001000046",
+    "beverage_type": "malt_beverage",
+    "brand_name": "GROOVITORY",
+    "fanciful_name": "",
+    "class_type": "ALE",
+    "class_code": "902",
+    "origin": "CONNECTICUT",
+    "source": "Domestic",
+    "applicant": "Twelvenote Brew Co, Twelvenote Brew Co LLC, 3389 FAIRFIELD AVE UNIT 3, Bridgeport CT 06605",
+    "status": "Approved",
+    "completed": "08/04/2026",
+    "images": [
+      {
+        "file": "26206001000046_front.jpg",
+        "type": "Brand (front) or keg collar",
+        "dimensions": "8 inches W X 4 inches H",
+        "pixels": "3228x1522"
+      }
+    ],
+    "source_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=26206001000046"
+  }
+]

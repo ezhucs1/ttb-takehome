@@ -120,14 +120,21 @@ The `beverage_type` column may be left blank in a batch CSV, and the type may be
 "Detect from the label" in the form: the reader decides the class and the record says the
 type was taken from the label.
 
-**Trying the batch upload** needs a CSV and a zip of images. The batch page offers both
-ready-made: a sixteen-row CSV and a zip of the sample labels. Fourteen rows are the bundled
+**Trying the batch upload** needs a CSV and a zip of images. The batch page offers two
+ready-made sets. The first is a sixteen-row CSV and a zip of the sample labels. Fourteen rows are the bundled
 samples; two are deliberately broken, a photo that is not a label and a row whose image is
 missing from the zip, so the summary shows failures next to the AI's findings. Download
 them, choose them in the form, and start the batch; the page shows progress and every
 readable row lands in the specialist's queue. In demo mode it finishes in a second or two. With a real API key the
 same batch makes fourteen model reads, which is a fair test of the concurrency and the
 per-label timing.
+
+The second set is real: sixty approved labels from TTB's public COLA registry, twenty of
+each class, many with back and neck panels, with the registry's own application values
+(`labelverify/testdata/cola/`, provenance in its README). The registry does not publish
+alcohol content or net contents, so those rows come back for review, and its class names
+are codes rather than label wording; what the set shows is the reader on real artwork and
+real photographs. It needs a live reader; demo mode cannot read it.
 
 The database is seeded on first start with fourteen sample applications in a mix of states
 so every screen has content.

@@ -54,6 +54,15 @@
       </div>
       {% if not demo_mode %}<p class="muted small try-batch-note">The reader is live, so this batch makes fourteen model calls.</p>{% endif %}
     </div>
+    <div class="try-batch">
+      <div class="card-title">Real labels from the public COLA registry</div>
+      <p class="small">{{ cola_rows or 60 }} approved labels fetched from TTB's public COLA registry, twenty of each class, many with back and neck panels, with the registry's own application values. The registry does not publish alcohol content or net contents, so those rows come back for review rather than approval; the class names are the registry's codes ("Table White Wine", "Other Gin"), not the label's wording. Real artwork, real photos, real variety.</p>
+      <div class="try-batch-links">
+        <a class="btn btn-secondary btn-sm" href="/applicant/batches/cola.csv" download><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg> COLA CSV ({{ cola_rows or 60 }} rows)</a>
+        <a class="btn btn-secondary btn-sm" href="/applicant/batches/cola-images.zip" download><svg class="icon" aria-hidden="true"><use href="#i-layers"></use></svg> COLA images (.zip, 15 MB)</a>
+      </div>
+      {% if not demo_mode %}<p class="muted small try-batch-note">The reader is live, so this batch makes {{ cola_rows or 60 }} model calls; in demo mode these labels cannot be read.</p>{% endif %}
+    </div>
   </div>
 
   <div class="card card-flush">

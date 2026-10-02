@@ -108,7 +108,10 @@ A CSV and a zip of images, up to 300 rows. The CSV has the same columns for ever
 template has one example row per class. Leave the type blank to let the label decide.
 Each row becomes an application with its result, straight into the queue; the batch page
 shows progress and a summary. A row whose image is missing or unreadable is reported,
-not dropped. The sample CSV and zip cover every outcome.
+not dropped. The sample CSV and zip cover every outcome. A second pair on the same page
+holds sixty real labels from TTB's public COLA registry with the registry's own values;
+it needs a live reader, and its rows mostly come back for review because the registry
+does not publish alcohol content or net contents.
 
 ## Specialist: the queue and a review
 

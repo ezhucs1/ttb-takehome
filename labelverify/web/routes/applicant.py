@@ -348,6 +348,7 @@ def batches(
         batches=_batches_for(db, user),
         errors=[],
         columns=services.BATCH_COLUMNS,
+        cola_rows=services.cola_row_count(),
     )
 
 
@@ -388,6 +389,27 @@ def sample_batch_zip(request: Request, user: User = Depends(require_applicant)):
         services.sample_batch_zip(request.app.state.samples, SAMPLES_DIR),
         media_type="application/zip",
         headers={"Content-Disposition": 'attachment; filename="labelverify-sample-images.zip"'},
+    )
+
+
+@router.get("/batches/cola.csv")
+def cola_batch_csv(user: User = Depends(require_applicant)):
+    """Sixty approved labels from the public COLA registry, with the registry's values."""
+    return PlainTextResponse(
+        services.cola_batch_csv(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="labelverify-cola-batch.csv"'},
+    )
+
+
+@router.get("/batches/cola-images.zip")
+def cola_batch_zip(user: User = Depends(require_applicant)):
+    from fastapi.responses import Response
+
+    return Response(
+        services.cola_batch_zip(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="labelverify-cola-images.zip"'},
     )
 
 
