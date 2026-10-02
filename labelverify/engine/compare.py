@@ -34,9 +34,11 @@ from .normalize import (
     METRIC_UNITS,
     normalize_address,
     normalize_country,
+    normalize_producer,
     normalize_text,
     parse_alcohol_content,
     parse_net_contents,
+    producer_candidates,
 )
 from .rules import ClassRules, Requirement, rules_for
 from .warning import check_health_warning
@@ -159,7 +161,7 @@ def _wraps(a: str, b: str) -> bool:
 
 
 def compare_brand_name(application: ApplicationData, extraction: LabelExtraction) -> FieldResult:
-    return _fuzzy_field(
+    result = _fuzzy_field(
         field="brand_name",
         label="Brand Name",
         application_value=application.brand_name,
@@ -167,6 +169,22 @@ def compare_brand_name(application: ApplicationData, extraction: LabelExtraction
         review_at=BRAND_REVIEW,
         wrapped_is_review=True,
     )
+    # The label carries two names and the reader took the other one for the brand: a
+    # brewery name over a product name, or the reverse. Which is the brand is a person's
+    # call (27 CFR 5.63, 4.33, 7.63), so this is a review item, not a mismatch.
+    if result.verdict is Verdict.MISMATCH:
+        app_norm = normalize_text(application.brand_name)
+        other_norm = normalize_text(extraction.fanciful_name.value)
+        if other_norm and (
+            app_norm == other_norm or _similarity(app_norm, other_norm) >= BRAND_REVIEW
+        ):
+            result.verdict = Verdict.NEEDS_REVIEW
+            result.reason = (
+                f"The application's brand '{application.brand_name}' is on the label as a "
+                f"second name ('{extraction.fanciful_name.value}'); the most prominent name "
+                f"reads as '{extraction.brand_name.value}'. Confirm which is the brand name."
+            )
+    return result
 
 
 def compare_class_type(application: ApplicationData, extraction: LabelExtraction) -> FieldResult:
@@ -362,21 +380,53 @@ def compare_beverage_type(application: ApplicationData, extraction: LabelExtract
     )
 
 
+_VERDICT_RANK = {
+    Verdict.MATCH: 0,
+    Verdict.NOT_APPLICABLE: 1,
+    Verdict.NEEDS_REVIEW: 2,
+    Verdict.MISMATCH: 3,
+}
+
+
 def compare_producer_name(application: ApplicationData, extraction: LabelExtraction) -> FieldResult:
-    return _fuzzy_field(
-        field="producer_name",
-        label="Producer / Bottler Name",
-        application_value=application.producer_name,
-        extracted=extraction.producer_name,
-        review_at=PRODUCER_REVIEW,
-        wrapped_is_review=True,  # "SVP Winery" filed, "SVP Winery, LLC" printed
-    )
+    """Entity suffixes are ignored ("Vinovae, Inc." is "Vinovae"), and a filing that lists
+    more than one name ("Go Brewing, Go Brewing Opco, LLC": trade name, legal name) matches
+    when any of them is the name printed."""
+    results = [
+        _fuzzy_field(
+            field="producer_name",
+            label="Producer / Bottler Name",
+            application_value=application.producer_name,
+            extracted=extraction.producer_name,
+            review_at=PRODUCER_REVIEW,
+            normalizer=normalize_producer,
+            wrapped_is_review=True,  # "SVP Winery" filed, "SVP Winery, LLC" printed
+        )
+    ]
+    for candidate in producer_candidates(application.producer_name)[1:]:
+        part = _fuzzy_field(
+            field="producer_name",
+            label="Producer / Bottler Name",
+            application_value=candidate,
+            extracted=extraction.producer_name,
+            review_at=PRODUCER_REVIEW,
+            normalizer=normalize_producer,
+            wrapped_is_review=True,
+        )
+        if _VERDICT_RANK[part.verdict] < _VERDICT_RANK[results[0].verdict]:
+            part.application_value = application.producer_name
+            part.reason = (
+                f"'{extraction.producer_name.value}' matches '{candidate}', one of the names the "
+                f"application lists. {part.reason}"
+            )
+            results.insert(0, part)
+    return results[0]
 
 
 def compare_producer_address(
     application: ApplicationData, extraction: LabelExtraction
 ) -> FieldResult:
-    return _fuzzy_field(
+    result = _fuzzy_field(
         field="producer_address",
         label="Producer / Bottler Address",
         application_value=application.producer_address,
@@ -385,6 +435,19 @@ def compare_producer_address(
         normalizer=normalize_address,
         required=False,
     )
+    # The label need only carry the city and state (27 CFR 5.66, 4.35, 7.66). An
+    # application that gives the street address agrees with a label that prints
+    # "Lexington, KY" when every word the label prints is in the application's address.
+    if result.verdict in (Verdict.NEEDS_REVIEW, Verdict.MISMATCH):
+        label_words = normalize_address(extraction.producer_address.value).split()
+        app_words = set(normalize_address(application.producer_address).split())
+        if len(label_words) >= 2 and all(w in app_words for w in label_words):
+            result.verdict = Verdict.MATCH
+            result.reason = (
+                f"The label states '{extraction.producer_address.value}', the city and state "
+                "the rule requires; the application's full address contains them."
+            )
+    return result
 
 
 def compare_alcohol_content(

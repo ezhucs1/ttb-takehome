@@ -2,7 +2,7 @@
   "_about": "Hand-written application values for the COLA batch demonstration. Every value here was transcribed by a person from the label image, or deliberately altered from that transcription; none comes from the app's reader. scripts/import_cola.py copies these over the registry values when it writes applications.csv. Rows not listed keep the registry's values (scenario 'registry-as-filed').",
   "26176001000014": {
     "scenario": "filed-correctly",
-    "expected": "approve",
+    "expected": "approve; the reader has judged the rotated warning heading not bold on one run, which is a review item",
     "fields": {
       "brand_name": "Tenhead",
       "class_type": "American Gin",
@@ -14,7 +14,7 @@
   },
   "26192001000073": {
     "scenario": "filed-correctly",
-    "expected": "approve",
+    "expected": "review: the age statement row (a whisky label without a statement of age goes to review under 27 CFR 5.74); every filed value matches",
     "fields": {
       "brand_name": "Rittenhouse",
       "class_type": "Kentucky Straight Rye Whiskey",
@@ -26,7 +26,7 @@
   },
   "26183001000057": {
     "scenario": "filed-correctly",
-    "expected": "approve",
+    "expected": "review: the age statement row (a whisky label without a statement of age goes to review under 27 CFR 5.74); every filed value matches",
     "fields": {
       "brand_name": "J. Henry & Sons",
       "class_type": "Wisconsin Straight Bourbon Whiskey",
@@ -74,7 +74,7 @@
   },
   "26188001000708": {
     "scenario": "filed-correctly",
-    "expected": "approve; the class row may be a review item because the label's designation is '100% Malt Premium Beer'",
+    "expected": "review: the class row, because the label's designation is '100% Malt Premium Beer' around the filed 'Beer'; every other row matches",
     "fields": {
       "brand_name": "Daikoku Beer",
       "class_type": "Beer",
@@ -86,7 +86,7 @@
   },
   "26205001000228": {
     "scenario": "filed-correctly",
-    "expected": "approve",
+    "expected": "corrections needed: the Government Health Warning on this approved label departs from the statutory text ('woman' for 'women', 'risks' for 'risk', and 'drive a car or' missing); every filed value matches. A real defect the registry approved",
     "fields": {
       "brand_name": "Crazy Turtle",
       "class_type": "Hazy India Pale Ale",
@@ -110,7 +110,7 @@
   },
   "26166001000624": {
     "scenario": "wrong-alcohol",
-    "expected": "corrections needed: alcohol content (the foot label states 56.9% alc/vol, 113.8 proof)",
+    "expected": "corrections needed: alcohol content (the foot label states 56.9% alc/vol, 113.8 proof); the age statement row is a review item as on every whisky without one",
     "fields": {
       "brand_name": "Never Say Die",
       "class_type": "Kentucky Straight Rye Whiskey",
@@ -134,7 +134,7 @@
   },
   "26198001000266": {
     "scenario": "wrong-net-contents",
-    "expected": "corrections needed: net contents (the back label states 750 mL); the class row is a review item because the label reads 'Blood Orange Forward Gin'",
+    "expected": "corrections needed: net contents (the back label states 750 mL); the class row is a review item ('Blood Orange Forward Gin' around 'Gin'), and the warning row flags 'ABILILTY', a misspelling printed on this approved label",
     "fields": {
       "brand_name": "Dark Island",
       "class_type": "Gin",
@@ -146,7 +146,7 @@
   },
   "26194001000967": {
     "scenario": "wrong-net-contents",
-    "expected": "corrections needed: net contents (the label states 750 mL)",
+    "expected": "corrections needed: net contents (the label states 750 mL); the brand row may be a review item when the reader returns 'Francis Coppola' without 'Diamond Collection'",
     "fields": {
       "brand_name": "Francis Coppola Diamond Collection",
       "class_type": "Sauvignon Blanc",
@@ -170,7 +170,7 @@
   },
   "26206001000046": {
     "scenario": "wrong-class",
-    "expected": "corrections needed: class/type (the label reads 'Belgian-Style Dark Strong Ale')",
+    "expected": "corrections needed: class/type (the label reads 'Belgian-Style Dark Strong Ale'); the brand row is a review item when the reader takes 'Twelvenote Brew Co.' as the brand and 'Groovitory' as the product name",
     "fields": {
       "brand_name": "Groovitory",
       "class_type": "Stout",
@@ -206,7 +206,7 @@
   },
   "26195001000186": {
     "scenario": "blank-fields",
-    "expected": "review: brand, class, alcohol content and net contents were left blank on the application; each row says what the label shows",
+    "expected": "review: brand, class, alcohol content and net contents were left blank on the application and each row says what the label shows; the producer row may differ where the registry names an importer and the label a producer",
     "fields": {
       "brand_name": "",
       "class_type": "",
@@ -216,7 +216,7 @@
   },
   "26196001000784": {
     "scenario": "blank-fields",
-    "expected": "review: brand, class, alcohol content and net contents were left blank on the application; each row says what the label shows",
+    "expected": "review: brand, class, alcohol content and net contents were left blank on the application and each row says what the label shows; the producer row may differ where the registry names an importer and the label a producer",
     "fields": {
       "brand_name": "",
       "class_type": "",
@@ -226,7 +226,7 @@
   },
   "26204001000524": {
     "scenario": "blank-fields",
-    "expected": "review: brand, class, alcohol content and net contents were left blank on the application (a handwritten keg collar, so the read itself may be uncertain)",
+    "expected": "review: brand, class, alcohol content and net contents were left blank on the application and each row says what the label shows; the producer row may differ where the registry names an importer and the label a producer",
     "fields": {
       "brand_name": "",
       "class_type": "",

@@ -66,11 +66,16 @@ def word_diff(expected: str, actual: str) -> list[WordDiff]:
     return diff
 
 
+_LINE_HYPHEN_RE = re.compile(r"(?<=\w)-\s+(?=\w)")
+
+
 @lru_cache(maxsize=256)
 def _tokens(text: str) -> list[tuple[str, str]]:
-    """(normalized token, word as printed) pairs; punctuation-only words are dropped."""
+    """(normalized token, word as printed) pairs; punctuation-only words are dropped. A word
+    hyphenated across a line break ("BE- CAUSE", "CONSUM- PTION") is one word: the statutory
+    text has no hyphens, so a hyphen at a break is never part of a word."""
     pairs: list[tuple[str, str]] = []
-    for raw in collapse_whitespace(text).split():
+    for raw in _LINE_HYPHEN_RE.sub("", collapse_whitespace(text)).split():
         normalized = normalize_words(raw)
         if not normalized:
             continue

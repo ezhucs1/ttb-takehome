@@ -344,6 +344,9 @@ def classify_text(text: str, *, prominent_lines: list[str] | None = None) -> Lab
     brand_line = next((ln for ln in (prominent_lines or []) if could_be_brand(ln)), None)
     if brand_line is None:
         brand_line = next((ln for ln in lines if ln not in consumed and could_be_brand(ln)), None)
+    fanciful_line = next(
+        (ln for ln in (prominent_lines or []) if ln != brand_line and could_be_brand(ln)), None
+    )
 
     def field(value: str | None, confidence: float = _LOW) -> ExtractedField:
         return ExtractedField(value=value, confidence=confidence if value else 0.0)
@@ -352,6 +355,7 @@ def classify_text(text: str, *, prominent_lines: list[str] | None = None) -> Lab
     category = _category_from_text(text)
     return LabelExtraction(
         brand_name=field(brand_line, 0.35),
+        fanciful_name=field(fanciful_line, 0.3),
         class_type=field(class_line),
         alcohol_content=field(alcohol, 0.55),
         net_contents=field(net, 0.55),

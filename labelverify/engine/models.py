@@ -104,6 +104,13 @@ class LabelExtraction(BaseModel):
     """Everything an extractor reports about one label image."""
 
     brand_name: ExtractedField = Field(default_factory=ExtractedField)
+    fanciful_name: ExtractedField = Field(
+        default_factory=ExtractedField,
+        description=(
+            "A product name printed in addition to the brand ('Spartan Select' under "
+            "'Harper's'; 'Chill Rasputin' under 'North Coast Brewing Co.'), or null."
+        ),
+    )
     class_type: ExtractedField = Field(default_factory=ExtractedField)
     alcohol_content: ExtractedField = Field(default_factory=ExtractedField)
     net_contents: ExtractedField = Field(default_factory=ExtractedField)

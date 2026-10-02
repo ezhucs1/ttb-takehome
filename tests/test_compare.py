@@ -56,6 +56,23 @@ class TestClassTypeWrapped:
         extraction.brand_name = make_field("NC'NEAN")
         assert compare_brand_name(application, extraction).verdict is Verdict.MISMATCH
 
+    def test_filed_brand_read_as_the_fanciful_name_needs_review(self, application, extraction):
+        """A product name under a brewery name: the reader called the brewery the brand."""
+        application.brand_name = "Groovitory"
+        extraction.brand_name = make_field("twelvenote BREW CO.")
+        extraction.fanciful_name = make_field("Groovitory")
+        result = compare_brand_name(application, extraction)
+        assert (
+            result.verdict is Verdict.NEEDS_REVIEW and "Confirm which is the brand" in result.reason
+        )
+
+    def test_the_producer_name_alone_does_not_make_a_brand(self, application, extraction):
+        """The bottler's name is on every label; printing it does not make it the brand."""
+        application.brand_name = "Saugatuck Brewing Co."
+        extraction.brand_name = make_field("SPARTAN SELECT")
+        extraction.producer_name = make_field("Saugatuck Brewing Co")
+        assert compare_brand_name(application, extraction).verdict is Verdict.MISMATCH
+
 
 class TestBrandName:
     def test_exact(self, application, extraction):
@@ -463,6 +480,41 @@ class TestProducer:
     def test_different_city_is_mismatch(self, application, extraction):
         extraction.producer_address = make_field("9 Harbor Way, Portland, OR 97201")
         assert compare_producer_address(application, extraction).verdict is Verdict.MISMATCH
+
+    def test_city_and_state_on_the_label_match_a_street_address_on_the_application(
+        self, application, extraction
+    ):
+        """The label need only carry the city and state; the filing may give the street."""
+        application.producer_address = "249 W SHORT ST STE 200, Lexington KY 40507"
+        extraction.producer_address = make_field("Lexington, KY")
+        result = compare_producer_address(application, extraction)
+        assert result.verdict is Verdict.MATCH and "city and state" in result.reason
+        extraction.producer_address = make_field("Kenwood, California")
+        application.producer_address = "10200 SONOMA HWY, KENWOOD CA 95452"
+        assert compare_producer_address(application, extraction).verdict is Verdict.MATCH
+
+    def test_a_different_city_in_a_street_address_still_mismatches(self, application, extraction):
+        application.producer_address = "249 W SHORT ST STE 200, Lexington KY 40507"
+        extraction.producer_address = make_field("Louisville, KY")
+        assert compare_producer_address(application, extraction).verdict is Verdict.MISMATCH
+
+    def test_entity_suffixes_do_not_count(self, application, extraction):
+        application.producer_name = "VINOVAE, INC."
+        extraction.producer_name = make_field("Vinovae")
+        assert compare_producer_name(application, extraction).verdict is Verdict.MATCH
+        application.producer_name = "Founders Brewing Company"
+        extraction.producer_name = make_field("Founders Brewing Co")
+        assert compare_producer_name(application, extraction).verdict is Verdict.MATCH
+
+    def test_a_filing_with_trade_and_legal_names_matches_either(self, application, extraction):
+        application.producer_name = "Go Brewing, Go Brewing Opco, LLC"
+        extraction.producer_name = make_field("GO BREWING")
+        result = compare_producer_name(application, extraction)
+        assert result.verdict is Verdict.MATCH
+        assert "one of the names the application lists" in result.reason
+        assert result.application_value == "Go Brewing, Go Brewing Opco, LLC"
+        extraction.producer_name = make_field("Some Other Brewery")
+        assert compare_producer_name(application, extraction).verdict is Verdict.MISMATCH
 
 
 class TestCountryOfOrigin:

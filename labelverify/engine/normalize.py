@@ -38,16 +38,18 @@ def normalize_words(text: str | None) -> list[str]:
 
 # --------------------------------------------------------------------------- alcohol content
 
+# A number is a whole number: "1.5" must not yield "5", but "ALC.13.0%" is still 13.
+_NOT_IN_NUMBER = r"(?<!\d)(?<!\d[.,])"
 _PERCENT_RE = re.compile(
-    r"(?<![\d.])(?P<num>\d{1,2}(?:[.,]\d{1,2})?)\s*%\s*"
+    _NOT_IN_NUMBER + r"(?P<num>\d{1,2}(?:[.,]\d{1,2})?)\s*%\s*"
     r"(?:alc(?:ohol)?\.?(?:\s*/\s*|\s+by\s+|\s*)vol(?:ume)?\.?|abv)?",
     re.IGNORECASE,
 )
 _ALC_PREFIX_RE = re.compile(
-    r"alc(?:ohol)?\.?\s*(?<![\d.])(?P<num>\d{1,2}(?:[.,]\d{1,2})?)\s*%", re.IGNORECASE
+    r"alc(?:ohol)?\.?\s*" + _NOT_IN_NUMBER + r"(?P<num>\d{1,2}(?:[.,]\d{1,2})?)\s*%", re.IGNORECASE
 )
 _PROOF_RE = re.compile(
-    r"(?<![\d.])(?P<num>\d{1,3}(?:[.,]\d{1,2})?)\s*(?:°\s*)?proof", re.IGNORECASE
+    _NOT_IN_NUMBER + r"(?P<num>\d{1,3}(?:[.,]\d{1,2})?)\s*(?:°\s*)?proof", re.IGNORECASE
 )
 _BARE_NUMBER_RE = re.compile(r"^\s*(?P<num>\d{1,2}(?:[.,]\d{1,2})?)\s*%?\s*$")
 
@@ -90,6 +92,9 @@ def _to_float(raw: str) -> float:
 # --------------------------------------------------------------------------- net contents
 
 METRIC_UNITS = {"ml", "cl", "l"}
+# "ONE PINT" is a common way to print 16 fl oz on cans.
+_NUMBER_WORDS = {"one": "1", "two": "2", "three": "3", "four": "4", "half": "0.5"}
+_NUMBER_WORD_RE = re.compile(r"\b(one|two|three|four|half)\b(?=\s*(?:a\s+)?[a-z])", re.IGNORECASE)
 
 _UNIT_TO_ML: dict[str, float] = {
     "ml": 1.0,
@@ -124,7 +129,7 @@ _UNIT_ALIASES: dict[str, str] = {
 }
 
 VOLUME_RE = re.compile(
-    r"(?P<num>\d+(?:[.,]\d+)?)\s*"
+    r"(?P<num>\d+(?:[.,]\d+)?)\s*(?:u\.?s\.?\s*)?"  # "5.16 U.S. Gallons" on a keg collar
     r"(?P<unit>fl\.?\s*oz\.?|milliliters?|millilitres?|centiliters?|centilitres?|liters?|litres?"
     r"|ml|cl|l|oz\.?|pints?|pt\.?|quarts?|qt\.?|gallons?|gal\.?)(?![a-z])",
     re.IGNORECASE,
@@ -145,7 +150,9 @@ def parse_net_contents(text: str | None) -> NetContents | None:
     """
     if not text:
         return None
-    cleaned = unicodedata.normalize("NFKC", text)
+    cleaned = _NUMBER_WORD_RE.sub(
+        lambda m: _NUMBER_WORDS[m.group(1).lower()], unicodedata.normalize("NFKC", text)
+    )
     candidates: list[NetContents] = []
     for match in VOLUME_RE.finditer(cleaned):
         unit_key = re.sub(r"[\s.]", "", match.group("unit")).lower()
@@ -163,6 +170,59 @@ def parse_net_contents(text: str | None) -> NetContents | None:
         return None
     metric = [c for c in candidates if c.original_unit in METRIC_UNITS]
     return (metric or candidates)[0]
+
+
+# --------------------------------------------------------------------------- producer names
+
+_ENTITY_WORDS = {
+    "inc",
+    "incorporated",
+    "llc",
+    "l l c",
+    "ltd",
+    "limited",
+    "corp",
+    "corporation",
+    "co",
+    "company",
+}
+_ENTITY_SUFFIX_RE = re.compile(
+    r"\b(?:inc|incorporated|l\s?l\s?c|ltd|limited|corp|corporation|co|company)\b\s*$"
+)
+
+
+def normalize_producer(text: str | None) -> str:
+    """Normalize a producer or bottler name: "Vinovae, Inc." equals "VINOVAE", and
+    "Founders Brewing Company" equals "Founders Brewing Co". Trailing entity words are
+    dropped (repeatedly, for "Co., Inc."), and "company" in the middle becomes "co"."""
+    normalized = normalize_text(text)
+    while True:
+        stripped = _ENTITY_SUFFIX_RE.sub("", normalized).strip()
+        if stripped == normalized or not stripped:
+            break
+        normalized = stripped
+    return re.sub(r"\bcompany\b", "co", normalized)
+
+
+def producer_candidates(text: str | None) -> list[str]:
+    """The names a producer field may hold. A filing can list "Trade name, Legal name, LLC":
+    each comma segment that is a name of its own (not just an entity suffix) is a candidate,
+    after the whole value."""
+    if not text:
+        return []
+    candidates = [text.strip()]
+    segments = [seg.strip() for seg in text.split(",") if seg.strip()]
+    if len(segments) > 1:
+        merged: list[str] = []
+        for seg in segments:
+            if merged and normalize_text(seg) in _ENTITY_WORDS:
+                merged[-1] = f"{merged[-1]}, {seg}"  # "Fayard Winemaking" + "LLC"
+            else:
+                merged.append(seg)
+        for seg in merged:
+            if normalize_producer(seg) and seg not in candidates:
+                candidates.append(seg)
+    return candidates
 
 
 # --------------------------------------------------------------------------- addresses

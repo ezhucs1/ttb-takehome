@@ -3,10 +3,12 @@ import pytest
 from labelverify.engine.normalize import (
     normalize_address,
     normalize_country,
+    normalize_producer,
     normalize_text,
     normalize_words,
     parse_alcohol_content,
     parse_net_contents,
+    producer_candidates,
 )
 
 
@@ -103,6 +105,31 @@ class TestParseNetContents:
     @pytest.mark.parametrize("text", [None, "", "seven fifty", "750"])
     def test_unparseable(self, text):
         assert parse_net_contents(text) is None
+
+
+class TestParseEdgeCases:
+    def test_percent_glued_to_the_alc_abbreviation(self):
+        assert parse_alcohol_content("ALC.13.0% BY VOL.").abv == 13.0
+
+    def test_a_decimal_volume_is_not_a_percentage(self):
+        assert parse_alcohol_content("1.5 L") is None
+
+    def test_number_words_and_us_gallons(self):
+        assert parse_net_contents("ONE PINT").milliliters == pytest.approx(473.18)
+        assert parse_net_contents("5.16 U.S. Gallons").original_unit == "gal"
+        assert parse_net_contents("16 FL OZ ONE PINT (473ML)").milliliters == 473.0
+
+    def test_producer_normalization_and_candidates(self):
+        assert normalize_producer("VINOVAE, INC.") == "vinovae"
+        assert normalize_producer("Founders Brewing Company") == normalize_producer(
+            "Founders Brewing Co."
+        )
+        assert producer_candidates("Go Brewing, Go Brewing Opco, LLC") == [
+            "Go Brewing, Go Brewing Opco, LLC",
+            "Go Brewing",
+            "Go Brewing Opco, LLC",
+        ]
+        assert producer_candidates("Matt Crutchfield Wines, LLC") == ["Matt Crutchfield Wines, LLC"]
 
 
 class TestNormalizeAddress:

@@ -590,3 +590,35 @@ inside a longer label designation ("Gin" in "Blood Orange Forward Gin", "Beer" i
 Malt Premium Beer") was a mismatch by similarity score. The regulations allow descriptive
 words beside the class, so that is now a review item with a reason, while a different
 class ("Stout" for a dark strong ale) stays a mismatch.
+
+## 26. What sixty real results taught the engine
+
+The first full run of the COLA batch came back 51 corrections needed, 7 review, 2
+approve, with the reader right almost everywhere. The results download showed where the
+engine, not the reader, was charging labels, and each item below is one line of that file.
+
+- "ALC.13.0% BY VOL." could not be read as a percentage: the guard that stops "1.5 L"
+  yielding 5% also rejected a number glued to "ALC.". The guard now rejects a digit or a
+  digit-and-point before the number, nothing else.
+- "ONE PINT" and "5.16 U.S. Gallons" (a keg collar) were not volumes. Number words and
+  "U.S." before the unit are.
+- "BE- CAUSE" and "CONSUM- PTION", a warning hyphenated across lines, counted as four
+  wrong words. A hyphen at a line break joins the halves; the statutory text has none.
+- Fifty-three address rows mismatched because the registry gives the street and the
+  label prints the city and state, which is all the rule asks of the label. When every
+  word the label prints is in the application's address, the row matches and says why.
+- The registry's applicant line lists a trade name and a legal name ("Go Brewing, Go
+  Brewing Opco, LLC"); the label prints one of them. The producer row now tries each
+  name, ignores entity suffixes ("Vinovae, Inc." is "Vinovae", "Company" is "Co"), and
+  reports which name matched.
+- The reader took a brewery name for the brand when the label also prints a product
+  name, or the reverse. The reader now returns a second name (``fanciful_name``, the term
+  on the COLA form) and a filed brand that matches it is a review item that asks which
+  is the brand, not a mismatch. The producer's name alone does not count: it is on every
+  label and does not make a brand.
+- Two approved labels have defective warnings ("woman", "risks", "drive a car or"
+  missing on one; "ABILILTY" on the other). The check flags both. That is the point.
+
+What did not change: the registry's class codes still mismatch the label's wording,
+blank fields still ask for the value, and a whisky without an age statement still goes
+to review. Those are the rules, applied to data that does not match the label.

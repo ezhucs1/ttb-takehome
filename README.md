@@ -145,14 +145,14 @@ check should report:
 
 | Scenario | Rows | Application values | Expected result |
 | --- | --- | --- | --- |
-| `filed-correctly` | 9 (3 per class) | Transcribed from the label by hand | Approve; an address or a wrapped class designation ("100% Malt Premium Beer" for "Beer") may be a review item |
+| `filed-correctly` | 9 (3 per class) | Transcribed from the label by hand | Approve. Two whisky rows are review items for the age statement (a whisky without one always is), one beer for a class designation wrapped in descriptive words ("100% Malt Premium Beer"), and one approved can is corrections needed because its Government Health Warning really does depart from the statutory text ("woman", "risks", "drive a car or" missing): the check caught a defect the registry let through |
 | `wrong-alcohol` | 2 | Transcribed, then the ABV changed (45% filed, 56.9% printed; 5.2% filed, 7.2% printed) | Corrections needed on alcohol content |
 | `wrong-net-contents` | 2 | Transcribed, then the volume changed (1 L and 1.5 L filed, 750 mL printed) | Corrections needed on net contents |
 | `wrong-class` | 2 | Transcribed, then the class changed ("Chardonnay" for a Chenin Blanc blend; "Stout" for a Belgian-style dark strong ale) | Corrections needed on class/type |
 | `wrong-brand` | 1 | Another distillery's brand filed for an Nc'nean Scotch | Corrections needed on brand name |
 | `near-miss-brand` | 1 | "Delto" filed for a label that reads "Delta" | Review: close but not identical, so a person decides rather than the label being charged |
 | `blank-fields` | 3 (1 per class) | Brand, class, ABV and net contents left empty | Review: each blank row says what the label shows, so the applicant can fill it in |
-| `registry-as-filed` | 40 | The registry's record: brand, class code, permit holder; ABV and net contents are not published | Mostly corrections needed: the registry's class code ("Other Gin", "Table White Wine") is not the label's wording, and the permit holder's legal name is often not the name printed; the blank ABV and net contents are review items. The reader is right on these rows; the filed values are the registry's, so this is the check doing its job on data that does not match the label |
+| `registry-as-filed` | 40 | The registry's record: brand, class code, permit holder with street address; ABV and net contents are not published | Mostly corrections needed, on the class row: the registry's code ("Other Gin", "Table White Wine") is not the label's wording. The street address matches the label's city and state, a trade name or legal name matches whichever is printed, and the blank ABV and net contents are review items. The reader is right on these rows; the filed values are the registry's, so this is the check doing its job on data that does not match the label |
 
 The values and the expected results are in `labelverify/testdata/cola/scenarios.json`;
 `scripts/import_cola.py --csv-only` rebuilds the CSV from it. The expectations describe a

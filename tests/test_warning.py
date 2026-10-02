@@ -34,6 +34,19 @@ def test_line_breaks_and_extra_spaces_are_ignored():
     assert check_health_warning(warning(wrapped)).verdict is Verdict.MATCH
 
 
+def test_words_hyphenated_across_a_line_break_are_one_word():
+    from labelverify.engine.models import HealthWarningExtraction, Verdict
+    from labelverify.engine.warning import STATUTORY_TEXT, check_health_warning
+
+    text = STATUTORY_TEXT.replace("because", "be- cause").replace("Consumption", "Consum- ption")
+    result = check_health_warning(
+        HealthWarningExtraction(
+            present=True, text=text, heading_all_caps=True, heading_bold=True, confidence=0.9
+        )
+    )
+    assert result.verdict is Verdict.MATCH
+
+
 def test_missing_statement_is_a_mismatch():
     result = check_health_warning(warning(None, present=False))
     assert result.verdict is Verdict.MISMATCH

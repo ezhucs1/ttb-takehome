@@ -110,7 +110,13 @@ def split_applicant(applicant: str) -> tuple[str, str]:
     parts = [p.strip() for p in applicant.split(",") if p.strip()]
     for i, part in enumerate(parts):
         if re.match(r"^\d", part):
-            return ", ".join(parts[:i]), ", ".join(parts[i:])
+            name = ", ".join(parts[:i])
+            # "Leiper's Fork Distillery, LLC, Leiper's Fork Distillery, LLC": the trade
+            # name and the legal name are the same; list it once.
+            half = name[: len(name) // 2].rstrip(", ")
+            if len(parts[:i]) % 2 == 0 and name == f"{half}, {half}":
+                name = half
+            return name, ", ".join(parts[i:])
     return applicant.strip(), ""
 
 

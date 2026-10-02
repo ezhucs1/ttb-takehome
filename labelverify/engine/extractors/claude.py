@@ -34,7 +34,8 @@ Rules:
 - Each field is reported once. If it appears on more than one panel, use the most legible instance.
 - If a field is not visible on any panel, set its value to null and confidence to 0.
 - Confidence is your certainty that the transcription is exactly right: 1.0 for crisp, unambiguous text; around 0.5 when glare, angle, or blur make characters uncertain; lower when guessing.
-- brand_name is the product's brand as displayed, not the producer's company name unless they are the same.
+- brand_name is the name under which the product is marketed, usually the most prominent name on the front label; it is not the producer's company name unless they are the same.
+- fanciful_name is a second product name printed in addition to the brand (the line under a brewery or distillery name that names this particular product, for example "Spartan Select" under "Harper's", or "Chill Rasputin" under "North Coast Brewing Co."); null if the label has one name only. When two names could each be the brand, put the more prominent one in brand_name and the other here.
 - class_type is the class or type designation, for example "Kentucky Straight Bourbon Whiskey", "Cabernet Sauvignon", "India Pale Ale".
 - alcohol_content is the full alcohol statement as printed, for example "45% Alc./Vol. (90 Proof)".
 - net_contents is the volume statement as printed, for example "750 mL".
@@ -53,13 +54,14 @@ Rules:
 - product_category is your judgment of which TTB class the product is, from every cue (the class/type words, "Distilled by" or "Brewed by", proof, vintage, grape variety, "Contains sulfites"): exactly one of "distilled_spirits", "wine", or "malt_beverage", with your confidence; null if the label gives no basis.
 - health_warning.text must be the complete Government Health Warning Statement transcribed verbatim starting at the words "GOVERNMENT WARNING", preserving the capitalization used on the label.
 - health_warning.heading_all_caps is true only if the words GOVERNMENT WARNING are printed entirely in capital letters.
-- health_warning.heading_bold is true only if that heading is printed noticeably bolder than the sentences that follow it. Use null if you cannot tell.
+- health_warning.heading_bold is true when that heading is printed in heavier type than the sentences that follow it, which is the usual case; false only when it is clearly the same weight or lighter. Small, rotated or low-resolution type is not evidence of either; use null if you cannot tell.
 - image_quality.readable is false when substantial parts of the label text cannot be read. List concrete issues such as "glare across the bottom third of the front label" or "back label photographed at a steep angle"."""
 
 # The reply shape, spelled out once so the model does not have to infer it from field names.
 _FIELD = '{"value": "text as printed or null", "confidence": 0.0}'
 _FIELD_KEYS = (
     "brand_name",
+    "fanciful_name",
     "class_type",
     "alcohol_content",
     "net_contents",
