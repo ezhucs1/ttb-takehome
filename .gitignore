@@ -9,3 +9,9 @@ dist/
 .env.local
 data/
 *.db
+
+# local secrets, never committed
+API_key.txt
+*key*.txt
+*.pem
+*.key
