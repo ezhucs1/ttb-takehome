@@ -17,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session, selectinload, sessionmaker
 
 from ..engine.compare import resolve_beverage_type
@@ -504,10 +504,21 @@ def create_draft(
 
 
 def discard_draft(db: Session, app: Application) -> bool:
-    """Delete an unsubmitted draft (its images and runs go with it). False if not a draft."""
+    """Delete an unsubmitted draft with everything hanging off it. False if not a draft.
+
+    The runs reference the images and the views reference the application, so they go
+    first, explicitly; the ORM's cascade would otherwise delete the images while a run
+    still points at one and trip the foreign key.
+    """
     if app.status != ApplicationStatus.DRAFT.value:
         return False
-    db.delete(app)
+    db.execute(delete(VerificationRun).where(VerificationRun.application_id == app.id))
+    db.execute(delete(ApplicationView).where(ApplicationView.application_id == app.id))
+    db.execute(delete(BatchItem).where(BatchItem.application_id == app.id))
+    app.latest_run_id = None
+    db.flush()
+    db.expire(app, ["runs"])
+    db.delete(app)  # images, comments, events and notices cascade
     db.flush()
     return True
 

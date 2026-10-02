@@ -4,7 +4,7 @@
   <div class="progress"><span style="width:{{ ((batch.completed + batch.failed) / batch.total * 100) | round | int if batch.total else 0 }}%"></span></div>
   <div class="batch-progress-text">
     {{ batch.completed + batch.failed }} of {{ batch.total }} checked
-    {% if batch.status == 'done' %}· done{% else %}· working…{% endif %}
+    {% if batch.status == 'done' %}· done{% if batch.finished_at and batch.total %}{% set secs = (batch.finished_at - batch.created_at).total_seconds() %} in {{ '%.1f' | format(secs) }} s · {{ '%.1f' | format(secs / batch.total) }} s per label{% endif %}{% else %}· working…{% endif %}
   </div>
   <div class="batch-summary">
     <span class="pill pill-success">{{ summary.approve }} all fields match</span>

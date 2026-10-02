@@ -109,7 +109,12 @@ async def create_application(
     if replace_draft_id:
         previous = db.get(Application, replace_draft_id)
         if previous is not None and previous.applicant_id == user.id:
-            services.discard_draft(db, previous)
+            try:
+                services.discard_draft(db, previous)
+                db.commit()
+            except Exception:  # the new read matters more than tidying the old draft
+                log.exception("could not discard draft %s", replace_draft_id)
+                db.rollback()
     try:
         uploads = await read_uploads(images)
         if not uploads and sample_id:

@@ -756,7 +756,7 @@ class TestBatch:
         assert resp.status_code == 303
         rows = applicant.get(resp.headers["location"] + "/rows")
         assert rows.headers["X-Batch-Status"] == "done"
-        assert "16 of 16 checked" in rows.text
+        assert "16 of 16 checked" in rows.text and "s per label" in rows.text
         assert ",," in csv_resp.text  # two rows leave the type blank on purpose
         assert "3 all fields match" in rows.text and "4 need a look" in rows.text
         assert "7 corrections needed" in rows.text and "2 could not be checked" in rows.text
@@ -1027,6 +1027,13 @@ def test_a_second_read_in_the_wizard_replaces_the_first_draft(applicant, app):
         data={"sample_id": "old-tom-bourbon"},
         headers={"Accept": "application/json"},
     ).json()
+    # The first draft was pre-checked, so it has a run that points at its image.
+    assert (
+        applicant.post(
+            f"/applicant/applications/{first['id']}/precheck", data=FORM, headers={"X-Partial": "1"}
+        ).status_code
+        == 200
+    )
     second = applicant.post(
         "/applicant/applications",
         data={"sample_id": "stones-throw-wine", "replace_draft_id": first["id"]},

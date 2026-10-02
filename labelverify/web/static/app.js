@@ -347,8 +347,9 @@
         const body = new FormData(uploadForm);
         if (applicationId) body.append("replace_draft_id", applicationId); // the earlier read's draft is replaced
         const resp = await fetch(uploadForm.action, { method: "post", body, headers: { Accept: "application/json" } });
-        const data = await resp.json();
-        if (!resp.ok) { status.textContent = data.detail || "Upload failed."; return; }
+        let data = null;
+        try { data = await resp.json(); } catch (e) { data = null; } // a crash page is not JSON
+        if (!resp.ok || !data) { status.textContent = (data && data.detail) || `Upload failed (${resp.status} ${resp.statusText}). Try again.`; return; }
         applicationId = data.id;
         applyRead(data, started);
       } catch (err) {
@@ -384,7 +385,8 @@
         orHand.className = "muted"; orHand.textContent = " or fill in the form by hand.";
         status.append(note, again, orHand);
       } else {
-        status.textContent = `Read ${n > 1 ? n + " images" : "the label"} in ${secs} s · ${data.serial}`;
+        const perImage = n > 1 ? ` (${(secs / n).toFixed(1)} s per image)` : "";
+        status.textContent = `Read ${n > 1 ? n + " images" : "the label"} in ${secs} s${perImage} · ${data.serial}`;
       }
       {
         // A new label: nothing from the previous one may linger in steps 2 and 3.
