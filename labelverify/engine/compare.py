@@ -175,14 +175,23 @@ def compare_brand_name(application: ApplicationData, extraction: LabelExtraction
     if result.verdict is Verdict.MISMATCH:
         app_norm = normalize_text(application.brand_name)
         other_norm = normalize_text(extraction.fanciful_name.value)
-        if other_norm and (
-            app_norm == other_norm or _similarity(app_norm, other_norm) >= BRAND_REVIEW
-        ):
+        if other_norm and app_norm == other_norm:
+            # The brand is the name the applicant designates, provided the label carries
+            # it. "Crazy Turtle" over a brewery's name is the brand if that is what was
+            # filed; which name the reader found most prominent does not change that.
+            result.verdict = Verdict.MATCH
+            result.similarity = 100.0
+            result.reason = (
+                f"The label prints '{extraction.fanciful_name.value}', the brand the "
+                f"application names, beside '{extraction.brand_name.value}'. The brand is "
+                "the name the applicant designates, as long as the label carries it."
+            )
+        elif other_norm and _similarity(app_norm, other_norm) >= BRAND_REVIEW:
             result.verdict = Verdict.NEEDS_REVIEW
             result.reason = (
-                f"The application's brand '{application.brand_name}' is on the label as a "
-                f"second name ('{extraction.fanciful_name.value}'); the most prominent name "
-                f"reads as '{extraction.brand_name.value}'. Confirm which is the brand name."
+                f"The application's brand '{application.brand_name}' is close to a second "
+                f"name on the label ('{extraction.fanciful_name.value}'); the most prominent "
+                f"name reads as '{extraction.brand_name.value}'. Confirm the brand name."
             )
     return result
 
@@ -392,35 +401,56 @@ def compare_producer_name(application: ApplicationData, extraction: LabelExtract
     """Entity suffixes are ignored ("Vinovae, Inc." is "Vinovae"), and a filing that lists
     more than one name ("Go Brewing, Go Brewing Opco, LLC": trade name, legal name) matches
     when any of them is the name printed."""
-    results = [
-        _fuzzy_field(
+
+    def compare(printed: ExtractedField) -> FieldResult:
+        best = _fuzzy_field(
             field="producer_name",
             label="Producer / Bottler Name",
             application_value=application.producer_name,
-            extracted=extraction.producer_name,
+            extracted=printed,
             review_at=PRODUCER_REVIEW,
             normalizer=normalize_producer,
             wrapped_is_review=True,  # "SVP Winery" filed, "SVP Winery, LLC" printed
         )
-    ]
-    for candidate in producer_candidates(application.producer_name)[1:]:
-        part = _fuzzy_field(
-            field="producer_name",
-            label="Producer / Bottler Name",
-            application_value=candidate,
-            extracted=extraction.producer_name,
-            review_at=PRODUCER_REVIEW,
-            normalizer=normalize_producer,
-            wrapped_is_review=True,
-        )
-        if _VERDICT_RANK[part.verdict] < _VERDICT_RANK[results[0].verdict]:
-            part.application_value = application.producer_name
-            part.reason = (
-                f"'{extraction.producer_name.value}' matches '{candidate}', one of the names the "
-                f"application lists. {part.reason}"
+        for candidate in producer_candidates(application.producer_name)[1:]:
+            part = _fuzzy_field(
+                field="producer_name",
+                label="Producer / Bottler Name",
+                application_value=candidate,
+                extracted=printed,
+                review_at=PRODUCER_REVIEW,
+                normalizer=normalize_producer,
+                wrapped_is_review=True,
             )
-            results.insert(0, part)
-    return results[0]
+            if _VERDICT_RANK[part.verdict] < _VERDICT_RANK[best.verdict]:
+                part.application_value = application.producer_name
+                part.reason = (
+                    f"'{printed.value}' matches '{candidate}', one of the names the "
+                    f"application lists. {part.reason}"
+                )
+                best = part
+        return best
+
+    result = compare(extraction.producer_name)
+    # "Vinted and bottled by SVP Winery for McKelvey Vineyards": the bottler is SVP
+    # Winery; the party it was bottled for is not the producer (27 CFR 4.35). Tried only
+    # when the whole name does not match, so "Wines for Change" stays one name.
+    parts = _BOTTLED_FOR_RE.split(extraction.producer_name.value or "", maxsplit=1)
+    if result.verdict is not Verdict.MATCH and len(parts) == 2 and parts[0].strip():
+        bottler = compare(
+            ExtractedField(value=parts[0].strip(), confidence=extraction.producer_name.confidence)
+        )
+        if _VERDICT_RANK[bottler.verdict] < _VERDICT_RANK[result.verdict]:
+            bottler.label_value = extraction.producer_name.value
+            bottler.notes.append(
+                f"The label adds 'for {parts[1].strip()}': the party the product was bottled "
+                "for, which is not the bottler."
+            )
+            result = bottler
+    return result
+
+
+_BOTTLED_FOR_RE = re.compile(r"\s+for\s+", re.IGNORECASE)
 
 
 def compare_producer_address(
@@ -439,15 +469,30 @@ def compare_producer_address(
     # application that gives the street address agrees with a label that prints
     # "Lexington, KY" when every word the label prints is in the application's address.
     if result.verdict in (Verdict.NEEDS_REVIEW, Verdict.MISMATCH):
-        label_words = normalize_address(extraction.producer_address.value).split()
-        app_words = set(normalize_address(application.producer_address).split())
-        if len(label_words) >= 2 and all(w in app_words for w in label_words):
+        label_words = [
+            w
+            for w in normalize_address(extraction.producer_address.value).split()
+            if w not in _COUNTRY_WORDS  # "Sonoma, California USA"
+        ]
+        app_words = normalize_address(application.producer_address).split()
+        if len(label_words) >= 2 and all(w in set(app_words) for w in label_words):
             result.verdict = Verdict.MATCH
             result.reason = (
                 f"The label states '{extraction.producer_address.value}', the city and state "
                 "the rule requires; the application's full address contains them."
             )
+        elif len(app_words) >= 2 and all(w in set(label_words) for w in app_words):
+            # The label carries more than the application: a street, or a second address
+            # after "for ...". The application's city and state are printed.
+            result.verdict = Verdict.MATCH
+            result.reason = (
+                f"The label's address includes '{application.producer_address}', the city and "
+                "state the application gives."
+            )
     return result
+
+
+_COUNTRY_WORDS = {"usa", "us", "united", "states", "america"}
 
 
 def compare_alcohol_content(

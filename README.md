@@ -85,7 +85,7 @@ itself follows the detected class: a red mark on every field the class requires,
 "also read from the label" list of the items the applicant never types (qualifying
 phrase, sulfites, appellation, vintage, age statement) with what the read found, so they
 are reviewed before the check. Changing the type re-applies the rules.
-| Health warning | Word for word against 27 CFR 16.21; `GOVERNMENT WARNING` must be all caps; bold is a visual judgment that goes to review when uncertain | exact statutory text |
+| Health warning | Word for word against 27 CFR 16.21; `GOVERNMENT WARNING` must be all caps; bold type is required too, but a reader cannot judge type weight reliably from an image, so the row notes what the reader saw and leaves the weight to the specialist, who has the image beside the table | exact statutory text |
 
 Per-field verdicts are match, needs review, mismatch, or not applicable. The strength of
 a verdict follows the confidence of the read. A match from a low-confidence read keeps
@@ -145,7 +145,7 @@ check should report:
 
 | Scenario | Rows | Application values | Expected result |
 | --- | --- | --- | --- |
-| `filed-correctly` | 9 (3 per class) | Transcribed from the label by hand | Approve. Two whisky rows are review items for the age statement (a whisky without one always is), one beer for a class designation wrapped in descriptive words ("100% Malt Premium Beer"), and one approved can is corrections needed because its Government Health Warning really does depart from the statutory text ("woman", "risks", "drive a car or" missing): the check caught a defect the registry let through |
+| `filed-correctly` | 9 (3 per class) | Transcribed from the label by hand | Five approve. Two whisky rows are review items for the age statement (a whisky without one always is), one of them also for "KENTUCKEY" printed on the label; one beer is a review item for a class designation wrapped in descriptive words ("100% Malt Premium Beer"); and one approved can is corrections needed because its Government Health Warning really does depart from the statutory text ("woman", "risks", "drive a car or" missing). The check caught two defects the registry let through |
 | `wrong-alcohol` | 2 | Transcribed, then the ABV changed (45% filed, 56.9% printed; 5.2% filed, 7.2% printed) | Corrections needed on alcohol content |
 | `wrong-net-contents` | 2 | Transcribed, then the volume changed (1 L and 1.5 L filed, 750 mL printed) | Corrections needed on net contents |
 | `wrong-class` | 2 | Transcribed, then the class changed ("Chardonnay" for a Chenin Blanc blend; "Stout" for a Belgian-style dark strong ale) | Corrections needed on class/type |

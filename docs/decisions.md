@@ -622,3 +622,29 @@ engine, not the reader, was charging labels, and each item below is one line of 
 What did not change: the registry's class codes still mismatch the label's wording,
 blank fields still ask for the value, and a whisky without an age statement still goes
 to review. Those are the rules, applied to data that does not match the label.
+
+A second run, on those changes, moved the batch from 51/7/2 (corrections, review,
+approve) to 40/18/2, and its results file showed what was left:
+
+- The reader judged five bold warning headings "not bold"; on the image at least three
+  are bold. Type weight is not something a model reads reliably from a JPEG, so the bold
+  judgment is now a note on the row for the specialist, who has the image, rather than a
+  review verdict. The all-caps and word-for-word checks are unchanged.
+- "Bottled by SVP Winery, Shandon, CA for McKelvey Vineyards, New Haven, MO": the reader
+  returned both parties and both addresses. The prompt now says the bottler is the
+  producer, the engine compares against the part before "for", and an address the label
+  prints more of than the application (two addresses, or a street) matches when the
+  application's city and state are in it.
+- The reader listed "Crazy Turtle" as the second name under "Clearwater Brewing
+  Company". The brand is the name the applicant designates, as long as the label carries
+  it, so a filed brand that equals the second name is a match with a note; a near miss
+  to it is still a review item.
+- "BE-CAUSE" transcribed without the space after the hyphen is "because" when the joined
+  word is a statutory word; "ABILILTY" next to it is still a mismatch.
+- Rittenhouse's approved label prints "KENTUCKEY". The 98% similarity review is the check
+  working.
+
+With the reader's own values from that run replayed through the engine, the nine
+hand-transcribed rows come out five approve, three review (two age statements, one
+wrapped class) and one corrections needed (the defective warning), which is what the
+labels deserve.

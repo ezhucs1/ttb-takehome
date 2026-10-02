@@ -56,15 +56,21 @@ class TestClassTypeWrapped:
         extraction.brand_name = make_field("NC'NEAN")
         assert compare_brand_name(application, extraction).verdict is Verdict.MISMATCH
 
-    def test_filed_brand_read_as_the_fanciful_name_needs_review(self, application, extraction):
-        """A product name under a brewery name: the reader called the brewery the brand."""
+    def test_filed_brand_printed_as_the_second_name_matches(self, application, extraction):
+        """A product name under a brewery name: the reader called the brewery the brand,
+        but the filed brand is on the label, and the applicant designates the brand."""
         application.brand_name = "Groovitory"
         extraction.brand_name = make_field("twelvenote BREW CO.")
         extraction.fanciful_name = make_field("Groovitory")
         result = compare_brand_name(application, extraction)
-        assert (
-            result.verdict is Verdict.NEEDS_REVIEW and "Confirm which is the brand" in result.reason
-        )
+        assert result.verdict is Verdict.MATCH
+        assert "the name the applicant designates" in result.reason
+
+    def test_filed_brand_close_to_the_second_name_needs_review(self, application, extraction):
+        application.brand_name = "Groovitory"
+        extraction.brand_name = make_field("twelvenote BREW CO.")
+        extraction.fanciful_name = make_field("Groovitorie")
+        assert compare_brand_name(application, extraction).verdict is Verdict.NEEDS_REVIEW
 
     def test_the_producer_name_alone_does_not_make_a_brand(self, application, extraction):
         """The bottler's name is on every label; printing it does not make it the brand."""
@@ -493,6 +499,28 @@ class TestProducer:
         application.producer_address = "10200 SONOMA HWY, KENWOOD CA 95452"
         assert compare_producer_address(application, extraction).verdict is Verdict.MATCH
 
+    def test_the_label_may_carry_more_address_than_the_application(self, application, extraction):
+        application.producer_address = "Shandon, CA"
+        extraction.producer_address = make_field(
+            "Shandon, CA; 8901 State Hwy YY, New Haven, MO 63056"
+        )
+        assert compare_producer_address(application, extraction).verdict is Verdict.MATCH
+        application.producer_address = "21481 E 8TH ST STE 25 & 30, Sonoma CA 95476"
+        extraction.producer_address = make_field("SONOMA, CALIFORNIA USA")
+        assert compare_producer_address(application, extraction).verdict is Verdict.MATCH
+
+    def test_bottled_for_names_the_bottler_not_the_customer(self, application, extraction):
+        application.producer_name = "SVP Winery"
+        extraction.producer_name = make_field("SVP Winery for McKelvey Vineyards")
+        result = compare_producer_name(application, extraction)
+        assert result.verdict is Verdict.MATCH
+        assert result.label_value == "SVP Winery for McKelvey Vineyards"
+        assert any("bottled for" in n for n in result.notes)
+        application.producer_name = "Wines for Change"
+        extraction.producer_name = make_field("WINES FOR CHANGE")  # "for" inside one name
+        whole = compare_producer_name(application, extraction)
+        assert whole.verdict is Verdict.MATCH and not whole.notes
+
     def test_a_different_city_in_a_street_address_still_mismatches(self, application, extraction):
         application.producer_address = "249 W SHORT ST STE 200, Lexington KY 40507"
         extraction.producer_address = make_field("Louisville, KY")
@@ -559,9 +587,16 @@ class TestVerify:
         assert any(line.startswith("Alcohol Content:") for line in result.summary)
 
     def test_review_without_mismatch_needs_review(self, application, extraction):
-        extraction.health_warning.heading_bold = None
+        extraction.brand_name = make_field("OLD TOM DISTILERY")  # a one-letter near miss
         result = verify(application, extraction)
         assert result.recommendation is Recommendation.NEEDS_REVIEW
+
+    def test_unknown_bold_alone_does_not_hold_an_application(self, application, extraction):
+        extraction.health_warning.heading_bold = None
+        result = verify(application, extraction)
+        assert result.recommendation is Recommendation.APPROVE
+        warning = next(f for f in result.fields if f.field == "health_warning")
+        assert any("could not tell" in n for n in warning.notes)
 
     def test_low_confidence_match_stays_a_match_but_is_flagged(self, application, extraction):
         """The values agree, so the row says match; the read was poor, so it is marked

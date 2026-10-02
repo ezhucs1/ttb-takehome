@@ -67,6 +67,7 @@ def word_diff(expected: str, actual: str) -> list[WordDiff]:
 
 
 _LINE_HYPHEN_RE = re.compile(r"(?<=\w)-\s+(?=\w)")
+_STATUTORY_WORDS = frozenset(normalize_words(STATUTORY_TEXT))
 
 
 @lru_cache(maxsize=256)
@@ -76,6 +77,10 @@ def _tokens(text: str) -> list[tuple[str, str]]:
     text has no hyphens, so a hyphen at a break is never part of a word."""
     pairs: list[tuple[str, str]] = []
     for raw in _LINE_HYPHEN_RE.sub("", collapse_whitespace(text)).split():
+        if "-" in raw and normalize_words(raw.replace("-", "")) in (
+            [word] for word in _STATUTORY_WORDS
+        ):
+            raw = raw.replace("-", "")  # "BE-CAUSE": a line break transcribed without the space
         normalized = normalize_words(raw)
         if not normalized:
             continue
@@ -132,13 +137,18 @@ def check_health_warning(extraction: HealthWarningExtraction) -> FieldResult:
             problems.append(
                 f"'GOVERNMENT WARNING' must be in capital letters (label shows '{heading}')."
             )
+        # Type weight is not something a reader judges reliably from an image: on real
+        # labels the model called bold headings "not bold" more often than not. The
+        # requirement stands (27 CFR 16.22), so the row says what the reader thought and
+        # leaves the weight to the specialist, who has the image beside the table.
         if extraction.heading_bold is False:
-            review_reasons.append(
-                "The heading does not appear bold. Bold type is required; confirm visually."
+            notes.append(
+                "The reader did not see the heading as bold. Bold type is required; confirm "
+                "the weight on the image."
             )
         elif extraction.heading_bold is None:
-            review_reasons.append(
-                "Could not determine whether the heading is bold; confirm visually."
+            notes.append(
+                "The reader could not tell whether the heading is bold; confirm on the image."
             )
 
     if problems:
@@ -149,7 +159,11 @@ def check_health_warning(extraction: HealthWarningExtraction) -> FieldResult:
         reason = " ".join(review_reasons)
     else:
         verdict = Verdict.MATCH
-        reason = "Statement matches the required wording; heading is capitalized and bold."
+        reason = (
+            "Statement matches the required wording; heading is capitalized and bold."
+            if extraction.heading_bold
+            else "Statement matches the required wording; heading is capitalized."
+        )
 
     return FieldResult(
         verdict=verdict,

@@ -90,15 +90,21 @@ def test_heading_only_is_a_mismatch():
     assert "body is missing" in result.reason
 
 
-def test_not_bold_heading_needs_review_not_rejection():
+def test_bold_is_a_note_for_the_specialist_not_a_verdict():
+    """The reader cannot judge type weight reliably; the row says what it saw."""
     result = check_health_warning(warning(STATUTORY_TEXT, bold=False))
-    assert result.verdict is Verdict.NEEDS_REVIEW
-    assert "bold" in result.reason
+    assert result.verdict is Verdict.MATCH
+    assert any("did not see the heading as bold" in n for n in result.notes)
+    assert "bold" not in result.reason.lower() or "capitalized." in result.reason
+    unknown = check_health_warning(warning(STATUTORY_TEXT, bold=None))
+    assert unknown.verdict is Verdict.MATCH and any("could not tell" in n for n in unknown.notes)
 
 
-def test_unknown_bold_needs_review():
-    result = check_health_warning(warning(STATUTORY_TEXT, bold=None))
-    assert result.verdict is Verdict.NEEDS_REVIEW
+def test_a_hyphen_inside_a_statutory_word_is_a_line_break():
+    text = STATUTORY_TEXT.replace("because", "BE-CAUSE").replace("Consumption", "CONSUM-PTION")
+    assert check_health_warning(warning(text)).verdict is Verdict.MATCH
+    typo = STATUTORY_TEXT.replace("ability", "ABILILTY")
+    assert check_health_warning(warning(typo)).verdict is Verdict.MISMATCH
 
 
 def test_missing_colon_is_only_a_note():

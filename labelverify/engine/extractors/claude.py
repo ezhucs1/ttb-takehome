@@ -39,7 +39,7 @@ Rules:
 - class_type is the class or type designation, for example "Kentucky Straight Bourbon Whiskey", "Cabernet Sauvignon", "India Pale Ale".
 - alcohol_content is the full alcohol statement as printed, for example "45% Alc./Vol. (90 Proof)".
 - net_contents is the volume statement as printed, for example "750 mL".
-- producer_name and producer_address come from the "Distilled by", "Bottled by", "Produced by", "Brewed by", or "Imported by" statement.
+- producer_name and producer_address come from the "Distilled by", "Bottled by", "Produced by", "Brewed by", or "Imported by" statement. When that statement reads "Bottled by A for B" (or "... for B, address"), A is the producer: report A's name and A's address only, and leave B out of both fields.
 - country_of_origin is the "Product of ..." or "Imported from ..." statement, or null if none.
 - sulfite_declaration is the sulfite statement as printed, for example "Contains Sulfites", or null if none.
 - qualifying_phrase is the wording that introduces the producer's name, exactly as printed: "Distilled and Bottled by", "Produced and Bottled by", "Brewed by", "Imported by", and so on; null if the name has no such phrase.

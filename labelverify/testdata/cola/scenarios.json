@@ -2,7 +2,7 @@
   "_about": "Hand-written application values for the COLA batch demonstration. Every value here was transcribed by a person from the label image, or deliberately altered from that transcription; none comes from the app's reader. scripts/import_cola.py copies these over the registry values when it writes applications.csv. Rows not listed keep the registry's values (scenario 'registry-as-filed').",
   "26176001000014": {
     "scenario": "filed-correctly",
-    "expected": "approve; the reader has judged the rotated warning heading not bold on one run, which is a review item",
+    "expected": "approve",
     "fields": {
       "brand_name": "Tenhead",
       "class_type": "American Gin",
@@ -14,7 +14,7 @@
   },
   "26192001000073": {
     "scenario": "filed-correctly",
-    "expected": "review: the age statement row (a whisky label without a statement of age goes to review under 27 CFR 5.74); every filed value matches",
+    "expected": "review: the class row, because this approved label prints 'KENTUCKEY STRAIGHT RYE WHISKEY' (a misspelling the check catches at 98% similar), and the age statement row as on every whisky without one",
     "fields": {
       "brand_name": "Rittenhouse",
       "class_type": "Kentucky Straight Rye Whiskey",
@@ -62,7 +62,7 @@
   },
   "26167001000445": {
     "scenario": "filed-correctly",
-    "expected": "approve",
+    "expected": "approve; the label reads 'bottled by SVP Winery, Shandon, CA for McKelvey Vineyards, New Haven, MO', and the bottler is the producer",
     "fields": {
       "brand_name": "McKelvey Vineyards",
       "class_type": "Pinot Grigio",
@@ -86,7 +86,7 @@
   },
   "26205001000228": {
     "scenario": "filed-correctly",
-    "expected": "corrections needed: the Government Health Warning on this approved label departs from the statutory text ('woman' for 'women', 'risks' for 'risk', and 'drive a car or' missing); every filed value matches. A real defect the registry approved",
+    "expected": "corrections needed: the Government Health Warning on this approved label departs from the statutory text ('woman' for 'women', 'risks' for 'risk', and 'drive a car or' missing); every filed value matches, including the brand, which the reader may list as the second name under the brewery's. A real defect the registry approved",
     "fields": {
       "brand_name": "Crazy Turtle",
       "class_type": "Hazy India Pale Ale",
