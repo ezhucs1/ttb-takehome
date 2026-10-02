@@ -138,6 +138,11 @@ class TesseractExtractor:
                 "LABELVERIFY_TESSERACT_CMD to the full path of the executable."
             )
         pytesseract.pytesseract.tesseract_cmd = command
+        # Tesseract spawns a thread per core for every call. The batch worker runs several
+        # reads at once, and five four-thread processes on four cores thrash: a load of 20
+        # and reads that take minutes. One thread per call keeps a read at about a second
+        # and lets the worker's own concurrency do the parallel work.
+        os.environ.setdefault("OMP_THREAD_LIMIT", "1")
         texts: list[str] = []
         prominent: list[str] = []
         for n, (image, _) in enumerate(panels):

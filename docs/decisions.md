@@ -513,3 +513,23 @@ The result page also now says, in a banner, when a read came from local OCR and 
 field assignment itself can be wrong, so a mismatch may be the reader rather than the
 label. The step-2 hint on a fallback read tells the applicant to correct the form to match
 their application before checking.
+
+## 22. On an uncertain read, absence is not evidence; and one OCR thread per call
+
+Running the sample batch through Tesseract alone gave eleven "corrections needed" out of
+sixteen, most of them "not found on the label" for text that is plainly on the label. OCR
+misses text far more often than labels omit it, so on an uncertain read (nothing at
+ordinary confidence, or nothing read at all) a required item the reader did not find is
+now a review item with a note to confirm on the image, and a warning transcription a word
+or two off is treated the same way. A difference in what was read stays a mismatch: a
+wrong percentage, a changed warning sentence, a title-case heading. The summary says which
+items were softened. The batch went to seven corrections, five of them the samples' own
+defects.
+
+The batch had also stalled for minutes under Tesseract while a single read took a second.
+Tesseract starts a thread per core on every call, and the batch worker runs five reads at
+once, so twenty threads fought over four cores (load average 20). The reader now sets
+`OMP_THREAD_LIMIT=1` for its calls; the sixteen-row batch takes about ten seconds.
+
+Also measured and rejected: upscaling the image two times before OCR. It lifted three
+fields by one sample each and made every read six times slower.

@@ -694,3 +694,29 @@ class TestUncertainRead:
         ]
         extraction.net_contents = make_field(None)
         assert verify(application, extraction).field("net_contents").verdict is Verdict.MISMATCH
+
+    def test_nothing_read_at_all_is_an_uncertain_read(self, application):
+        from labelverify.engine.compare import read_is_uncertain
+        from labelverify.engine.models import HealthWarningExtraction, ImageQuality, LabelExtraction
+
+        blank = LabelExtraction(
+            health_warning=HealthWarningExtraction(present=False),
+            image_quality=ImageQuality(readable=False, issues=["No text could be read."]),
+        )
+        assert read_is_uncertain(blank)
+        result = verify(application, blank)
+        assert result.recommendation is Recommendation.NEEDS_REVIEW
+        assert Verdict.MISMATCH not in {f.verdict for f in result.fields}
+
+    def test_a_small_warning_slip_on_an_uncertain_read_is_review(self, application, extraction):
+        from labelverify.engine.warning import STATUTORY_TEXT
+
+        self._ocr_grade(extraction)
+        extraction.health_warning.text = STATUTORY_TEXT.replace("birth defects", "birth defect5")
+        assert (
+            verify(application, extraction).field("health_warning").verdict is Verdict.NEEDS_REVIEW
+        )
+        extraction.health_warning.text = STATUTORY_TEXT.replace(
+            "GOVERNMENT WARNING", "Government Warning"
+        )
+        assert verify(application, extraction).field("health_warning").verdict is Verdict.MISMATCH

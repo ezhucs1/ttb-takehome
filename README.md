@@ -193,9 +193,15 @@ panel and dark labels are read inverted:
 | Address | 8 of 14 | |
 | Warning present | 13 of 14 | the word-for-word check still runs on what was read |
 
-About one second per label. Every OCR value is reported at low confidence, so the rows
-that agree with the application show "match · uncertain read", the ones that differ show
-a mismatch, and the application goes to review either way. The form in step 2 is filled
+About one second per label, and the sample batch of sixteen in about ten seconds. Every
+OCR value is reported at low confidence, so the rows that agree with the application show
+"match · uncertain read", and the application goes to review rather than approval. On
+such a read, a required item the reader did not find is a review item with a note to
+confirm on the image, not a finding, because OCR misses text far more often than labels
+omit it; a difference in what was read (a wrong percentage, a changed warning) stays a
+mismatch. On the sample batch that leaves seven rows with corrections, five of them the
+label's own defects and two reader slips on a dark can and a photographed address, which
+the "Read with local OCR" banner on the result warns about. The form in step 2 is filled
 from the read: correct the fields that are wrong before checking, exactly as you would
 check a model read against your application.
 

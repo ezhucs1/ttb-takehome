@@ -707,7 +707,9 @@ def read_is_uncertain(extraction: LabelExtraction) -> bool:
     ]
     if extraction.health_warning.present:
         confidences.append(extraction.health_warning.confidence)
-    return bool(confidences) and max(confidences) <= LOW_CONFIDENCE
+    if not confidences:  # nothing read at all: the most uncertain read there is
+        return True
+    return max(confidences) <= LOW_CONFIDENCE
 
 
 def _soften_absences(fields: list[FieldResult]) -> list[str]:
@@ -716,10 +718,24 @@ def _soften_absences(fields: list[FieldResult]) -> list[str]:
     differences in what was read stay mismatches. Returns the labels softened."""
     softened = []
     for f in fields:
-        if f.verdict is Verdict.MISMATCH and not (f.label_value or "").strip():
+        if f.verdict is not Verdict.MISMATCH:
+            continue
+        absent = not (f.label_value or "").strip()
+        # A warning transcription a word or two off is the usual OCR slip; the heading's
+        # capitalization is read reliably and stays a finding.
+        slip = (
+            f.field == "health_warning"
+            and f.diff
+            and sum(1 for d in f.diff if d.op != "equal") <= 3
+            and "capital letters" not in f.reason
+        )
+        if absent or slip:
             f.verdict = Verdict.NEEDS_REVIEW
             f.uncertain = True
-            f.reason += " The reader was uncertain, so confirm on the image before treating this as missing."
+            f.reason += (
+                " The reader was uncertain, so confirm on the image before treating this as "
+                + ("missing." if absent else "a wording difference.")
+            )
             softened.append(f.label)
     return softened
 
