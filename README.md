@@ -377,9 +377,12 @@ ANTHROPIC_API_KEY=sk-ant-... GEMINI_API_KEY=... scripts/deploy_azure.sh
 
 Claude reads the labels; with the Gemini key present, Gemini words the specialist's
 correction notices (the findings are the engine's either way), and without it Claude
-does. The script builds the image in Azure Container Registry (no local Docker), creates
-a B1 Linux plan with Always On, a web app from the image, and the settings for a public
-URL, then waits for `/healthz` and prints the address. The database, the stored images and the
+does. The script builds the image with Docker on your machine and pushes it to Azure
+Container Registry (free and trial subscriptions are not allowed Azure's own cloud
+build), creates a B1 Linux plan with Always On, a web app from the image, and the
+settings for a public URL, then waits for `/healthz` and prints the address. Docker on
+Ubuntu: `sudo apt install docker.io`; the script uses `sudo docker` when your user is
+not in the docker group. The database, the stored images and the
 session secret live under `/home`, which App Service persists across restarts and
 deployments. Re-running the script with the same `APP` name rebuilds and redeploys.
 `az group delete --name labelverify-rg` removes everything. On a free Azure account the

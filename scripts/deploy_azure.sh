@@ -2,9 +2,10 @@
 # Deploy LabelVerify to Azure App Service as a Linux container: always on (no cold starts),
 # HTTPS by default, and a persistent /home directory for the SQLite database and images.
 #
-# Needs the Azure CLI (az >= 2.60) signed in: az login
-# Builds the image in Azure Container Registry (no local Docker needed), then creates a
-# B1 App Service plan, a web app from that image, and the app settings for a public URL.
+# Needs the Azure CLI (az >= 2.60) signed in (az login) and Docker (the image is built
+# here and pushed to Azure Container Registry: free and trial subscriptions do not allow
+# Azure's own cloud build). Then creates a B1 App Service plan, a web app from that image,
+# and the app settings for a public URL.
 #
 #   ANTHROPIC_API_KEY=sk-ant-... GEMINI_API_KEY=... scripts/deploy_azure.sh
 #
@@ -28,11 +29,20 @@ SECRET_KEY="${SECRET_KEY:-$(openssl rand -hex 32)}"
 echo "resource group $RG in $LOCATION, app $APP, registry $ACR, image $IMAGE"
 az group create --name "$RG" --location "$LOCATION" --output none
 
-# 1. Build the image in the cloud from this checkout.
+# 1. Build the image from this checkout and push it to the registry.
 az acr show --name "$ACR" --resource-group "$RG" --output none 2>/dev/null \
   || az acr create --name "$ACR" --resource-group "$RG" --sku Basic --admin-enabled true --output none
-az acr build --registry "$ACR" --resource-group "$RG" --image "$IMAGE" . --output none
 REGISTRY="$(az acr show --name "$ACR" --resource-group "$RG" --query loginServer --output tsv)"
+if command -v docker >/dev/null 2>&1; then
+  DOCKER=docker
+  docker info >/dev/null 2>&1 || DOCKER="sudo docker"   # the user is not in the docker group
+  az acr login --name "$ACR"
+  $DOCKER build -t "$REGISTRY/$IMAGE" .
+  $DOCKER push "$REGISTRY/$IMAGE"
+else
+  echo "docker is not installed; trying Azure's cloud build (not available on free subscriptions)" >&2
+  az acr build --registry "$ACR" --resource-group "$RG" --image "$IMAGE" . --output none
+fi
 ACR_USER="$(az acr credential show --name "$ACR" --resource-group "$RG" --query username --output tsv)"
 ACR_PASS="$(az acr credential show --name "$ACR" --resource-group "$RG" --query 'passwords[0].value' --output tsv)"
 
