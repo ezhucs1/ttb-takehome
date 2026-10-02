@@ -63,13 +63,14 @@ az appservice plan show --name "$PLAN" --resource-group "$RG" --output none 2>/d
   || az appservice plan create --name "$PLAN" --resource-group "$RG" --location "$LOCATION" \
        --is-linux --sku "$SKU" --output none
 if ! az webapp show --name "$APP" --resource-group "$RG" --output none 2>/dev/null; then
+  # The image name is given without the registry host: az prepends the registry URL.
   az webapp create --name "$APP" --resource-group "$RG" --plan "$PLAN" \
-    --container-image-name "$REGISTRY/$IMAGE" \
+    --container-image-name "$IMAGE" \
     --container-registry-url "https://$REGISTRY" \
     --container-registry-user "$ACR_USER" --container-registry-password "$ACR_PASS" --output none
 else
   az webapp config container set --name "$APP" --resource-group "$RG" \
-    --container-image-name "$REGISTRY/$IMAGE" \
+    --container-image-name "$IMAGE" \
     --container-registry-url "https://$REGISTRY" \
     --container-registry-user "$ACR_USER" --container-registry-password "$ACR_PASS" --output none
 fi
