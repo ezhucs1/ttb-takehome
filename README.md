@@ -4,7 +4,10 @@ AI-assisted alcohol label verification for TTB COLA review.
 
 **Live demo:** <https://labelverify-429e03fa.azurewebsites.net>, on Azure App Service,
 always on. Sign in with the accounts under "Run it locally"; the dialog hides them on a
-public URL.
+public URL. The demo reads labels with a paid model: one label costs about $0.02 to
+$0.06 to read, so please run the batch uploads two or three times at most. The deployment
+caps paid reads per day; past the cap, uploads say so and the bundled samples keep
+working.
 
 Applicants upload label artwork, the engine reads it and compares every required field
 against the application, and a labeling specialist confirms the result. The tool
@@ -158,7 +161,9 @@ The `beverage_type` column may be left blank in a batch CSV, and the type may be
 type was taken from the label.
 
 **Trying the batch upload** needs a CSV and a zip of images. The batch page offers two
-ready-made sets. The first is a sixteen-row CSV and a zip of the sample labels. Fourteen rows are the bundled
+ready-made sets. The brief's 200 to 300 at a time is supported (300 rows per batch); on
+the live demo, where each label read costs about $0.02 to $0.06, please keep it to two or
+three runs. The first is a sixteen-row CSV and a zip of the sample labels. Fourteen rows are the bundled
 samples; two are deliberately broken, a photo that is not a label and a row whose image is
 missing from the zip, so the summary shows failures next to the AI's findings. Download
 them, choose them in the form, and start the batch; the page shows progress and every
