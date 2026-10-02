@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Deploy LabelVerify to Azure App Service as a Linux container: always on (no cold starts),
+# HTTPS by default, and a persistent /home directory for the SQLite database and images.
+#
+# Needs the Azure CLI (az >= 2.60) signed in: az login
+# Builds the image in Azure Container Registry (no local Docker needed), then creates a
+# B1 App Service plan, a web app from that image, and the app settings for a public URL.
+#
+#   ANTHROPIC_API_KEY=sk-ant-... scripts/deploy_azure.sh
+#
+# Re-running the script with the same APP name rebuilds the image and restarts the app.
+# Tear everything down with:  az group delete --name "$RG" --yes
+set -euo pipefail
+
+: "${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY (the model key the deployment will use)}"
+RG="${RG:-labelverify-rg}"
+LOCATION="${LOCATION:-eastus}"
+APP="${APP:-labelverify-$(tr -dc a-z0-9 </dev/urandom | head -c 6)}"   # globally unique host name
+ACR="${ACR:-$(echo "$APP" | tr -d -)}"                                   # registry names: letters and digits only
+PLAN="${PLAN:-$APP-plan}"
+SKU="${SKU:-B1}"                                                         # Basic: Always On is available
+IMAGE="labelverify:$(git rev-parse --short HEAD 2>/dev/null || date +%s)"
+SECRET_KEY="${SECRET_KEY:-$(openssl rand -hex 32)}"
+
+echo "resource group $RG in $LOCATION, app $APP, registry $ACR, image $IMAGE"
+az group create --name "$RG" --location "$LOCATION" --output none
+
+# 1. Build the image in the cloud from this checkout.
+az acr show --name "$ACR" --resource-group "$RG" --output none 2>/dev/null \
+  || az acr create --name "$ACR" --resource-group "$RG" --sku Basic --admin-enabled true --output none
+az acr build --registry "$ACR" --resource-group "$RG" --image "$IMAGE" . --output none
+REGISTRY="$(az acr show --name "$ACR" --resource-group "$RG" --query loginServer --output tsv)"
+ACR_USER="$(az acr credential show --name "$ACR" --resource-group "$RG" --query username --output tsv)"
+ACR_PASS="$(az acr credential show --name "$ACR" --resource-group "$RG" --query 'passwords[0].value' --output tsv)"
+
+# 2. The plan and the web app.
+az appservice plan show --name "$PLAN" --resource-group "$RG" --output none 2>/dev/null \
+  || az appservice plan create --name "$PLAN" --resource-group "$RG" --is-linux --sku "$SKU" --output none
+if ! az webapp show --name "$APP" --resource-group "$RG" --output none 2>/dev/null; then
+  az webapp create --name "$APP" --resource-group "$RG" --plan "$PLAN" \
+    --container-image-name "$REGISTRY/$IMAGE" \
+    --container-registry-url "https://$REGISTRY" \
+    --container-registry-user "$ACR_USER" --container-registry-password "$ACR_PASS" --output none
+else
+  az webapp config container set --name "$APP" --resource-group "$RG" \
+    --container-image-name "$REGISTRY/$IMAGE" \
+    --container-registry-url "https://$REGISTRY" \
+    --container-registry-user "$ACR_USER" --container-registry-password "$ACR_PASS" --output none
+fi
+
+# 3. Settings for a public URL. /home persists across restarts and deployments on App
+#    Service, so the database, the stored images and the session secret live there.
+az webapp config appsettings set --name "$APP" --resource-group "$RG" --output none --settings \
+  WEBSITES_PORT=8000 \
+  WEBSITES_ENABLE_APP_SERVICE_STORAGE=true \
+  WEBSITES_CONTAINER_START_TIME_LIMIT=240 \
+  DATABASE_URL=sqlite:////home/data/labelverify.db \
+  SECRET_KEY="$SECRET_KEY" \
+  ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+  LABELVERIFY_DEMO_ACCOUNTS=false \
+  LABELVERIFY_SECURE_COOKIES=true \
+  LABELVERIFY_DAILY_READ_LIMIT="${LABELVERIFY_DAILY_READ_LIMIT:-150}" \
+  LABELVERIFY_FALLBACK=tesseract \
+  ${GEMINI_API_KEY:+GEMINI_API_KEY="$GEMINI_API_KEY"}
+az webapp config set --name "$APP" --resource-group "$RG" --always-on true --http20-enabled true \
+  --generic-configurations '{"healthCheckPath": "/healthz"}' --output none
+az webapp update --name "$APP" --resource-group "$RG" --https-only true --output none
+az webapp restart --name "$APP" --resource-group "$RG" --output none
+
+URL="https://$(az webapp show --name "$APP" --resource-group "$RG" --query defaultHostName --output tsv)"
+echo "waiting for $URL/healthz"
+for _ in $(seq 1 40); do
+  if curl -fsS "$URL/healthz" >/dev/null 2>&1; then
+    echo "up: $URL"
+    echo "sign in with the accounts in README.md (the dialog hides them on a public URL)"
+    exit 0
+  fi
+  sleep 10
+done
+echo "the app did not answer within 400 s; check: az webapp log tail --name $APP --resource-group $RG" >&2
+exit 1

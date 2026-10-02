@@ -2,6 +2,10 @@
 
 AI-assisted alcohol label verification for TTB COLA review.
 
+**Live demo:** add the address that `scripts/deploy_azure.sh` prints here before
+submitting. Sign in with the accounts under "Run it locally"; the dialog hides them on a
+public URL.
+
 Applicants upload label artwork, the engine reads it and compares every required field
 against the application, and a labeling specialist confirms the result. The tool
 recommends; a person decides.
@@ -53,6 +57,7 @@ nothing on any page loads from a CDN.
 | Alcohol content | Parsed to % ABV; proof converted; label proof must equal 2 × ABV | `45% Alc./Vol. (90 Proof)` = `45` = `90 proof` |
 | Net contents | Parsed to mL; standard-of-fill sizes noted | `750 mL` = `0.75 L` = `75 cL` |
 | Country of origin | Required for imports only; aliases folded | `Product of Scotland` = `United Kingdom` |
+| Health warning | Word for word against 27 CFR 16.21; `GOVERNMENT WARNING` must be all caps and bold. A reader that says the heading is not bold sends the row to review; a reader that cannot tell adds a note, since type weight is hard to judge from an image, and the specialist has the image beside the table | exact statutory text |
 | Type of product | The class the label implies must be the class filed; if none was filed, the label decides and that class's rules apply | `Straight Bourbon Whiskey` filed as wine is a mismatch |
 | Sulfite declaration | Wine only: "Contains sulfites" is required at 10 ppm or more, so a missing statement goes to review | wine label without the statement |
 | Qualifying phrase | The words before the producer's name ("Distilled by", "Produced and bottled by", "Brewed by"); imports must also name the importer | label with no such phrase |
@@ -85,7 +90,6 @@ itself follows the detected class: a red mark on every field the class requires,
 "also read from the label" list of the items the applicant never types (qualifying
 phrase, sulfites, appellation, vintage, age statement) with what the read found, so they
 are reviewed before the check. Changing the type re-applies the rules.
-| Health warning | Word for word against 27 CFR 16.21; `GOVERNMENT WARNING` must be all caps and bold. A reader that says the heading is not bold sends the row to review; a reader that cannot tell adds a note, since type weight is hard to judge from an image, and the specialist has the image beside the table | exact statutory text |
 
 Per-field verdicts are match, needs review, mismatch, or not applicable. The strength of
 a verdict follows the confidence of the read. A match from a low-confidence read keeps
@@ -96,6 +100,25 @@ interviews say that when an agent cannot read a label the practice is to ask for
 image, not to reject it for a mismatch, and a reader's slip must not become a correction
 request. A difference read with confidence is a mismatch. The roll-up is approve, needs
 review, or request correction.
+
+## How it measures against the brief
+
+The brief's interview notes set the bar: results in about five seconds, exact matching
+with judgment where TTB allows it, batches of 200 to 300, an interface a novice can use,
+a network that blocks most cloud services, and "a reliable core application over
+incomplete feature sets, with transparent documentation of trade-offs made". Measured
+against each, with the shortfalls stated:
+
+| The brief asks for | What is here | Where it falls short |
+| --- | --- | --- |
+| Results in about 5 seconds; the vendor pilot took 30 to 40 | One model call reads a label set; the comparison is code and takes milliseconds. Measured on the hardest sample (angled, glary phone photo): Claude Sonnet 5.5 reads one panel in 4.1 s, a front-and-back set in 5.5 s. The set is read once at upload; the pre-check and the submission reuse that read, so "Check before submitting" is instant. Every result shows its read time, and a batch shows elapsed time per label | A two-panel set or a hard photograph can take 5 to 7 s on the model's slow tail. The budget is met for one panel of artwork and missed by a second or two for multi-panel photos; the UI never hides it |
+| Exact matching: brand, class/type, ABV, net contents, producer, origin, and a word-for-word Government Warning with an all-caps bold heading | The warning is diffed word by word against the statutory text with the differences shown inline; caps and bold are checked. Text fields match only when identical after normalization; a near miss goes to a person; numbers are parsed and compared under each class's tolerance. 362 offline tests, one per rule and one per sample label. On real labels: the 8 deliberately wrong rows in the registry batch are all caught, the 9 correct rows come back 5 approve and 4 explained review items, and the check found two approved labels with defective warnings and one with "KENTUCKEY" | The reader, not the engine, is the error source: it can take a brewery name for the brand or misjudge bold type. Both are routed to review rather than decided. Type size cannot be checked at all |
+| Judgment where TTB allows it ("STONE'S THROW" vs "Stone's Throw") | Case, punctuation, spacing, standard abbreviations and synonyms are folded; a street address matches the label's city and state; a trade or legal name matches whichever is printed; a filed class wrapped in descriptive words, and a filed brand printed as the second name, are accepted or sent to a person with the reason | The thresholds are tuned on fourteen synthetic labels and sixty real ones, not on hundreds with specialist decisions |
+| Batch uploads of 200 to 300 | A CSV plus a zip, up to 300 rows, read with bounded concurrency in the background, live progress, a summary, every readable row in the specialist's queue, and a results CSV. Rows fail individually; a missing or unreadable image is reported, not dropped. Sixty real labels with 97 panels run in one batch for about a dollar of model reads | The queue is a thread pool in the web process; a restart mid-batch leaves rows pending (they are closed as failed at the next start). Cost scales with panels, not rows |
+| Usable by a novice | Three numbered steps; the form fills itself from the label with a note that says to check it; a red mark on required fields; the label stays beside the form and the result, zoomable; verdicts in plain words with the rule behind each; correction notices in plain language with a thread on the exact field; an inbox that says what is new | No formal Section 508 audit, no email, and the specialist's queue assumes a desktop screen |
+| Firewalls that block cloud services | Every read falls back to Tesseract on the server when the model fails, and the result says so; nothing on any page loads from a CDN; the model endpoint is one setting, with the Azure-tenant path in `docs/production.md` | Tesseract reads the brand, class and net contents on clean artwork and misses small print on photographs; its accuracy table is in "If the model is unavailable" |
+| A reliable core and documented trade-offs | The seven fields and the warning work end to end for both roles, with the correction loop, in demo mode without any key. Twenty-six decision entries record what was chosen, what was considered, and what two runs on real labels changed | Production needs identity, FedRAMP-authorized hosting, object storage, a durable queue and an evaluation set; `docs/production.md` lists them in order |
+| A README with setup, and a deployed URL | This file, `docs/user-guide.md` for the screens, and `scripts/deploy_azure.sh` for the URL | |
 
 ## Run it locally
 
@@ -117,7 +140,7 @@ Open the landing page, choose Sign in, and use one of the demo accounts (passwor
 | Applicant | maria@alvarezlabels.com | Start a new application from a sample label, run the pre-check, submit; fix the one awaiting correction; batch upload with the template CSV and the sample images |
 
 Maria is a label-compliance agent filing for several producers, so her one account holds
-all ten sample cases.
+all fourteen sample cases.
 
 The `beverage_type` column may be left blank in a batch CSV, and the type may be left on
 "Detect from the label" in the form: the reader decides the class and the record says the
@@ -305,6 +328,8 @@ outcome:
 | Stone's Throw Cabernet | `STONE'S THROW` vs `Stone's Throw` | Approve |
 | Sunset Ridge Rosé | Warning reworded ("can cause health issues") | Request correction |
 | Glen Aldie Scotch | Import, `Product of Scotland` vs `United Kingdom` | Approve |
+| Harvest Moon Red | Vintage date with no appellation of origin | Request correction |
+| North Shore Lager | "Extra Strength", a statement of alcoholic strength on a malt beverage | Needs review |
 | Harbor Light IPA | No warning statement at all | Request correction (seeded as rejected, with notice) |
 | Harbor Light IPA, can photo | 16 fl oz on label vs 12 fl oz on application | Request correction |
 | Copper Ridge Rye | Brand printed `COPPER RIGDE` | Needs review |
@@ -337,7 +362,30 @@ own with verbose names so the output reads as a checklist:
 
 ## Deploy
 
-**Docker**
+The app is one container: Python, the engine, Tesseract for the fallback, SQLite in a
+directory. Any host that runs a container with a persistent directory and keeps it
+awake will do. Two things matter for a demo that reviewers will open cold: no cold
+start (the first request must answer in seconds, the vendor-pilot failure from the
+interviews) and HTTPS (the session cookie is marked Secure on a public URL).
+
+**Azure App Service** (recommended; the script does everything from a signed-in `az`):
+
+```bash
+az login
+ANTHROPIC_API_KEY=sk-ant-... scripts/deploy_azure.sh
+```
+
+It builds the image in Azure Container Registry (no local Docker), creates a B1 Linux
+plan with Always On, a web app from the image, and the settings for a public URL, then
+waits for `/healthz` and prints the address. The database, the stored images and the
+session secret live under `/home`, which App Service persists across restarts and
+deployments. Re-running the script with the same `APP` name rebuilds and redeploys.
+`az group delete --name labelverify-rg` removes everything. On a free Azure account the
+B1 plan comes out of the credit; App Service's free tier would also run it, but it
+sleeps after twenty minutes idle and the first request after that takes long enough to
+fail the brief's five-second test.
+
+**Docker**, anywhere:
 
 ```bash
 docker build -t labelverify .
@@ -345,13 +393,12 @@ docker run -p 8000:8000 -v labelverify-data:/app/data -e ANTHROPIC_API_KEY=... -
 ```
 
 **Fly.io** (always-on machine, persistent volume): see `fly.toml`. Railway or Render work
-the same way; use a paid or always-on tier so the demo does not hit a cold start, which is
-exactly the vendor-pilot failure from the interviews.
+the same way; use a paid or always-on tier so the demo does not hit a cold start.
 
-`fly.toml` sets two guards for a public URL: the sign-in dialog shows no demo credentials
-(reviewers take them from this README), and paid model reads are capped per day so an
-open link cannot run up the API bill. Both are plain environment variables, so any host
-can set them.
+Every public deployment sets the same guards, as environment variables any host can set:
+the sign-in dialog shows no demo credentials (reviewers take them from this README),
+paid model reads are capped per day so an open link cannot run up the API bill, and the
+session cookie is Secure.
 
 ## Configuration
 
@@ -382,24 +429,30 @@ can set them.
 labelverify/
   engine/                 pure verification logic, no web imports
     models.py             ApplicationData, LabelExtraction, VerificationResult
-    normalize.py          text, ABV, volume, address, country normalizers
+    rules.py              the rulebook: what each class must carry, citations, tolerances, standards of fill
+    normalize.py          text, ABV, volume, producer name, address, country normalizers
     warning.py            health warning rules and word diff
-    compare.py            per-field rules and roll-up
+    compare.py            per-field rules and roll-up; nothing here calls a model
     preprocess.py         EXIF rotation, 1500 px downscale, JPEG re-encode
     notices.py            correction notice template and optional model rewrite
     verify.py             orchestration with timing and fallback
-    extractors/           claude and gemini (vision), tesseract (local OCR), demo (samples), fixture (tests)
+    extractors/           claude and gemini (vision), tesseract (local OCR), demo (samples), fixture (tests), budget (daily cap)
   web/
     app.py                FastAPI factory, session middleware, error handlers
+    auth.py, db.py        sign-in and cookies; SQLite engine and session factory
     models.py             SQLAlchemy tables: users, applications, images, runs, comments, events, notices, views, batches
     services.py           every state change: create, verify, submit, review, decide, resubmit, batch
+    render.py, seed.py    template helpers and labels; the demo accounts and sample applications
     routes/               shared (auth, images, comments), applicant, specialist, api
     templates/            Jinja2 pages and partials
     static/               one stylesheet, one script, two self-hosted typefaces, no external assets
   samples/                bundled labels and manifest
-  cli.py                  command-line verify/extract for latency checks
+  testdata/cola/          sixty registry labels, the scenario file, the batch CSV
+  cli.py                  command-line verify, extract and bench for latency checks
 scripts/make_samples.py   renders the sample labels
-docs/                     decisions.md, production.md, screenshots
+scripts/import_cola.py    builds the registry set from downloads; --csv-only applies scenarios.json
+scripts/deploy_azure.sh   App Service deployment
+docs/                     decisions.md, production.md, user-guide.md, screenshots
 tests/                    pytest suite
 ```
 
@@ -436,10 +489,11 @@ application. No model is involved in the comparison step.
   model call and each field is reported once.
 - The seven fields named in the brief are checked under the rules of the product's class,
   plus: the type-of-product consistency check, the qualifying phrase, and, where the class
-  and the label call for them, the sulfite declaration (wine), the age statement (whisky),
-  the bottled-in-bond proof, and the blend percentage. Rules the engine cannot judge from
-  a read (state of distillation, appellations, vintage, varietal percentages, type sizes)
-  are listed on the rules page as the specialist's checks.
+  and the label call for them, the sulfite declaration, appellation, vintage and estate
+  bottling (wine), the age statement, bottled-in-bond proof and blend percentage
+  (spirits), and statements of strength (malt). Rules the engine cannot judge from a read
+  (state of distillation, varietal and grape-source percentages, type sizes) are listed
+  on the rules page as the specialist's checks.
 - Bold detection on the warning heading is a visual judgment and is surfaced for review
   rather than failed automatically.
 - Sample labels are synthetic renders, not real COLA images.

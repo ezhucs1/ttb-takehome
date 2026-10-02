@@ -40,9 +40,11 @@ need. Ordered roughly by how soon each would matter.
 
 ## Accuracy and operations
 
-- **Evaluation set.** The ten bundled labels are synthetic. Before rollout, collect a few
-  hundred real, de-identified label images with specialist decisions and measure
-  per-field precision and recall, plus the false-approve rate specifically.
+- **Evaluation set.** The fourteen bundled labels are synthetic, and the sixty registry
+  labels come with the registry's record rather than the applicant's form, so only the
+  twenty hand-transcribed rows have true answers. Before rollout, collect a few hundred
+  real, de-identified label images with the forms as filed and the specialist decisions,
+  and measure per-field precision and recall, plus the false-approve rate specifically.
 - **Latency budget.** The UI shows extraction time on every check. Track p50 and p95
   against the five-second target and switch to a faster model tier if needed
   (`LABELVERIFY_MODEL`).
@@ -55,9 +57,11 @@ need. Ordered roughly by how soon each would matter.
 
 ## Product gaps
 
-- **Beverage-specific rules.** Only the seven common fields are checked. TTB rules differ
-  by class (wine appellation and varietal percentages, malt beverage exemptions, spirits
-  age statements). The comparison module is organized per field so these slot in.
+- **Beverage-specific rules.** The rulebook covers the seven common fields under each
+  class's rules plus the class statements the engine can read (sulfites, appellation,
+  vintage, estate bottled, age, bottled in bond, blend percentage, strength claims).
+  Still the specialist's: varietal and grape-source percentages, type sizes, state of
+  distillation, and anything that needs the formula or records behind the label.
 - **Label panels.** Up to four images per set are read together. Production would let
   the applicant tag each image (front, back, neck, strip) and show the specialist which
   panel each field was read from.
