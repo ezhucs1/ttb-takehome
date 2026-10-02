@@ -11,6 +11,8 @@ import hmac
 import logging
 import os
 import secrets
+import threading
+import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -31,6 +33,72 @@ SECURE_COOKIES = os.environ.get("LABELVERIFY_SECURE_COOKIES", "").strip().lower(
 SESSION_COOKIE = "lv_session"
 SESSION_MAX_AGE = 60 * 60 * 12
 _PBKDF2_ROUNDS = 120_000
+# A key for the JSON API (X-API-Key or "Authorization: Bearer"); blank means the API
+# accepts only signed-in users, so a public URL cannot be used to spend model reads.
+API_KEY = os.environ.get("LABELVERIFY_API_KEY", "").strip()
+
+
+def client_ip(request: Request) -> str:
+    """The caller's address, through one reverse proxy (App Service, Fly) if there is one."""
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+class LoginThrottle:
+    """Sign-in failures per address and per account: after ``limit`` in ``window``
+    seconds, sign-in waits. In memory, per process, which is enough for one instance;
+    a fleet would keep the counters in its shared store."""
+
+    def __init__(self, limit: int = 10, window: int = 15 * 60) -> None:
+        self.limit, self.window = limit, window
+        self._failures: dict[str, list[float]] = {}
+        self._lock = threading.Lock()
+
+    def _recent(self, key: str, now: float) -> list[float]:
+        times = [t for t in self._failures.get(key, []) if now - t < self.window]
+        if times:
+            self._failures[key] = times
+        else:
+            self._failures.pop(key, None)
+        return times
+
+    def wait_seconds(self, *keys: str) -> int:
+        """Seconds before another attempt is allowed, or 0."""
+        now = time.monotonic()
+        with self._lock:
+            waits = [
+                int(self.window - (now - times[0])) + 1
+                for key in keys
+                if len(times := self._recent(key, now)) >= self.limit
+            ]
+        return max(waits, default=0)
+
+    def failed(self, *keys: str) -> None:
+        now = time.monotonic()
+        with self._lock:
+            for key in keys:
+                self._failures.setdefault(key, []).append(now)
+
+    def succeeded(self, *keys: str) -> None:
+        with self._lock:
+            for key in keys:
+                self._failures.pop(key, None)
+
+
+def api_caller(request: Request) -> User | None:
+    """The JSON API takes a signed-in user or the configured API key; nothing else."""
+    user = getattr(request.state, "user", None)
+    if user is not None:
+        return user
+    sent = request.headers.get("x-api-key", "")
+    auth = request.headers.get("authorization", "")
+    if auth.lower().startswith("bearer "):
+        sent = sent or auth[7:].strip()
+    if API_KEY and sent and hmac.compare_digest(sent, API_KEY):
+        return None
+    raise HTTPException(401, "Sign in, or send the API key in an X-API-Key header.")
 
 
 def hash_password(password: str, salt: str | None = None) -> str:

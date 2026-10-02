@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import mimetypes
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
@@ -12,6 +12,8 @@ from ...engine.extractors import ExtractionError
 from ...engine.models import ApplicationData
 from ...engine.preprocess import UnreadableImageError
 from ...engine.verify import run_verification
+from ..auth import api_caller
+from ..models import User
 from .common import read_upload, sample_image
 
 router = APIRouter(prefix="/api")
@@ -20,6 +22,7 @@ router = APIRouter(prefix="/api")
 @router.post("/verify")
 async def verify(
     request: Request,
+    _caller: User | None = Depends(api_caller),
     image: UploadFile | None = File(default=None),
     sample_id: str = Form(""),
     application: str = Form(..., description="ApplicationData as a JSON string"),

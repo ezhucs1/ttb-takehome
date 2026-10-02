@@ -105,7 +105,9 @@ az webapp config appsettings set --name "$APP" --resource-group "$RG" --output n
   LABELVERIFY_SECURE_COOKIES=true \
   LABELVERIFY_DAILY_READ_LIMIT="${LABELVERIFY_DAILY_READ_LIMIT:-150}" \
   LABELVERIFY_FALLBACK=tesseract \
-  ${GEMINI_API_KEY:+GEMINI_API_KEY="$GEMINI_API_KEY" LABELVERIFY_NOTICE_PROVIDER=gemini}
+  ${GEMINI_API_KEY:+GEMINI_API_KEY="$GEMINI_API_KEY" LABELVERIFY_NOTICE_PROVIDER=gemini} \
+  ${LABELVERIFY_API_KEY:+LABELVERIFY_API_KEY="$LABELVERIFY_API_KEY"} \
+  ${LABELVERIFY_DEMO_PASSWORD:+LABELVERIFY_DEMO_PASSWORD="$LABELVERIFY_DEMO_PASSWORD"}
 ALWAYS_ON=true
 case "$SKU" in F1|FREE|Free|free|D1|SHARED|Shared|shared) ALWAYS_ON=false ;; esac   # not offered on these tiers
 az webapp config set --name "$APP" --resource-group "$RG" --always-on "$ALWAYS_ON" --http20-enabled true \

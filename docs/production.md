@@ -15,9 +15,14 @@ need. Ordered roughly by how soon each would matter.
   numbers, tolerances, and the January 2025 standards of fill. Production would review it
   against eCFR on a schedule and extend it to the class-specific items the engine lists
   as specialist checks (age statements, appellations, qualifying phrases, type sizes).
-- **Rate limiting and upload scanning.** Only a process-wide daily cap on model reads.
-  Add per-account quotas, a reverse-proxy limit on the upload endpoints, and antivirus
-  scanning of uploaded files.
+- **What is already in place.** Hashed passwords, a throttled sign-in, a signed
+  SameSite cookie, an origin check on state-changing requests, a Content-Security-Policy
+  and the other response headers, access checks per account, image re-encoding and size
+  limits on uploads, an API key for the JSON endpoint, and a daily cap on model reads
+  (README, "Security basics").
+- **Rate limiting and upload scanning.** The sign-in throttle and the read cap are
+  per process. Add per-account quotas, a reverse-proxy limit on the upload endpoints,
+  shared counters for more than one instance, and antivirus scanning of uploaded files.
 - **Audit trail.** Status events record who did what and when, but comments and notices
   are editable only by insertion, not deletion; a production system needs a formal,
   immutable audit log and records-retention policy.

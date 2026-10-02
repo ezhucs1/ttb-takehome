@@ -714,3 +714,32 @@ server's read time was the same; the difference was the upload of a multi-megaby
 photo from a home connection, which the read-time line used to include. Photos are now
 shrunk in the browser to 1600 px before upload, and the line shows the server's read time
 with the upload apart.
+
+## 29. Security basics, now that there is a public URL
+
+What the app had: hashed passwords with a constant-time compare, a signed and expiring
+HttpOnly SameSite=Lax cookie (Secure on HTTPS), an open-redirect check on sign-in,
+per-account access checks, upload limits with server-side re-encoding, no third-party
+assets, and error pages without stack traces. What a public address needed on top, each
+small and dependency-free:
+
+- **An origin check** on every request that changes state outside the API: the cookie's
+  SameSite rule already keeps it off cross-site form posts; the server now also refuses a
+  request whose Origin, Referer or Sec-Fetch-Site names another site. A request with
+  neither header (a command-line client) passes; it carries no cookie unless its author
+  sends one.
+- **Response headers**: a Content-Security-Policy with scripts and connections from this
+  origin only and no framing, nosniff, a referrer policy, and HSTS when the cookie is
+  Secure. The one inline script (the theme, applied before first paint) became a file so
+  the policy can be strict about scripts; styles stay inline-permitted because the
+  result table and progress bars set widths.
+- **A sign-in throttle**: ten failures per address or per account in fifteen minutes,
+  in memory per process, which is right for one instance and documented as such.
+- **The JSON API takes a caller**: a signed-in user or a configured key. Before, anyone
+  with the URL could spend model reads through it; the daily cap bounded the bill, not
+  the principle.
+
+**Considered:** CSRF tokens in every form. Not needed given SameSite plus the origin
+check, and they would have touched every template and every fetch for no added safety in
+current browsers. Also considered a Web Application Firewall and per-account quotas;
+those belong to the hosting platform and are listed in the production notes.

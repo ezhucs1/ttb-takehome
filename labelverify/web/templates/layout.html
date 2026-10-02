@@ -8,10 +8,7 @@
   <link rel="stylesheet" href="/static/app.css?v={{ asset_version }}">
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <meta name="color-scheme" content="dark light">
-  <script>
-    // Apply the saved theme before first paint. Dark is the default; "light" is opt-in.
-    (function () { var t = "dark"; try { t = localStorage.getItem("lv-theme") || t; } catch (e) {} document.documentElement.dataset.theme = t === "light" ? "light" : "dark"; })();
-  </script>
+  <script src="/static/theme.js"></script>
 </head>
 <body class="{% block body_class %}{% endblock %}">
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">

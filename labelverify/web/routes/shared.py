@@ -14,6 +14,7 @@ from ..auth import (
     SECURE_COOKIES,
     SESSION_COOKIE,
     SESSION_MAX_AGE,
+    client_ip,
     current_user,
     optional_user,
     sign_session,
@@ -148,8 +149,22 @@ def login(
     password: str = Form(""),
     next: str = Form(""),
 ):
-    user = db.scalar(select(User).where(User.email == email.strip().lower()))
+    email = email.strip().lower()
+    throttle = request.app.state.login_throttle
+    keys = (f"ip:{client_ip(request)}", f"account:{email}")
+    wait = throttle.wait_seconds(*keys)
+    if wait:
+        return renderer(request).page(
+            request,
+            "login.html",
+            status_code=429,
+            next=next,
+            error=f"Too many sign-in attempts. Try again in {wait // 60 + 1} minute(s).",
+            **_login_context(),
+        )
+    user = db.scalar(select(User).where(User.email == email))
     if user is None or not verify_password(password, user.password_hash):
+        throttle.failed(*keys)
         return renderer(request).page(
             request,
             "login.html",
@@ -158,6 +173,7 @@ def login(
             error="That email and password do not match.",
             **_login_context(),
         )
+    throttle.succeeded(*keys)
     response = RedirectResponse(_safe_next(user, next), status_code=303)
     response.set_cookie(
         SESSION_COOKIE,

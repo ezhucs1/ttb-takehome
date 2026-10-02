@@ -835,8 +835,8 @@ class TestBatch:
 
 
 class TestApi:
-    def test_verify_with_sample(self, anon):
-        resp = anon.post(
+    def test_verify_with_sample(self, applicant):
+        resp = applicant.post(
             "/api/verify",
             data={
                 "sample_id": "old-tom-bourbon",
@@ -846,15 +846,19 @@ class TestApi:
         assert resp.status_code == 200 and resp.json()["recommendation"] == "approve"
 
     @pytest.mark.parametrize("entry", load_manifest(), ids=lambda s: s["id"])
-    def test_every_sample_gives_its_promised_recommendation(self, anon, entry):
-        resp = anon.post(
+    def test_every_sample_gives_its_promised_recommendation(self, applicant, entry):
+        resp = applicant.post(
             "/api/verify",
             data={"sample_id": entry["id"], "application": json.dumps(entry["application"])},
         )
         assert resp.status_code == 200, resp.text
         assert resp.json()["recommendation"] == entry["expected"]
 
-    def test_verify_with_fixture_extractor_and_upload(self, tmp_path, extraction, label_png):
+    def test_verify_with_fixture_extractor_and_upload(
+        self, tmp_path, extraction, label_png, monkeypatch
+    ):
+        from labelverify.web import auth
+
         app = create_app(
             extractor=FixtureExtractor(extraction),
             database_url=f"sqlite:///{tmp_path}/f.db",
@@ -866,18 +870,34 @@ class TestApi:
             data={"application": json.dumps(FORM)},
             files={"image": ("l.png", label_png, "image/png")},
         )
+        assert resp.status_code == 401  # no session, no key
+        monkeypatch.setattr(auth, "API_KEY", "test-key")
+        resp = client.post(
+            "/api/verify",
+            data={"application": json.dumps(FORM)},
+            files={"image": ("l.png", label_png, "image/png")},
+            headers={"X-API-Key": "test-key"},
+        )
         assert resp.status_code == 200 and resp.json()["source"] == "upload:l.png"
+        wrong = client.post(
+            "/api/verify",
+            data={"application": json.dumps(FORM)},
+            files={"image": ("l.png", label_png, "image/png")},
+            headers={"Authorization": "Bearer nope"},
+        )
+        assert wrong.status_code == 401
 
-    def test_api_errors(self, anon, label_png):
-        assert anon.post("/api/verify", data={"application": "{}"}).status_code == 400
+    def test_api_errors(self, anon, applicant, label_png):
+        assert anon.post("/api/verify", data={"application": "{}"}).status_code == 401
+        assert applicant.post("/api/verify", data={"application": "{}"}).status_code == 400
         assert (
-            anon.post(
+            applicant.post(
                 "/api/verify", data={"sample_id": "old-tom-bourbon", "application": "{}"}
             ).status_code
             == 422
         )
         assert (
-            anon.post(
+            applicant.post(
                 "/api/verify",
                 data={"application": json.dumps(FORM)},
                 files={"image": ("l.png", label_png, "image/png")},
@@ -1214,3 +1234,49 @@ class TestFiledStatementsOnTheWeb:
         assert data.age_statement is None and data.health_warning is None
         data = application_from_form({**FORM, "age_statement": ""})
         assert data.age_statement == ""
+
+
+class TestSecurityBasics:
+    def test_every_page_carries_the_hardening_headers(self, applicant):
+        resp = applicant.get("/applicant")
+        h = resp.headers
+        assert h["X-Content-Type-Options"] == "nosniff" and h["X-Frame-Options"] == "DENY"
+        assert "frame-ancestors 'none'" in h["Content-Security-Policy"]
+        assert "script-src 'self'" in h["Content-Security-Policy"]
+        assert h["Referrer-Policy"] == "strict-origin-when-cross-origin"
+        assert "<script>" not in resp.text  # the theme script is a file, as the policy requires
+        assert applicant.get("/static/theme.js").status_code == 200
+        assert "Content-Security-Policy" not in applicant.get("/api/docs").headers
+
+    def test_a_cross_site_post_is_refused_and_a_same_site_one_is_not(self, applicant):
+        evil = applicant.post("/logout", headers={"Origin": "https://evil.example"})
+        assert evil.status_code == 403
+        assert applicant.get("/applicant").status_code == 200  # still signed in
+        evil = applicant.post("/logout", headers={"Sec-Fetch-Site": "cross-site"})
+        assert evil.status_code == 403
+        same = applicant.post(
+            "/logout", headers={"Origin": "http://testserver"}, follow_redirects=False
+        )
+        assert same.status_code == 303
+
+    def test_sign_in_is_throttled_after_repeated_failures(self, app):
+        client = TestClient(app)
+        for _ in range(10):
+            bad = client.post("/login", data={**APPLICANT, "password": "wrong"})
+            assert bad.status_code == 401
+        blocked = client.post("/login", data=APPLICANT, follow_redirects=False)
+        assert blocked.status_code == 429 and "Too many sign-in attempts" in blocked.text
+        app.state.login_throttle.succeeded("ip:testclient", f"account:{APPLICANT['email']}")
+        ok = client.post("/login", data=APPLICANT, follow_redirects=False)
+        assert ok.status_code == 303
+
+    def test_the_throttle_counts_per_address_and_per_account(self):
+        from labelverify.web.auth import LoginThrottle
+
+        t = LoginThrottle(limit=2, window=60)
+        t.failed("ip:a", "account:x")
+        assert t.wait_seconds("ip:a", "account:x") == 0
+        t.failed("ip:a", "account:y")
+        assert t.wait_seconds("ip:a") > 0 and t.wait_seconds("account:x") == 0
+        t.succeeded("ip:a")
+        assert t.wait_seconds("ip:a") == 0

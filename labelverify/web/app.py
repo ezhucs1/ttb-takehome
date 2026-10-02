@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -20,7 +21,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from ..engine.extractors import Extractor, fallback_extractor, get_extractor
 from ..engine.extractors.demo import load_manifest
 from . import services
-from .auth import LoginRequired, read_session, secret_key
+from .auth import SECURE_COOKIES, LoginRequired, LoginThrottle, read_session, secret_key
 from .db import init_db, make_engine, make_session_factory
 from .models import User
 from .render import Renderer, build_templates
@@ -29,6 +30,58 @@ from .seed import seed
 
 HERE = Path(__file__).resolve().parent
 log = logging.getLogger(__name__)
+
+
+# What every response carries. Scripts only from this origin (the theme script is a
+# file, not inline); styles may be inline because the result table sets widths; images
+# may be blobs because the file picker previews them before upload.
+CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; form-action 'self'; "
+    "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
+)
+_UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+class HardeningMiddleware(BaseHTTPMiddleware):
+    """Two things a browser-facing app needs beyond the session cookie: a request that
+    changes state must come from this site (the cookie's SameSite=Lax already keeps it off
+    cross-site form posts; this refuses the rest, by the Origin or Referer the browser
+    sends), and every response carries the headers that keep it in its own frame and
+    origin."""
+
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        if request.method in _UNSAFE_METHODS and not path.startswith("/api/"):
+            if not _same_site(request):
+                return JSONResponse({"detail": "Cross-site request refused."}, status_code=403)
+        response = await call_next(request)
+        headers = response.headers
+        headers.setdefault("X-Content-Type-Options", "nosniff")
+        headers.setdefault("X-Frame-Options", "DENY")
+        headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+        if not path.startswith(("/api/docs", "/api/openapi.json")):  # the docs UI loads a CDN
+            headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
+        if SECURE_COOKIES:
+            headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        return response
+
+
+def _same_site(request: Request) -> bool:
+    """True unless the browser says the request came from another site. A request with no
+    Origin and no Referer (a command-line client) is let through: it carries no cookie
+    unless the caller chose to send one."""
+    fetch_site = request.headers.get("sec-fetch-site", "")
+    if fetch_site == "cross-site":
+        return False
+    host = request.headers.get("host", "")
+    for header in ("origin", "referer"):
+        value = request.headers.get(header)
+        if value:
+            return urlsplit(value).netloc == host
+    return True
 
 
 class UserMiddleware(BaseHTTPMiddleware):
@@ -89,6 +142,8 @@ def create_app(
             seed(db)
 
     app.add_middleware(UserMiddleware)
+    app.add_middleware(HardeningMiddleware)
+    app.state.login_throttle = LoginThrottle()
 
     @app.exception_handler(LoginRequired)
     async def _login_required(request: Request, exc: LoginRequired):

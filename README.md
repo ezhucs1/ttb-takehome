@@ -435,6 +435,30 @@ the sign-in dialog shows no demo credentials (reviewers take them from this READ
 paid model reads are capped per day so an open link cannot run up the API bill, and the
 session cookie is Secure.
 
+### Security basics
+
+What the app does on its own, on every host; `docs/production.md` lists what a real
+deployment adds on top (identity provider, MFA, audit log, scanning).
+
+- **Sign-in.** Passwords are stored as salted PBKDF2 hashes and compared in constant
+  time. Ten failed attempts per address or per account in fifteen minutes and sign-in
+  waits. The session is a signed, expiring cookie, HttpOnly and SameSite=Lax, Secure on
+  HTTPS; the "next" page after sign-in is checked so it cannot send anyone off-site or
+  to the other role's pages. The demo password can be set per deployment.
+- **Requests that change state** must come from this site: the cookie's SameSite rule
+  keeps it off cross-site form posts, and the server refuses any such request whose
+  Origin, Referer or Sec-Fetch-Site says another site.
+- **Every response** carries a Content-Security-Policy (scripts and connections from this
+  origin only, nothing in a frame), nosniff, a referrer policy, and HSTS on HTTPS. No
+  page loads anything from a third party.
+- **Access.** An applicant reaches only their own applications and batches; a specialist
+  reaches no drafts. The JSON API takes a signed-in user or `LABELVERIFY_API_KEY`, so a
+  public URL cannot be used to spend model reads.
+- **Uploads** are decoded and re-encoded as images on the server (a file that is not an
+  image is refused), limited in size and count, and zip members are size-checked before
+  they are read. Templates escape everything; the database is reached through an ORM
+  with bound parameters. Error pages carry no stack traces.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -452,7 +476,9 @@ session cookie is Secure.
 | `LABELVERIFY_REPO_URL` | this repository | GitHub link on the landing page |
 | `LABELVERIFY_TESSERACT_CMD` | found on PATH | Full path of the tesseract executable when the app cannot find it on its own |
 | `LABELVERIFY_FALLBACK` | `tesseract` | Reader used when the configured one fails on a read; `none` turns the fallback off |
-| `LABELVERIFY_SECURE_COOKIES` | `false` | `true` marks the session cookie Secure; set it behind HTTPS (the Fly config does) |
+| `LABELVERIFY_SECURE_COOKIES` | `false` | `true` marks the session cookie Secure and adds HSTS; set it behind HTTPS (the deploy script does) |
+| `LABELVERIFY_API_KEY` | | Lets a client call `/api/verify` without a session, via `X-API-Key` or a bearer token; blank means signed-in users only |
+| `LABELVERIFY_DEMO_PASSWORD` | `labelverify` | The demo accounts' password when the database is first seeded |
 | `LABELVERIFY_STRUCTURED_OUTPUT` | `false` | `true` asks the API to constrain the reply to the extraction schema. Off by default: the API compiles a new schema into a grammar on first use, and that compile can take longer than a read is allowed to. The default asks for JSON in the prompt and validates it here |
 | `LABELVERIFY_IMAGE_MAX_EDGE` | `1200` | Long edge in pixels after preprocessing; smaller is faster and cheaper, larger keeps more small-print detail (1500 measured as no more accurate on the samples) |
 | `DATABASE_URL` | `sqlite:///./data/labelverify.db` | SQLAlchemy URL; Postgres works unchanged |

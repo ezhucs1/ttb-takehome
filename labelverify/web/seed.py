@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 
 from sqlalchemy import select
@@ -18,7 +19,8 @@ from .models import Application, Role, User
 
 log = logging.getLogger(__name__)
 
-DEMO_PASSWORD = "labelverify"
+# The shared demo password; a deployment may set its own in LABELVERIFY_DEMO_PASSWORD.
+DEMO_PASSWORD = os.environ.get("LABELVERIFY_DEMO_PASSWORD", "").strip() or "labelverify"
 
 # Two demo accounts, one per role. The applicant is a label-compliance agent who files
 # COLAs on behalf of several producers, which is why one account holds labels from Old
