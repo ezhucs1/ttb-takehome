@@ -33,18 +33,23 @@ az group create --name "$RG" --location "$LOCATION" --output none
 az acr show --name "$ACR" --resource-group "$RG" --output none 2>/dev/null \
   || az acr create --name "$ACR" --resource-group "$RG" --sku Basic --admin-enabled true --output none
 REGISTRY="$(az acr show --name "$ACR" --resource-group "$RG" --query loginServer --output tsv)"
+ACR_USER="$(az acr credential show --name "$ACR" --resource-group "$RG" --query username --output tsv)"
+ACR_PASS="$(az acr credential show --name "$ACR" --resource-group "$RG" --query 'passwords[0].value' --output tsv)"
 if command -v docker >/dev/null 2>&1; then
   DOCKER=docker
-  docker info >/dev/null 2>&1 || DOCKER="sudo docker"   # the user is not in the docker group
-  az acr login --name "$ACR"
+  if ! docker info >/dev/null 2>&1; then
+    echo "your user cannot reach the Docker daemon; using sudo docker (add yourself to the docker group to avoid this)" >&2
+    DOCKER="sudo docker"
+  fi
+  # Sign Docker in with the registry's own credentials rather than az acr login, which
+  # would need Docker access as the current user.
+  printf '%s' "$ACR_PASS" | $DOCKER login "$REGISTRY" --username "$ACR_USER" --password-stdin
   $DOCKER build -t "$REGISTRY/$IMAGE" .
   $DOCKER push "$REGISTRY/$IMAGE"
 else
   echo "docker is not installed; trying Azure's cloud build (not available on free subscriptions)" >&2
   az acr build --registry "$ACR" --resource-group "$RG" --image "$IMAGE" . --output none
 fi
-ACR_USER="$(az acr credential show --name "$ACR" --resource-group "$RG" --query username --output tsv)"
-ACR_PASS="$(az acr credential show --name "$ACR" --resource-group "$RG" --query 'passwords[0].value' --output tsv)"
 
 # 2. The plan and the web app.
 az appservice plan show --name "$PLAN" --resource-group "$RG" --output none 2>/dev/null \
