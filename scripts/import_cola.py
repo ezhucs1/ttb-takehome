@@ -148,7 +148,9 @@ def registry_row(rec: dict) -> dict:
         "is_import": "true" if is_import else "false",
         "country_of_origin": title(origin) if is_import and origin else "",
         "scenario": "registry-as-filed",
-        "expected": "review: alcohol content and net contents left blank; class is the registry code",
+        "expected": "corrections needed on a confident read: the class row (the registry's code, not "
+        "the label's wording) and often the producer row (the permit holder's legal name); the blank "
+        "alcohol content and net contents are review items",
         "ttbid": rec["ttbid"],
         "registry_class": rec["class_type"],
         "note": REGISTRY_NOTE,

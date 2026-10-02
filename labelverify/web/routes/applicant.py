@@ -479,6 +479,22 @@ def batch_detail(
     )
 
 
+@router.get("/batches/{batch_id}/results.csv")
+def batch_results(
+    batch_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_applicant),
+):
+    batch = _load_batch(db, batch_id, user)
+    return PlainTextResponse(
+        services.batch_results_csv(batch),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="labelverify-batch-{batch.id[:8]}-results.csv"'
+        },
+    )
+
+
 @router.get("/batches/{batch_id}/rows")
 def batch_rows(
     request: Request,

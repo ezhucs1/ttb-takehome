@@ -97,7 +97,12 @@ def _fuzzy_field(
     review_at: float,
     normalizer=normalize_text,
     required: bool = True,
+    wrapped_is_review: bool = False,
 ) -> FieldResult:
+    """Compare one free-text field after normalization. With ``wrapped_is_review`` a value
+    that appears whole inside the other ("Gin" in "Blood Orange Forward Gin", "Sounds" in
+    "Sounds Vineyard") is a review item rather than a mismatch: the words are there, and
+    whether the extra ones change the meaning is a person's call."""
     base = dict(
         field=field,
         label=label,
@@ -134,10 +139,23 @@ def _fuzzy_field(
     elif score >= review_at:
         verdict = Verdict.NEEDS_REVIEW
         reason = f"Similar but not identical to the application ({score:.0f}% similar). Confirm visually."
+    elif wrapped_is_review and _wraps(app_norm, label_norm):
+        verdict = Verdict.NEEDS_REVIEW
+        reason = (
+            f"The label reads '{extracted.value}' and the application says "
+            f"'{application_value}': one is the other with words added ({score:.0f}% similar). "
+            f"Confirm the added words are descriptive, not a different {label.lower()}."
+        )
     else:
         verdict = Verdict.MISMATCH
         reason = f"Does not match the application ({score:.0f}% similar)."
     return FieldResult(verdict=verdict, reason=reason, similarity=round(score, 1), **base)
+
+
+def _wraps(a: str, b: str) -> bool:
+    """True when either normalized value contains the other as whole words."""
+    short, long = sorted((a, b), key=len)
+    return bool(short) and re.search(rf"\b{re.escape(short)}\b", long) is not None
 
 
 def compare_brand_name(application: ApplicationData, extraction: LabelExtraction) -> FieldResult:
@@ -147,6 +165,7 @@ def compare_brand_name(application: ApplicationData, extraction: LabelExtraction
         application_value=application.brand_name,
         extracted=extraction.brand_name,
         review_at=BRAND_REVIEW,
+        wrapped_is_review=True,
     )
 
 
@@ -158,24 +177,8 @@ def compare_class_type(application: ApplicationData, extraction: LabelExtraction
         extracted=extraction.class_type,
         review_at=CLASS_REVIEW,
         normalizer=_normalize_class,
+        wrapped_is_review=True,  # "Gin" filed, "Blood Orange Forward Gin" printed
     )
-    # "Blood Orange Forward Gin" or "100% Malt Premium Beer" against a filed "Gin" or
-    # "Beer": the class is there, wrapped in descriptive words the regulations allow next
-    # to it. That is a look, not a charge against the label.
-    app_norm = _normalize_class(application.class_type)
-    label_norm = _normalize_class(extraction.class_type.value)
-    if (
-        result.verdict is Verdict.MISMATCH
-        and app_norm
-        and label_norm
-        and re.search(rf"\b{re.escape(app_norm)}\b", label_norm)
-    ):
-        result.verdict = Verdict.NEEDS_REVIEW
-        result.reason = (
-            f"The label's designation '{extraction.class_type.value}' contains the filed class "
-            f"'{application.class_type}' with other words around it. Confirm the designation "
-            "is the class, with permitted descriptive words, and not a different class."
-        )
     # A malt beverage must use a recognized class designation (27 CFR 7.64): beer, ale,
     # lager, stout, porter, malt liquor ... A designation with none of them goes to review.
     rules = _class_of(application, extraction)
@@ -366,6 +369,7 @@ def compare_producer_name(application: ApplicationData, extraction: LabelExtract
         application_value=application.producer_name,
         extracted=extraction.producer_name,
         review_at=PRODUCER_REVIEW,
+        wrapped_is_review=True,  # "SVP Winery" filed, "SVP Winery, LLC" printed
     )
 
 

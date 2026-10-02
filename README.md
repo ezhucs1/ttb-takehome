@@ -28,7 +28,7 @@ recommends; a person decides.
   that item only; opening the application from a list reads everything on it. Works for
   both roles.
 - Batch upload: a CSV of applications plus a zip of images, up to 300 at a time, checked
-  in the background with live progress.
+  in the background with live progress, and a results CSV to download when it is done.
 
 **For labeling specialists**
 
@@ -152,12 +152,15 @@ check should report:
 | `wrong-brand` | 1 | Another distillery's brand filed for an Nc'nean Scotch | Corrections needed on brand name |
 | `near-miss-brand` | 1 | "Delto" filed for a label that reads "Delta" | Review: close but not identical, so a person decides rather than the label being charged |
 | `blank-fields` | 3 (1 per class) | Brand, class, ABV and net contents left empty | Review: each blank row says what the label shows, so the applicant can fill it in |
-| `registry-as-filed` | 40 | The registry's record: brand, class code, permit holder; ABV and net contents are not published | Review on the blank rows; the class row is often a review item because the registry's code ("Other Gin", "Table White Wine") is not the label's wording |
+| `registry-as-filed` | 40 | The registry's record: brand, class code, permit holder; ABV and net contents are not published | Mostly corrections needed: the registry's class code ("Other Gin", "Table White Wine") is not the label's wording, and the permit holder's legal name is often not the name printed; the blank ABV and net contents are review items. The reader is right on these rows; the filed values are the registry's, so this is the check doing its job on data that does not match the label |
 
 The values and the expected results are in `labelverify/testdata/cola/scenarios.json`;
 `scripts/import_cola.py --csv-only` rebuilds the CSV from it. The expectations describe a
 confident model read. Under the local OCR fallback every row is an uncertain read and
-differences become review items, as described above.
+differences become review items, as described above. "Download results (.csv)" on the
+finished batch lists every row with its result and each flagged field, the application
+value, the label value and the reason, which is the quickest way to compare a run with
+the `expected` column.
 
 The database is seeded on first start with fourteen sample applications in a mix of states
 so every screen has content.

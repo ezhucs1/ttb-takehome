@@ -8,6 +8,7 @@
     <h1>Batch of {{ batch.total }} labels</h1>
     <p class="subtitle">Started {{ batch.created_at | dt }}{% if batch.finished_at %} · finished {{ batch.finished_at | dt }}{% endif %}</p>
   </div>
+  {% if batch.status == 'done' %}<a class="btn btn-secondary btn-sm" href="/applicant/batches/{{ batch.id }}/results.csv" download title="Every row with its result and each flagged field: the application value, the label value and the reason"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg> Download results (.csv)</a>{% endif %}
 </div>
 <div class="card card-flush" id="batch-rows" {% if batch.status != 'done' %}data-poll="/applicant/batches/{{ batch.id }}/rows" data-poll-interval="1500" data-poll-until="X-Batch-Status: done"{% endif %}>
   {% include "partials/batch_rows.html" %}

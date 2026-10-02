@@ -727,6 +727,18 @@ class TestBatch:
         )
         assert applicant.get(batch_url).status_code == 200
         assert "peak.csv" in applicant.get("/applicant/batches").text
+        # The results export: one line per row, the flagged fields spelled out.
+        results = applicant.get(batch_url + "/results.csv")
+        assert results.status_code == 200 and "text/csv" in results.headers["content-type"]
+        lines = results.text.strip().splitlines()
+        assert lines[0].startswith(
+            "row,image,brand_as_filed,application,result,reader,flagged_fields,details"
+        )
+        assert len(lines) == 4
+        assert "all fields match" in lines[1]
+        assert "corrections needed" in lines[2] and "alcohol_content=mismatch" in lines[2]
+        assert "could not be checked" in lines[3] and "ghost.png" in lines[3]
+        assert "Download results (.csv)" in applicant.get(batch_url).text
         assert (
             "OLD TOM DISTILLERY" in specialist.get("/specialist").text
         )  # the batch rows are queued

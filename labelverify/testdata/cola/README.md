@@ -11,11 +11,13 @@ size, characters per inch and contrasting background.
 - `applications.csv`: one row per COLA in the batch upload's column format. Forty rows
   carry the registry's own values (`scenario` = `registry-as-filed`): alcohol content and
   net contents are not on the public record and are left blank, so the engine reports
-  them as "left blank on the application" and the rows come back for review; the
-  class/type column is the registry's class name made readable ("Table White Wine",
-  "Other Gin"), which is rarely the label's own wording, so that row is usually a review
-  item too. The producer name and address are split from the registry's applicant line
-  at the street address.
+  them as "left blank on the application" (review items); the class/type column is the
+  registry's class name made readable ("Table White Wine", "Other Gin"), which is rarely
+  the label's own wording, and the producer name is the permit holder's legal name, so
+  on a confident read most of these rows come back as corrections needed. That is the
+  check working on filed values that do not match the label, not a reading error. The
+  producer name and address are split from the registry's applicant line at the street
+  address.
 - Twenty rows are a demonstration (`scenario` = `filed-correctly`, `wrong-alcohol`,
   `wrong-net-contents`, `wrong-class`, `wrong-brand`, `near-miss-brand`, `blank-fields`).
   Their application values were transcribed from the label image by a person, then

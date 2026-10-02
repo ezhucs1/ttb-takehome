@@ -22,7 +22,7 @@ class TestClassTypeWrapped:
         extraction.class_type = make_field("Blood Orange Forward Gin")
         result = compare_class_type(application, extraction)
         assert result.verdict is Verdict.NEEDS_REVIEW
-        assert "contains the filed class" in result.reason
+        assert "one is the other with words added" in result.reason
 
     def test_malt_designation_with_qualifiers(self, application, extraction):
         application.beverage_type = BeverageType.MALT_BEVERAGE
@@ -39,6 +39,22 @@ class TestClassTypeWrapped:
         application.class_type = "Ale"
         extraction.class_type = make_field("Pale Lager")  # "ale" inside "pale" is not the class
         assert compare_class_type(application, extraction).verdict is Verdict.MISMATCH
+
+    def test_brand_with_a_word_dropped_needs_review(self, application, extraction):
+        application.brand_name = "Sounds Vineyard"
+        extraction.brand_name = make_field("SOUNDS")
+        result = compare_brand_name(application, extraction)
+        assert result.verdict is Verdict.NEEDS_REVIEW and "words added" in result.reason
+
+    def test_producer_with_a_suffix_needs_review(self, application, extraction):
+        application.producer_name = "SVP Winery"
+        extraction.producer_name = make_field("SVP Winery, LLC")
+        assert compare_producer_name(application, extraction).verdict is not Verdict.MISMATCH
+
+    def test_unrelated_brand_is_still_a_mismatch(self, application, extraction):
+        application.brand_name = "Kilchoman"
+        extraction.brand_name = make_field("NC'NEAN")
+        assert compare_brand_name(application, extraction).verdict is Verdict.MISMATCH
 
 
 class TestBrandName:

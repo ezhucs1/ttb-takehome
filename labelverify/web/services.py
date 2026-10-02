@@ -1480,6 +1480,74 @@ def _finish_batch(session_factory: sessionmaker, batch_id: str) -> None:
         db.commit()
 
 
+RESULT_WORDS = {
+    "approve": "all fields match",
+    "needs_review": "needs a look",
+    "request_correction": "corrections needed",
+    "error": "could not be checked",
+}
+
+
+def batch_results_csv(batch: Batch) -> str:
+    """One line per row of the batch with the check's outcome and every flagged field, so a
+    batch can be reviewed, filed or shared outside the app."""
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(
+        [
+            "row",
+            "image",
+            "brand_as_filed",
+            "application",
+            "result",
+            "reader",
+            "flagged_fields",
+            "details",
+        ]
+    )
+    for item in batch.items:
+        app = item.application
+        run = app.latest_run if app else None
+        result = result_of(run)
+        if item.status == "error" or app is None:
+            writer.writerow(
+                [
+                    item.row_number,
+                    item.image_name,
+                    item.brand_name,
+                    "",
+                    "could not be checked",
+                    "",
+                    "",
+                    item.error or "",
+                ]
+            )
+            continue
+        flagged = [
+            f
+            for f in (result.fields if result else [])
+            if f.verdict.value in ("mismatch", "needs_review")
+        ]
+        writer.writerow(
+            [
+                item.row_number,
+                item.image_name,
+                item.brand_name,
+                app.serial,
+                RESULT_WORDS.get(app.recommendation or "error", app.recommendation or ""),
+                run.extractor if run else "",
+                "; ".join(f"{f.field}={f.verdict.value}" for f in flagged),
+                " | ".join(
+                    f"{f.label}: application '{f.application_value}' vs label "
+                    f"'{f.label_value or ''}'. {f.reason}"
+                    for f in flagged
+                )
+                or (run.error if run and run.error else ""),
+            ]
+        )
+    return out.getvalue()
+
+
 def batch_summary(batch: Batch) -> dict[str, int]:
     counts = {"approve": 0, "needs_review": 0, "request_correction": 0, "error": 0}
     for item in batch.items:
