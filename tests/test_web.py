@@ -515,7 +515,9 @@ class TestApplicantWorkflow:
         page = applicant.get("/applicant/applications/new").text
         assert "data-form-rules=" in page and "27 CFR" in page and "Detect from the label" in page
         assert 'id="label-read"' in page and 'href="/rules"' in page and ">Reference<" in page
-        assert 'id="wizard-viewer"' in page and "data-viewer-toggle" in page  # zoomable label beside the form
+        assert (
+            'id="wizard-viewer"' in page and "data-viewer-toggle" in page
+        )  # zoomable label beside the form
         created = applicant.post(
             "/applicant/applications", data={"sample_id": "stones-throw-wine"}
         ).json()
@@ -1015,3 +1017,22 @@ class TestLocalFallback:
         assert fallback_extractor("claude").name == "tesseract"
         monkeypatch.setattr(TesseractExtractor, "available", staticmethod(lambda: False))
         assert fallback_extractor("claude") is None
+
+
+def test_a_second_read_in_the_wizard_replaces_the_first_draft(applicant, app):
+    from labelverify.web.models import Application
+
+    first = applicant.post(
+        "/applicant/applications",
+        data={"sample_id": "old-tom-bourbon"},
+        headers={"Accept": "application/json"},
+    ).json()
+    second = applicant.post(
+        "/applicant/applications",
+        data={"sample_id": "stones-throw-wine", "replace_draft_id": first["id"]},
+        headers={"Accept": "application/json"},
+    ).json()
+    assert second["prefill"]["brand_name"] == "STONE'S THROW"
+    with app.state.session_factory() as db:
+        assert db.get(Application, first["id"]) is None
+        assert db.get(Application, second["id"]) is not None

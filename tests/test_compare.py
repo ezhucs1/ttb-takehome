@@ -649,3 +649,48 @@ class TestMaltRules:
         application.class_type = "Vodka"
         extraction.class_type = make_field("Vodka")
         assert compare_net_contents(application, extraction).verdict is Verdict.MISMATCH
+
+
+class TestUncertainRead:
+    """An OCR-grade read: nothing it did not find counts as missing."""
+
+    @staticmethod
+    def _ocr_grade(extraction):
+        for name in (
+            "brand_name",
+            "class_type",
+            "alcohol_content",
+            "net_contents",
+            "producer_name",
+            "producer_address",
+            "qualifying_phrase",
+            "age_statement",
+        ):
+            setattr(extraction, name, make_field(getattr(extraction, name).value, confidence=0.45))
+        extraction.health_warning.confidence = 0.45
+
+    def test_absences_become_review_but_differences_stay_findings(self, application, extraction):
+        from labelverify.engine.compare import read_is_uncertain
+
+        self._ocr_grade(extraction)
+        assert read_is_uncertain(extraction)
+        extraction.net_contents = make_field(None)  # OCR missed the volume line
+        extraction.alcohol_content = make_field(
+            "40% Alc./Vol.", confidence=0.45
+        )  # a real difference
+        result = verify(application, extraction)
+        net = result.field("net_contents")
+        assert net.verdict is Verdict.NEEDS_REVIEW and net.uncertain
+        assert "confirm on the image" in net.reason
+        assert result.field("alcohol_content").verdict is Verdict.MISMATCH
+        assert result.recommendation is Recommendation.REQUEST_CORRECTION
+        assert any("did not find: Net Contents" in line for line in result.summary)
+
+    def test_a_confident_read_keeps_absences_as_findings(self, application, extraction):
+        from labelverify.engine.compare import read_is_uncertain
+
+        assert not read_is_uncertain(extraction), [
+            (n, getattr(extraction, n).confidence) for n in ("brand_name", "class_type")
+        ]
+        extraction.net_contents = make_field(None)
+        assert verify(application, extraction).field("net_contents").verdict is Verdict.MISMATCH

@@ -696,6 +696,34 @@ def compare_country_of_origin(
     )
 
 
+def read_is_uncertain(extraction: LabelExtraction) -> bool:
+    """True when nothing in the read reached ordinary confidence: an OCR read, or a model
+    read of an image it could barely make out. Absence from such a read is not evidence of
+    absence from the label."""
+    confidences = [
+        getattr(extraction, name).confidence
+        for name, field in LabelExtraction.model_fields.items()
+        if field.annotation is ExtractedField and getattr(extraction, name).value
+    ]
+    if extraction.health_warning.present:
+        confidences.append(extraction.health_warning.confidence)
+    return bool(confidences) and max(confidences) <= LOW_CONFIDENCE
+
+
+def _soften_absences(fields: list[FieldResult]) -> list[str]:
+    """On an uncertain read, a required item the reader did not find is a review item,
+    not a finding: the reader misses text far more often than labels omit it. Real
+    differences in what was read stay mismatches. Returns the labels softened."""
+    softened = []
+    for f in fields:
+        if f.verdict is Verdict.MISMATCH and not (f.label_value or "").strip():
+            f.verdict = Verdict.NEEDS_REVIEW
+            f.uncertain = True
+            f.reason += " The reader was uncertain, so confirm on the image before treating this as missing."
+            softened.append(f.label)
+    return softened
+
+
 def _apply_confidence_gate(result: FieldResult) -> FieldResult:
     """A match from a low-confidence read is never an unattended match.
 
@@ -1086,6 +1114,7 @@ def _verify_with(
         if row is not None:
             fields.append(_apply_confidence_gate(row))
     fields.append(_apply_confidence_gate(check_health_warning(extraction.health_warning)))
+    softened = _soften_absences(fields) if read_is_uncertain(extraction) else []
     for f in fields:
         rule = rules.fields.get(f.field)
         if rule is not None:
@@ -1122,7 +1151,7 @@ def _verify_with(
         for f in fields:
             if f.verdict is Verdict.NEEDS_REVIEW:
                 summary.append(f"{f.label}: {f.reason}")
-        uncertain = [f.label for f in fields if f.uncertain]
+        uncertain = [f.label for f in fields if f.uncertain and f.label not in softened]
         if uncertain:
             summary.append(
                 f"{len(uncertain)} matching field{'s' if len(uncertain) != 1 else ''} came from "
@@ -1131,6 +1160,11 @@ def _verify_with(
     else:
         recommendation = Recommendation.APPROVE
         summary.append("All required fields match the application.")
+    if softened:  # whatever the roll-up, say what the uncertain read did not find
+        summary.append(
+            f"The read was uncertain and did not find: {', '.join(softened)}. Shown as "
+            "review rather than missing; confirm on the image."
+        )
 
     return VerificationResult(
         recommendation=recommendation,

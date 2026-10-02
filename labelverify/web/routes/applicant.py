@@ -102,8 +102,14 @@ async def create_application(
     images: list[UploadFile] = File(default=[]),
     sample_id: str = Form(""),
     beverage_type: str = Form(""),
+    replace_draft_id: str = Form(""),
 ):
-    """Step 1: store the label set, run extraction, and return pre-filled form values."""
+    """Step 1: store the label set, run extraction, and return pre-filled form values.
+    A second read from the same wizard replaces the draft the first read created."""
+    if replace_draft_id:
+        previous = db.get(Application, replace_draft_id)
+        if previous is not None and previous.applicant_id == user.id:
+            services.discard_draft(db, previous)
     try:
         uploads = await read_uploads(images)
         if not uploads and sample_id:

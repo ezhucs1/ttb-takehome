@@ -314,6 +314,7 @@
     const submitForm = $("#submit-form");
     const submitBtn = $("#submit-btn");
     let applicationId = null;
+    const precheckPlaceholder = $("#precheck-result") ? $("#precheck-result").innerHTML : "";
 
     function pickSample(btn) {
       sampleInput.value = btn.dataset.sampleId;
@@ -343,7 +344,9 @@
       status.innerHTML = '<span class="spinner"></span> Reading the label…';
       const started = performance.now();
       try {
-        const resp = await fetch(uploadForm.action, { method: "post", body: new FormData(uploadForm), headers: { Accept: "application/json" } });
+        const body = new FormData(uploadForm);
+        if (applicationId) body.append("replace_draft_id", applicationId); // the earlier read's draft is replaced
+        const resp = await fetch(uploadForm.action, { method: "post", body, headers: { Accept: "application/json" } });
         const data = await resp.json();
         if (!resp.ok) { status.textContent = data.detail || "Upload failed."; return; }
         applicationId = data.id;
@@ -384,6 +387,11 @@
         status.textContent = `Read ${n > 1 ? n + " images" : "the label"} in ${secs} s · ${data.serial}`;
       }
       {
+        // A new label: nothing from the previous one may linger in steps 2 and 3.
+        detailsForm.reset();
+        $("#precheck-result").innerHTML = precheckPlaceholder;
+        $("#step-2").classList.remove("step-done");
+        $("#step-3").classList.remove("step-done");
         for (const [key, value] of Object.entries(data.prefill || {})) {
           const el = detailsForm.elements[key];
           if (el) el.value = value;

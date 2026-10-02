@@ -503,6 +503,15 @@ def create_draft(
     return app
 
 
+def discard_draft(db: Session, app: Application) -> bool:
+    """Delete an unsubmitted draft (its images and runs go with it). False if not a draft."""
+    if app.status != ApplicationStatus.DRAFT.value:
+        return False
+    db.delete(app)
+    db.flush()
+    return True
+
+
 def update_fields(app: Application, data: ApplicationData) -> None:
     for key, value in _column_values(data).items():
         setattr(app, key, value)
