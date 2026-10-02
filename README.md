@@ -4,10 +4,9 @@ AI-assisted alcohol label verification for TTB COLA review.
 
 **Live demo:** <https://labelverify-429e03fa.azurewebsites.net>, on Azure App Service,
 always on. Sign in with the accounts under "Run it locally"; the dialog hides them on a
-public URL. The demo reads labels with a paid model: one label costs about $0.02 to
-$0.06 to read, so please run the batch uploads two or three times at most. The deployment
-caps paid reads per day; past the cap, uploads say so and the bundled samples keep
-working.
+public URL. A note for testers: the demo reads labels with a paid model on a limited
+budget, and one label costs about $0.02 to $0.06 to read. Please test with that in mind,
+and run the batch uploads two or three times at most.
 
 Applicants upload label artwork, the engine reads it and compares every required field
 against the application, and a labeling specialist confirms the result. The tool
@@ -437,8 +436,8 @@ always-on tier with a persistent disk so the demo does not hit a cold start.
 
 Every public deployment sets the same guards, as environment variables any host can set:
 the sign-in dialog shows no demo credentials (reviewers take them from this README),
-paid model reads are capped per day so an open link cannot run up the API bill, and the
-session cookie is Secure.
+paid model reads can be capped per day (`LABELVERIFY_DAILY_READ_LIMIT`) so an open link
+cannot run up the API bill, and the session cookie is Secure.
 
 ### Security basics
 
@@ -476,7 +475,7 @@ deployment adds on top (identity provider, MFA, audit log, scanning).
 | `LABELVERIFY_MODEL` | `claude-sonnet-5-5` | Extraction model. Measured at 4.1 s on the hardest sample; `claude-haiku-4-5` is faster if its reads hold up |
 | `LABELVERIFY_NOTICE_MODEL` | `claude-sonnet-5-5` | Claude model for the notice rewrite when the provider is `claude` |
 | `LABELVERIFY_EXTRACT_TIMEOUT` | `20` | Seconds before a one-image read is abandoned; each extra panel adds half again (a front-and-back set gets 30 s). A failed read in the wizard offers "Read again" on the stored images |
-| `LABELVERIFY_DAILY_READ_LIMIT` | unlimited | Paid model reads allowed per UTC day; after that uploads get a clear message and the sample labels still work. Set it on any public URL |
+| `LABELVERIFY_DAILY_READ_LIMIT` | unlimited | Paid model reads allowed per UTC day; after that uploads get a clear message and the sample labels still work |
 | `LABELVERIFY_DEMO_ACCOUNTS` | `true` | Show the demo account list in the sign-in dialog. Set `false` on a public URL; reviewers use the accounts in this README |
 | `LABELVERIFY_REPO_URL` | this repository | GitHub link on the landing page |
 | `LABELVERIFY_TESSERACT_CMD` | found on PATH | Full path of the tesseract executable when the app cannot find it on its own |
