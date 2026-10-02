@@ -9,6 +9,11 @@
 #
 #   ANTHROPIC_API_KEY=sk-ant-... GEMINI_API_KEY=... scripts/deploy_azure.sh
 #
+# Free and trial subscriptions start with a quota of zero B1 instances. Either request
+# one (portal: Quotas > App Service > B1 > request 1; usually granted in minutes) or run
+# with SKU=F1 for the free tier, which has no Always On: the first request after twenty
+# idle minutes is slow, after that it answers normally.
+#
 # Claude reads the labels. With GEMINI_API_KEY set, Gemini words the specialist's
 # correction notices (its free tier covers that call); without it, Claude does.
 #
@@ -19,7 +24,8 @@ set -euo pipefail
 : "${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY (the model key the deployment will use)}"
 RG="${RG:-labelverify-rg}"
 LOCATION="${LOCATION:-eastus}"
-APP="${APP:-labelverify-$(printf '%06x' $(( (RANDOM << 15) | RANDOM )))}"   # globally unique host name
+# One stable name per subscription, so a re-run reuses the registry, plan and app.
+APP="${APP:-labelverify-$(az account show --query id --output tsv | cut -c1-8)}"
 ACR="${ACR:-$(echo "$APP" | tr -d -)}"                                   # registry names: letters and digits only
 PLAN="${PLAN:-$APP-plan}"
 SKU="${SKU:-B1}"                                                         # Basic: Always On is available
@@ -53,7 +59,8 @@ fi
 
 # 2. The plan and the web app.
 az appservice plan show --name "$PLAN" --resource-group "$RG" --output none 2>/dev/null \
-  || az appservice plan create --name "$PLAN" --resource-group "$RG" --is-linux --sku "$SKU" --output none
+  || az appservice plan create --name "$PLAN" --resource-group "$RG" --location "$LOCATION" \
+       --is-linux --sku "$SKU" --output none
 if ! az webapp show --name "$APP" --resource-group "$RG" --output none 2>/dev/null; then
   az webapp create --name "$APP" --resource-group "$RG" --plan "$PLAN" \
     --container-image-name "$REGISTRY/$IMAGE" \
@@ -80,7 +87,9 @@ az webapp config appsettings set --name "$APP" --resource-group "$RG" --output n
   LABELVERIFY_DAILY_READ_LIMIT="${LABELVERIFY_DAILY_READ_LIMIT:-150}" \
   LABELVERIFY_FALLBACK=tesseract \
   ${GEMINI_API_KEY:+GEMINI_API_KEY="$GEMINI_API_KEY" LABELVERIFY_NOTICE_PROVIDER=gemini}
-az webapp config set --name "$APP" --resource-group "$RG" --always-on true --http20-enabled true \
+ALWAYS_ON=true
+case "$SKU" in F1|FREE|Free|free|D1|SHARED|Shared|shared) ALWAYS_ON=false ;; esac   # not offered on these tiers
+az webapp config set --name "$APP" --resource-group "$RG" --always-on "$ALWAYS_ON" --http20-enabled true \
   --generic-configurations '{"healthCheckPath": "/healthz"}' --output none
 az webapp update --name "$APP" --resource-group "$RG" --https-only true --output none
 az webapp restart --name "$APP" --resource-group "$RG" --output none

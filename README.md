@@ -386,9 +386,11 @@ not in the docker group. The database, the stored images and the
 session secret live under `/home`, which App Service persists across restarts and
 deployments. Re-running the script with the same `APP` name rebuilds and redeploys.
 `az group delete --name labelverify-rg` removes everything. On a free Azure account the
-B1 plan comes out of the credit; App Service's free tier would also run it, but it
-sleeps after twenty minutes idle and the first request after that takes long enough to
-fail the brief's five-second test.
+B1 plan comes out of the credit, but the account starts with a quota of zero B1
+instances: request one in the portal (Quotas, App Service, B1, usually granted within
+minutes), or run `SKU=F1 scripts/deploy_azure.sh` for the free tier, which has no Always
+On. The free tier sleeps after twenty minutes idle and the first request after that is
+slow, which is the one way a reviewer could see a cold start.
 
 **Docker**, anywhere:
 
