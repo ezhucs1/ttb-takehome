@@ -1,10 +1,10 @@
 # Fly.io deployment. One always-on machine (no cold starts) with a persistent volume
 # for the SQLite database and stored label images.
 #
-#   fly launch --copy-config --no-deploy
-#   fly volumes create labelverify_data --size 1
-#   fly secrets set ANTHROPIC_API_KEY=... SECRET_KEY=$(openssl rand -hex 32)
-#   fly deploy
+#   fly launch --copy-config --no-deploy --yes --name <unique-name> --region iad
+#   fly volumes create labelverify_data --size 1 --region iad --yes
+#   fly secrets set ANTHROPIC_API_KEY=... GEMINI_API_KEY=... LABELVERIFY_NOTICE_PROVIDER=gemini SECRET_KEY=$(openssl rand -hex 32)
+#   fly deploy --remote-only
 
 app = "labelverify"
 primary_region = "iad"
@@ -29,6 +29,11 @@ primary_region = "iad"
   auto_stop_machines = false
   auto_start_machines = true
   min_machines_running = 1
+
+[[vm]]
+  # Python, Pillow and a Tesseract pass during a batch need more than the 256 MB default.
+  size = "shared-cpu-1x"
+  memory = "1gb"
 
 [[http_service.checks]]
   interval = "30s"
