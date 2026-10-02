@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from sqlalchemy.orm import Session
 
+from ...engine.notices import flagged_fields
 from .. import services
 from ..auth import require_specialist
 from ..db import get_db
@@ -126,7 +127,7 @@ def review(
         comments=services.comments_by_field(app),
         can_comment=not app.is_decided,
         latest_notice=app.notices[-1] if app.notices else None,
-        flagged=services.flagged_fields(result) if result else [],
+        flagged=flagged_fields(result) if result else [],
         unread=unread,
     )
 

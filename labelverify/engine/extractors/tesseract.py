@@ -12,6 +12,7 @@ import re
 import shutil
 from collections.abc import Sequence
 from io import BytesIO
+from pathlib import Path
 
 from ..models import ExtractedField, HealthWarningExtraction, ImageQuality, LabelExtraction
 from ..normalize import STATE_NAMES, VOLUME_RE
@@ -105,11 +106,11 @@ def tesseract_command() -> str | None:
     install locations. None when nothing is found."""
     configured = os.environ.get("LABELVERIFY_TESSERACT_CMD", "").strip()
     if configured:
-        return configured if os.path.exists(configured) else shutil.which(configured)
+        return configured if Path(configured).exists() else shutil.which(configured)
     found = shutil.which("tesseract")
     if found:
         return found
-    return next((place for place in _USUAL_PLACES if os.path.exists(place)), None)
+    return next((place for place in _USUAL_PLACES if Path(place).exists()), None)
 
 
 class TesseractExtractor:

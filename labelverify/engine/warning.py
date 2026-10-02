@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import difflib
 import re
-from functools import lru_cache
+from functools import lru_cache, partial
 
 from .models import FieldResult, HealthWarningExtraction, Verdict, WordDiff
 from .normalize import collapse_whitespace, normalize_words
@@ -92,7 +92,8 @@ def _tokens(text: str) -> list[tuple[str, str]]:
 
 
 def check_health_warning(extraction: HealthWarningExtraction) -> FieldResult:
-    base = dict(
+    result = partial(
+        FieldResult,
         field="health_warning",
         label="Government Health Warning",
         application_value=STATUTORY_TEXT,
@@ -100,11 +101,10 @@ def check_health_warning(extraction: HealthWarningExtraction) -> FieldResult:
     )
 
     if not extraction.present or not extraction.text:
-        return FieldResult(
+        return result(
             verdict=Verdict.MISMATCH,
             label_value=None,
             reason="No Government Health Warning Statement was found on the label.",
-            **base,
         )
 
     heading, body = split_heading(extraction.text)
@@ -165,11 +165,10 @@ def check_health_warning(extraction: HealthWarningExtraction) -> FieldResult:
             else "Statement matches the required wording; heading is capitalized."
         )
 
-    return FieldResult(
+    return result(
         verdict=verdict,
         label_value=collapse_whitespace(extraction.text),
         reason=reason,
         notes=notes + (review_reasons if problems else []),
         diff=diff,
-        **base,
     )

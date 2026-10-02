@@ -239,7 +239,7 @@ class TestLifecycle:
         sarah = users["sarah.chen@ttb.gov"]
         c = services.add_comment(db, app, sarah, "brand_name", "Please confirm the apostrophe.")
         services.add_comment(db, app, applicant, "brand_name", "Confirmed, it is printed as shown.")
-        services.resolve_comment(db, c)
+        services.resolve_comment(c)
         assert c.resolved is True
         with pytest.raises(services.WorkflowError):
             services.add_comment(db, app, sarah, "nope", "x")

@@ -58,7 +58,7 @@ def _safe_next(user: User, next_url: str) -> str:
     if not next_url.startswith("/") or next_url.startswith("//"):
         return _home_for(user)
     other = "/applicant" if user.role == Role.SPECIALIST else "/specialist"
-    if next_url == other or next_url.startswith(other + "/") or next_url.startswith(other + "?"):
+    if next_url == other or next_url.startswith((other + "/", other + "?")):
         return _home_for(user)
     return next_url
 
@@ -247,7 +247,7 @@ def resolve_comment(
     comment = db.get(Comment, comment_id)
     if comment is None or comment.application_id != app.id:
         raise HTTPException(404, "Comment not found.")
-    services.resolve_comment(db, comment, resolved.lower() == "true")
+    services.resolve_comment(comment, resolved.lower() == "true")
     db.commit()
     return renderer(request).partial(
         request,

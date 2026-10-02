@@ -52,9 +52,12 @@ class HardeningMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
-        if request.method in _UNSAFE_METHODS and not path.startswith("/api/"):
-            if not _same_site(request):
-                return JSONResponse({"detail": "Cross-site request refused."}, status_code=403)
+        if (
+            request.method in _UNSAFE_METHODS
+            and not path.startswith("/api/")
+            and not _same_site(request)
+        ):
+            return JSONResponse({"detail": "Cross-site request refused."}, status_code=403)
         response = await call_next(request)
         headers = response.headers
         headers.setdefault("X-Content-Type-Options", "nosniff")

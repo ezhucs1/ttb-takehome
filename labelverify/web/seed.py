@@ -87,10 +87,6 @@ def seed_users(db: Session) -> dict[str, User]:
     return users
 
 
-def _applicant_for(sample_id: str, users: dict[str, User]) -> User:
-    return users[APPLICANT_EMAIL]
-
-
 def _default_state(expected: str, seen: dict[str, int]) -> str:
     """Spread samples across workflow states so every screen has content on first run."""
     n = seen.get(expected, 0)
@@ -117,7 +113,7 @@ def seed_applications(db: Session, users: dict[str, User], samples_dir: Path = S
     created = 0
     seen: dict[str, int] = {}
     for n, sample in enumerate(manifest):
-        applicant = _applicant_for(sample["id"], users)
+        applicant = users[APPLICANT_EMAIL]
         image = (samples_dir / sample["file"]).read_bytes()
         data = ApplicationData.model_validate(sample["application"])
         app = services.create_draft(db, applicant, data, [(image, sample["file"])])

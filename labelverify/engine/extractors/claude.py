@@ -16,6 +16,7 @@ from __future__ import annotations
 import base64
 import os
 from collections.abc import Sequence
+from typing import Any
 
 import anthropic
 
@@ -184,13 +185,15 @@ class ClaudeExtractor:
         if not panels:
             raise ExtractionError("No label images were provided.")
         timeout = self.timeout_for(len(panels))
-        request: dict = dict(
-            model=self.model,
-            max_tokens=8192,
-            timeout=timeout,
-            system=SYSTEM_PROMPT if self.structured_output else SYSTEM_PROMPT + OUTPUT_INSTRUCTIONS,
-            messages=self.build_messages(panels),
-        )
+        request: dict[str, Any] = {
+            "model": self.model,
+            "max_tokens": 8192,
+            "timeout": timeout,
+            "system": SYSTEM_PROMPT
+            if self.structured_output
+            else SYSTEM_PROMPT + OUTPUT_INSTRUCTIONS,
+            "messages": self.build_messages(panels),
+        }
         if self.structured_output:
             request["output_format"] = LabelExtraction
         if supports_effort(self.model):

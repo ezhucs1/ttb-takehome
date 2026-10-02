@@ -219,7 +219,7 @@ class TestSulfiteDeclaration:
         assert fields["sulfite_declaration"].verdict is Verdict.NEEDS_REVIEW
         assert fields["sulfite_declaration"].citation == "27 CFR 4.32(e)"
         extraction.sulfite_declaration = make_field("Contains Sulfites")
-        assert compare_sulfite_declaration(application, extraction).verdict is Verdict.MATCH
+        assert compare_sulfite_declaration(extraction).verdict is Verdict.MATCH
 
 
 class TestClassResolution:

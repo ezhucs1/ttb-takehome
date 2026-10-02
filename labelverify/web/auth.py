@@ -6,6 +6,7 @@ stores it on ``request.state.user``; the dependencies below read from there.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import hmac
 import logging
@@ -138,10 +139,8 @@ def secret_key(data_dir: str | os.PathLike | None = None, *, database_url: str =
     try:
         directory.mkdir(parents=True, exist_ok=True)
         path.write_text(key)
-        try:
+        with contextlib.suppress(OSError):
             path.chmod(0o600)
-        except OSError:
-            pass
     except OSError as exc:
         log.warning("could not store a secret key at %s (%s); sessions end on restart", path, exc)
     return key
