@@ -906,7 +906,7 @@ class ActivityItem:
 
     kind: str  # comment | notice | status
     item_id: str
-    app: Application
+    app: Application | None  # None on a batch line
     created_at: datetime
     actor: User | None
     field: str  # comment field, "general", or "" for notices and decisions
@@ -923,82 +923,157 @@ class ActivityItem:
         return "notice" if self.kind == "notice" else "history"
 
 
-def _fold_batches(db: Session, items: list[ActivityItem], user: User) -> list[ActivityItem]:
-    """Activity on a batch's rows is one inbox line per batch, not one per row: sixty
-    submissions are one event to the specialist, and sixty decisions one to the applicant.
-    The line links to the batch page, which opens every row's items."""
-    by_batch: dict[str, list[ActivityItem]] = {}
-    kept: list[ActivityItem] = []
-    for item in items:
-        if item.app.batch_id:
-            by_batch.setdefault(item.app.batch_id, []).append(item)
-        else:
-            kept.append(item)
-    for batch_id, members in by_batch.items():
-        batch = db.get(Batch, batch_id)
-        if batch is None:
-            kept.extend(members)
+def _batch_lines(
+    db: Session,
+    user: User,
+    batch_of: dict[str, str],
+    unread_apps: set[str],
+) -> list[ActivityItem]:
+    """One inbox line per batch, from grouped counts rather than per-row items: three
+    hundred submissions or decisions are one line, and the queries stay three however
+    many rows the batch has. ``batch_of`` maps each batch row's application id to its
+    batch; ``unread_apps`` is the set of those rows with something unread."""
+    if not batch_of:
+        return []
+    app_ids = list(batch_of)
+    other = other_role(user)
+    watched = [s.value for s in FEED_STATUSES[Role(user.role)]]
+    per: dict[str, dict] = {}
+
+    def note(app_id: str, key: str, n: int, latest: datetime | None) -> None:
+        b = per.setdefault(
+            batch_of[app_id],
+            {"comments": 0, "notices": 0, "resubmitted": 0, "latest": None},
+        )
+        b[key] = b.get(key, 0) + n
+        if latest is not None and (b["latest"] is None or latest > b["latest"]):
+            b["latest"] = latest
+
+    for app_id, n, latest in db.execute(
+        select(Comment.application_id, func.count(), func.max(Comment.created_at))
+        .join(User, Comment.author_id == User.id)
+        .where(User.role == other, Comment.application_id.in_(app_ids))
+        .group_by(Comment.application_id)
+    ):
+        note(app_id, "comments", n, latest)
+    for app_id, to_status, n, latest in db.execute(
+        select(
+            StatusEvent.application_id,
+            StatusEvent.to_status,
+            func.count(),
+            func.max(StatusEvent.created_at),
+        )
+        .join(User, StatusEvent.actor_id == User.id)
+        .where(
+            User.role == other,
+            StatusEvent.to_status.in_(watched),
+            StatusEvent.application_id.in_(app_ids),
+        )
+        .group_by(StatusEvent.application_id, StatusEvent.to_status)
+    ):
+        note(app_id, to_status, n, latest)
+    if user.role == Role.APPLICANT:
+        for app_id, n, latest in db.execute(
+            select(Notice.application_id, func.count(), func.max(Notice.created_at))
+            .where(Notice.application_id.in_(app_ids))
+            .group_by(Notice.application_id)
+        ):
+            note(app_id, "notices", n, latest)
+    if not per:
+        return []
+    batches = {
+        b.id: b
+        for b in db.scalars(
+            select(Batch).where(Batch.id.in_(list(per))).options(selectinload(Batch.applicant))
+        )
+    }
+    unread_batches = {batch_of[a] for a in unread_apps if a in batch_of}
+    lines = []
+    for batch_id, counts in per.items():
+        batch = batches.get(batch_id)
+        if batch is None or counts["latest"] is None:
             continue
-        latest = max(members, key=lambda i: i.created_at)
-        kept.append(
+        actor = batch.applicant if user.role == Role.SPECIALIST else _batch_specialist(db, batch)
+        lines.append(
             ActivityItem(
                 "batch",
                 batch_id,
-                latest.app,
-                latest.created_at,
-                latest.actor,
+                None,
+                counts["latest"],
+                actor,
                 "",
-                _batch_activity_text(db, batch, members, user),
-                any(i.unread for i in members),
-                status=latest.status,
+                _batch_activity_text(db, batch, counts, user),
+                batch_id in unread_batches,
+                status="",
                 batch=batch,
-                count=len(members),
+                count=sum(v for k, v in counts.items() if k != "latest"),
             )
         )
-    return kept
+    return lines
 
 
-def _batch_activity_text(db: Session, batch: Batch, members: list[ActivityItem], user: User) -> str:
+def _batch_specialist(db: Session, batch: Batch) -> User | None:
+    """Whoever decided a row of the batch, for the applicant's inbox line."""
+    return db.scalar(
+        select(User)
+        .join(Application, Application.specialist_id == User.id)
+        .where(Application.batch_id == batch.id)
+        .limit(1)
+    )
+
+
+def _batch_activity_text(db: Session, batch: Batch, counts: dict, user: User) -> str:
     """One sentence for a batch line: what happened across its rows."""
+    replies = counts.get("comments", 0)
     if user.role == Role.SPECIALIST:
-        resubmitted = sum(1 for i in members if i.status == ApplicationStatus.RESUBMITTED.value)
-        replies = sum(1 for i in members if i.kind == "comment")
         parts = [f"a batch of {batch.total} labels, {batch.completed} checked"]
-        if resubmitted:
-            parts.append(f"{resubmitted} resubmitted")
+        if counts.get("resubmitted"):
+            parts.append(f"{counts['resubmitted']} resubmitted")
         if replies:
             parts.append(f"{replies} repl{'ies' if replies != 1 else 'y'}")
         return "; ".join(parts)
-    counts = batch_decisions(db, batch)
+    decided = batch_decisions(db, batch)
     parts = []
-    if counts["approved"]:
-        parts.append(f"{counts['approved']} approved")
-    if counts["correction_requested"]:
-        parts.append(
-            f"{counts['correction_requested']} correction request{'s' if counts['correction_requested'] != 1 else ''}"
-        )
-    if counts["rejected"]:
-        parts.append(f"{counts['rejected']} rejected")
-    replies = sum(1 for i in members if i.kind == "comment")
+    if decided["approved"]:
+        parts.append(f"{decided['approved']} approved")
+    if decided["correction_requested"]:
+        n = decided["correction_requested"]
+        parts.append(f"{n} correction request{'s' if n != 1 else ''}")
+    if decided["rejected"]:
+        parts.append(f"{decided['rejected']} rejected")
     if replies:
         parts.append(f"{replies} question{'s' if replies != 1 else ''} on fields")
-    if counts["open"]:
-        parts.append(f"{counts['open']} still waiting")
+    if decided["open"]:
+        parts.append(f"{decided['open']} still waiting")
     return ", ".join(parts) or "activity on the batch"
 
 
 def activity_feed(db: Session, user: User, *, limit: int = 40) -> list[ActivityItem]:
     """The other party's recent activity across the user's applications, newest first."""
-    ids = _scoped_app_ids(db, user)
-    if not ids:
+    scoped = _scoped_app_ids(db, user)
+    if not scoped:
         return []
+    # Rows of a batch are folded into one line per batch from grouped counts; only single
+    # applications are listed item by item, so a large batch never crowds them out.
+    batch_of = dict(
+        db.execute(
+            select(Application.id, Application.batch_id).where(
+                Application.id.in_(scoped), Application.batch_id.is_not(None)
+            )
+        ).all()
+    )
+    ids = [i for i in scoped if i not in batch_of]
     seen = _seen_map(db, user, ids)
     read = _read_keys(db, user)
+    unread_rows = set(unread_counts(db, user, list(batch_of))) if batch_of else set()
+    items: list[ActivityItem] = _batch_lines(db, user, batch_of, unread_rows)
+    if not ids:
+        items.sort(key=lambda i: i.created_at, reverse=True)
+        return items[:limit]
 
     def is_unread(kind: str, item_id: str, app_id: str, created_at: datetime) -> bool:
         return _after(created_at, seen.get(app_id)) and (kind, item_id) not in read
 
-    items: list[ActivityItem] = []
     other = other_role(user)
     for c in db.scalars(
         select(Comment)
@@ -1066,7 +1141,6 @@ def activity_feed(db: Session, user: User, *, limit: int = 40) -> list[ActivityI
                     is_unread("notice", n.id, n.application_id, n.created_at),
                 )
             )
-    items = _fold_batches(db, items, user)
     items.sort(key=lambda i: i.created_at, reverse=True)
     return items[:limit]
 

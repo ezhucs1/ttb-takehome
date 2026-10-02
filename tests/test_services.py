@@ -6,6 +6,7 @@ import io
 import zipfile
 
 import pytest
+from sqlalchemy import select
 
 from labelverify.engine.extractors import DemoExtractor, FixtureExtractor
 from labelverify.engine.extractors.demo import SAMPLES_DIR, load_manifest
@@ -14,7 +15,7 @@ from labelverify.engine.preprocess import UnreadableImageError
 from labelverify.web import services
 from labelverify.web.auth import verify_password
 from labelverify.web.db import init_db, make_engine, make_session_factory
-from labelverify.web.models import ApplicationStatus, Role
+from labelverify.web.models import Application, ApplicationStatus, Role, User
 from labelverify.web.seed import DEMO_PASSWORD, seed, seed_users
 
 
@@ -686,3 +687,89 @@ def test_label_carries_covers_every_label_only_checklist_item():
     assert found["appellation"] == "NAPA VALLEY" and found["vintage_year"] == "2021"
     assert found["estate_bottled"] == "ESTATE BOTTLED" and found["sulfite_declaration"]
     assert found["age_statement"] is None and found["health_warning"]
+
+
+class TestBatchInbox:
+    """A batch is one inbox line built from grouped counts, so its rows never crowd the
+    single applications out of the feed, and the badge counts it once."""
+
+    def _batch(self, db, session_factory, users, names: list[str]):
+        import io
+        import zipfile
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            for name in names:
+                zf.writestr(f"{name}.png", sample_bytes(name))
+        header = ",".join(services.BATCH_COLUMNS)
+        lines = [header] + [
+            ",".join(
+                f'"{v}"'
+                for v in (
+                    f"{name}.png",
+                    "distilled_spirits",
+                    "OLD TOM DISTILLERY",
+                    "Kentucky Straight Bourbon Whiskey",
+                    "45% Alc./Vol. (90 Proof)",
+                    "750 mL",
+                    "Old Tom Distillery",
+                    "Bardstown, KY",
+                    "false",
+                    "",
+                )
+            )
+            for name in names
+        ]
+        parsed = services.parse_batch("\n".join(lines).encode(), buf.getvalue())
+        assert parsed.errors == []
+        batch = services.create_batch(db, users["maria@alvarezlabels.com"], "big.csv", parsed)
+        db.commit()
+        services.process_batch(session_factory, batch.id, parsed, DemoExtractor())
+        return batch.id
+
+    def test_a_batch_is_one_line_and_does_not_crowd_out_single_applications(
+        self, db, session_factory, users
+    ):
+        sarah = users["sarah.chen@ttb.gov"]
+        single, applicant = make_app(db, users, "old-tom-bourbon")
+        services.submit(db, single, applicant)
+        db.commit()
+        batch_id = self._batch(
+            db,
+            session_factory,
+            users,
+            ["old-tom-bourbon", "old-tom-abv-mismatch", "old-tom-angled-photo"],
+        )
+        with session_factory() as fresh:
+            sarah = fresh.get(User, sarah.id)
+            feed = services.activity_feed(fresh, sarah, limit=2)  # smaller than the batch
+            kinds = [(i.kind, i.app.id if i.app else i.batch.id) for i in feed]
+            assert kinds == [("batch", batch_id), ("status", single.id)]
+            line = feed[0]
+            assert line.unread and line.batch.total == 3 and "a batch of 3 labels" in line.text
+            assert line.actor is not None and line.actor.id == applicant.id
+            assert services.unread_total(fresh, sarah) == 2  # the batch once, the single once
+            # Opening the batch reads its rows; the single application stays new.
+            services.open_batch_items(fresh, sarah, batch_id)
+            fresh.commit()
+            assert not services.activity_feed(fresh, sarah)[0].unread
+            assert services.unread_total(fresh, sarah) == 1
+
+    def test_the_applicant_sees_decisions_on_a_batch_as_one_line(self, db, session_factory, users):
+        sarah = users["sarah.chen@ttb.gov"]
+        batch_id = self._batch(db, session_factory, users, ["old-tom-bourbon", "stones-throw-wine"])
+        with session_factory() as fresh:
+            sarah = fresh.get(User, sarah.id)
+            maria = fresh.get(User, users["maria@alvarezlabels.com"].id)
+            rows = list(fresh.scalars(select(Application).where(Application.batch_id == batch_id)))
+            clean = [a.id for a in rows if a.recommendation == "approve"]
+            assert services.bulk_approve(fresh, sarah, clean) == 1
+            other = next(a for a in rows if a.id not in clean)
+            services.decide(fresh, other, sarah, "reject", note="Wrong product filed.")
+            fresh.commit()
+            feed = services.activity_feed(fresh, maria)
+            batch_lines = [i for i in feed if i.kind == "batch"]
+            assert len(batch_lines) == 1
+            assert "1 approved" in batch_lines[0].text and "1 rejected" in batch_lines[0].text
+            assert batch_lines[0].actor is not None and batch_lines[0].actor.id == sarah.id
+            assert not any(i.kind == "status" and i.app and i.app.batch_id for i in feed)

@@ -39,7 +39,7 @@
       </div>
       <p class="inbox-text">{{ i.text | truncate(160) }}</p>
       <div class="inbox-meta">
-        {% if i.kind == 'batch' %}<span class="mono">{{ i.batch.filename }}</span> · {{ i.batch.total }} labels{% if user.role == 'specialist' %} · {{ i.app.organization }}{% endif %}
+        {% if i.kind == 'batch' %}<span class="mono">{{ i.batch.filename }}</span> · {{ i.batch.total }} labels{% if user.role == 'specialist' %} · {{ i.batch.applicant.organization }}{% endif %}
         {% else %}<span class="mono">{{ i.app.serial }}</span> · {{ i.app.brand_name }}{% if user.role == 'specialist' %} · {{ i.app.organization }}{% endif %}{% endif %}
         · {{ i.created_at | ago }}
       </div>

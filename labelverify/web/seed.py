@@ -141,13 +141,15 @@ def seed_applications(db: Session, users: dict[str, User], samples_dir: Path = S
                 notice_body=draft.body,
                 notice_source=draft.source,
             )
-            if sample["id"] in SEED_REPLIES:
-                reply_field, reply = SEED_REPLIES[sample["id"]]
-                services.add_comment(db, app, applicant, reply_field, reply)
         elif state == "under_review":
             services.claim_for_review(db, app, sarah)
-        if state != "submitted":
-            services.mark_seen(db, app, sarah)  # she acted on it, so its submission is not news
+        # The seeded queue is one Sarah has already looked through: its submissions are
+        # not news. What arrives after that (a reply below, anything a reviewer does) is.
+        db.flush()  # the events take their timestamps now, before the "seen" moment
+        services.mark_seen(db, app, sarah)
+        if state == "correction_requested" and sample["id"] in SEED_REPLIES:
+            reply_field, reply = SEED_REPLIES[sample["id"]]
+            services.add_comment(db, app, applicant, reply_field, reply)
         created += 1
         if n % 3 == 0:
             db.flush()

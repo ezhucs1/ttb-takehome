@@ -709,6 +709,15 @@ a row works exactly as on a single application.
 labels, not spreadsheets, and the rows differ. Bulk approval of the rows where every
 field matched, already in the queue, is the bundle-level action that is safe.
 
+The batch line is built from grouped counts (comments, status changes and notices per
+batch, with the latest time), not from the rows' own items folded afterwards: the feed
+fetches the newest forty items of each kind, and a three-hundred-row batch would have
+filled all forty and pushed every single application out of the inbox. Only single
+applications are listed item by item. The seeded queue is one Sarah has already looked
+through: its submissions are marked seen at seed time (after a flush, so the events'
+timestamps come first), and the demo inbox opens with the one reply that was designed
+to be there.
+
 Also from the deployment: reads looked slower on the hosted site than locally. The
 server's read time was the same; the difference was the upload of a multi-megabyte phone
 photo from a home connection, which the read-time line used to include. Photos are now
