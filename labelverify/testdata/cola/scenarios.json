@@ -2,7 +2,7 @@
   "_about": "Hand-written application values for the COLA batch demonstration. Every value here was transcribed by a person from the label image, or deliberately altered from that transcription; none comes from the app's reader. scripts/import_cola.py copies these over the registry values when it writes applications.csv. Rows not listed keep the registry's values (scenario 'registry-as-filed').",
   "26176001000014": {
     "scenario": "filed-correctly",
-    "expected": "approve",
+    "expected": "approve; a review item when the reader judges the rotated or small warning heading not bold, which it has done on some runs",
     "fields": {
       "brand_name": "Tenhead",
       "class_type": "American Gin",
@@ -50,7 +50,7 @@
   },
   "26201001000349": {
     "scenario": "filed-correctly",
-    "expected": "approve",
+    "expected": "approve; a review item when the reader judges the rotated or small warning heading not bold, which it has done on some runs",
     "fields": {
       "brand_name": "Calimist",
       "class_type": "Sauvignon Blanc",

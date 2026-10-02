@@ -90,14 +90,15 @@ def test_heading_only_is_a_mismatch():
     assert "body is missing" in result.reason
 
 
-def test_bold_is_a_note_for_the_specialist_not_a_verdict():
-    """The reader cannot judge type weight reliably; the row says what it saw."""
+def test_not_bold_goes_to_a_person_but_unknown_is_only_a_note():
+    """The brief requires a bold heading, so a reader saying "not bold" is a review item;
+    a reader that cannot tell gives no evidence either way."""
     result = check_health_warning(warning(STATUTORY_TEXT, bold=False))
-    assert result.verdict is Verdict.MATCH
-    assert any("did not see the heading as bold" in n for n in result.notes)
-    assert "bold" not in result.reason.lower() or "capitalized." in result.reason
+    assert result.verdict is Verdict.NEEDS_REVIEW
+    assert "did not see the heading as bold" in result.reason
     unknown = check_health_warning(warning(STATUTORY_TEXT, bold=None))
-    assert unknown.verdict is Verdict.MATCH and any("could not tell" in n for n in unknown.notes)
+    assert unknown.verdict is Verdict.MATCH
+    assert any("could not tell" in n for n in unknown.notes)
 
 
 def test_a_hyphen_inside_a_statutory_word_is_a_line_break():

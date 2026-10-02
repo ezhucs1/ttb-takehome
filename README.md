@@ -85,7 +85,7 @@ itself follows the detected class: a red mark on every field the class requires,
 "also read from the label" list of the items the applicant never types (qualifying
 phrase, sulfites, appellation, vintage, age statement) with what the read found, so they
 are reviewed before the check. Changing the type re-applies the rules.
-| Health warning | Word for word against 27 CFR 16.21; `GOVERNMENT WARNING` must be all caps; bold type is required too, but a reader cannot judge type weight reliably from an image, so the row notes what the reader saw and leaves the weight to the specialist, who has the image beside the table | exact statutory text |
+| Health warning | Word for word against 27 CFR 16.21; `GOVERNMENT WARNING` must be all caps and bold. A reader that says the heading is not bold sends the row to review; a reader that cannot tell adds a note, since type weight is hard to judge from an image, and the specialist has the image beside the table | exact statutory text |
 
 Per-field verdicts are match, needs review, mismatch, or not applicable. The strength of
 a verdict follows the confidence of the read. A match from a low-confidence read keeps

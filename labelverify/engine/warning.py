@@ -137,12 +137,12 @@ def check_health_warning(extraction: HealthWarningExtraction) -> FieldResult:
             problems.append(
                 f"'GOVERNMENT WARNING' must be in capital letters (label shows '{heading}')."
             )
-        # Type weight is not something a reader judges reliably from an image: on real
-        # labels the model called bold headings "not bold" more often than not. The
-        # requirement stands (27 CFR 16.22), so the row says what the reader thought and
-        # leaves the weight to the specialist, who has the image beside the table.
+        # Bold type is required (27 CFR 16.22, and the brief says so in as many words). A
+        # reader that says "not bold" is evidence, even though on real labels it misjudged
+        # the weight more often than not, so that goes to a person with the image beside
+        # the table. A reader that cannot tell is not evidence of anything: a note only.
         if extraction.heading_bold is False:
-            notes.append(
+            review_reasons.append(
                 "The reader did not see the heading as bold. Bold type is required; confirm "
                 "the weight on the image."
             )

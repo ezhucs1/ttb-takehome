@@ -627,9 +627,12 @@ A second run, on those changes, moved the batch from 51/7/2 (corrections, review
 approve) to 40/18/2, and its results file showed what was left:
 
 - The reader judged five bold warning headings "not bold"; on the image at least three
-  are bold. Type weight is not something a model reads reliably from a JPEG, so the bold
-  judgment is now a note on the row for the specialist, who has the image, rather than a
-  review verdict. The all-caps and word-for-word checks are unchanged.
+  are bold. Type weight is not something a model reads reliably from a JPEG. The first
+  reaction was to make the judgment a note; the brief, re-read, says the heading "has to
+  be in all caps and bold", so a reader that says "not bold" still sends the row to a
+  person, and only "could not tell" is a note. A few false review items on real labels
+  cost less than a non-bold heading passing. The all-caps and word-for-word checks are
+  unchanged.
 - "Bottled by SVP Winery, Shandon, CA for McKelvey Vineyards, New Haven, MO": the reader
   returned both parties and both addresses. The prompt now says the bottler is the
   producer, the engine compares against the part before "for", and an address the label
