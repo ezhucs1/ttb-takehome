@@ -17,6 +17,10 @@
 # Claude reads the labels. With GEMINI_API_KEY set, Gemini words the specialist's
 # correction notices (its free tier covers that call); without it, Claude does.
 #
+# The app name is the public hostname (<APP>.azurewebsites.net). The first run picks a
+# random one and prints it; put it in .env as APP=<name> so later runs reuse the same
+# registry, plan and app. Never derive it from anything identifying.
+#
 # Re-running the script with the same APP name rebuilds the image and restarts the app in
 # place (the old container is stopped; there is never a second copy). Each deployment
 # starts with a fresh, seeded database by default (RESET_DATA=true); RESET_DATA=false
@@ -27,8 +31,10 @@ set -euo pipefail
 : "${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY (the model key the deployment will use)}"
 RG="${RG:-labelverify-rg}"
 LOCATION="${LOCATION:-eastus}"
-# One stable name per subscription, so a re-run reuses the registry, plan and app.
-APP="${APP:-labelverify-$(az account show --query id --output tsv | cut -c1-8)}"
+if [ -z "${APP:-}" ]; then
+  APP="labelverify-$(openssl rand -hex 4)"
+  echo "no APP set: using the new name $APP. Add APP=$APP to .env so the next run redeploys it instead of creating another." >&2
+fi
 ACR="${ACR:-$(echo "$APP" | tr -d -)}"                                   # registry names: letters and digits only
 PLAN="${PLAN:-$APP-plan}"
 SKU="${SKU:-B1}"                                                         # Basic: Always On is available

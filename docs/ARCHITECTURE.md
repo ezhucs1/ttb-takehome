@@ -220,7 +220,10 @@ docker run -p 8000:8000 -v labelverify-data:/app/data -e SECRET_KEY=... labelver
 from a signed-in Azure CLI with Docker on the local machine:
 
 1. Creates the resource group (`RG`, default `labelverify-rg`) in `LOCATION` (the demo
-   uses `westus2`, where the subscription had B1 quota).
+   uses `westus2`, where the subscription had B1 quota). The app name, which is the
+   public hostname, is `APP`: the first run picks a random one and prints it, and it is
+   kept in the local `.env` so later runs redeploy the same app. It is never derived
+   from anything identifying.
 2. Creates an Azure Container Registry with the admin account enabled, builds the image
    locally with Docker (free and trial subscriptions are not allowed Azure's own cloud
    build) and pushes it as `labelverify:<git short sha>`, signing Docker in with the
