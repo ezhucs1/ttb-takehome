@@ -2,8 +2,8 @@
 
 AI-assisted alcohol label verification for TTB COLA review.
 
-**Live demo:** add the address that `scripts/deploy_azure.sh` prints here before
-submitting. Sign in with the accounts under "Run it locally"; the dialog hides them on a
+**Live demo:** <https://labelverify-429e03fa.azurewebsites.net>, on Azure App Service,
+always on. Sign in with the accounts under "Run it locally"; the dialog hides them on a
 public URL.
 
 Applicants upload label artwork, the engine reads it and compares every required field
