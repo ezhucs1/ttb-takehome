@@ -4,8 +4,10 @@ AI-assisted alcohol label verification for TTB COLA review. Applicants upload la
 artwork, the app reads it and compares every required field against the application,
 and a labeling specialist confirms the result. The tool recommends; a person decides.
 
-**Live demo:** <https://labelverify-429e03fa.azurewebsites.net> (Azure App Service,
-always on). Sign in with the accounts listed under "Demo accounts" below.
+**Live demo:** a deployed, always-on copy runs on Azure App Service. Its address is shared
+with the reviewers directly rather than published here, so that the model budget behind it
+is spent by the people it is meant for. Sign in with the accounts listed under "Demo
+accounts" below.
 
 > **A note for testers.** The live demo reads labels with a paid vision model on a
 > limited budget. One label costs roughly $0.02 to $0.06 to read, and the sixty-label
@@ -13,7 +15,7 @@ always on). Sign in with the accounts listed under "Demo accounts" below.
 > freely, run the batch uploads two or three times at most, and go easy on repeated
 > re-checks. Thank you for testing with consideration for the developer.
 
-![Specialist review screen](docs/screenshots/review.png)
+![LabelVerify in use](docs/screenshots/demo.gif)
 
 ## What it does
 

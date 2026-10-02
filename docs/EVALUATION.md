@@ -10,7 +10,7 @@ each to what is in the repository and the deployed app, and states the shortfall
 | Source code repository | <https://github.com/ezhucs1/ttb-takehome>, one package (`labelverify/`), 378 offline tests, lint-clean |
 | README with setup and run instructions | [README.md](../README.md): install, run locally without a key (demo mode and local OCR), demo accounts, three walkthroughs, batch examples |
 | Brief documentation of approach, tools used, assumptions made | [ARCHITECTURE.md](ARCHITECTURE.md) (approach and tools), [AI-MODEL.md](AI-MODEL.md) (the model's place, cost and timing), [REGULATIONS.md](REGULATIONS.md) (what is checked and how strictly), [PROTOTYPE.md](PROTOTYPE.md) (assumptions and limits), [decisions.md](decisions.md) (29 decision entries with alternatives) |
-| Deployed application URL | <https://labelverify-429e03fa.azurewebsites.net>, Azure App Service, always on, HTTPS; deployment script in `scripts/deploy_azure.sh` |
+| Deployed application URL | Shared with the reviewers directly (not published, to keep the model budget for them): Azure App Service, always on, HTTPS; deployment script in `scripts/deploy_azure.sh` |
 
 ## Evaluation criteria
 
