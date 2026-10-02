@@ -1,7 +1,8 @@
 # User guide
 
 How to use LabelVerify, what every screen is for, and what each tag and symbol means.
-The README covers installation and configuration; this page is for the people using it.
+The README covers installation and [ARCHITECTURE.md](ARCHITECTURE.md) the configuration;
+this page is for the people using it.
 
 ## Who uses it
 
@@ -173,4 +174,4 @@ contents and the warning to be read on clean artwork, and small print on photogr
 be missed; the field assignment can also be wrong, so a mismatch on an OCR read may be
 the reader rather than the label. Use "Read again" once the model is back, or correct the
 form by hand and let the specialist confirm against the image. The measured accuracy on
-the bundled samples is in the README.
+the bundled samples is in [AI-MODEL.md](AI-MODEL.md).

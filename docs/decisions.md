@@ -134,7 +134,7 @@ prepared JPEG bytes in a table. `DATABASE_URL` switches to Postgres without code
 **Why:** one file on one volume is the simplest thing to deploy and back up for a
 prototype, and images are downscaled to about 1500 px before storage, so a 300-label
 batch is tens of megabytes, not gigabytes. Production would move images to object
-storage; see `production.md`.
+storage; see `PROTOTYPE.md`.
 
 ## 7. Batch processing in a thread pool, not a job queue
 
@@ -245,7 +245,7 @@ URL to stay private.
 are in the README by design, so hiding them from the page only keeps them off search
 engines and casual visitors. The thing that actually bounds the cost is the cap: a
 process-local counter is enough for one always-on machine and adds no datastore.
-Per-account quotas would be the production answer and are noted in production.md.
+Per-account quotas would be the production answer and are noted in PROTOTYPE.md.
 
 ## 12. One rulebook per commodity class, consulted by every comparison
 
