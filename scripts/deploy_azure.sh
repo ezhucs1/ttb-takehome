@@ -18,7 +18,7 @@ set -euo pipefail
 : "${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY (the model key the deployment will use)}"
 RG="${RG:-labelverify-rg}"
 LOCATION="${LOCATION:-eastus}"
-APP="${APP:-labelverify-$(tr -dc a-z0-9 </dev/urandom | head -c 6)}"   # globally unique host name
+APP="${APP:-labelverify-$(printf '%06x' $(( (RANDOM << 15) | RANDOM )))}"   # globally unique host name
 ACR="${ACR:-$(echo "$APP" | tr -d -)}"                                   # registry names: letters and digits only
 PLAN="${PLAN:-$APP-plan}"
 SKU="${SKU:-B1}"                                                         # Basic: Always On is available
