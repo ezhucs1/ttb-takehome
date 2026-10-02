@@ -392,6 +392,19 @@ minutes), or run `SKU=F1 scripts/deploy_azure.sh` for the free tier, which has n
 On. The free tier sleeps after twenty minutes idle and the first request after that is
 slow, which is the one way a reviewer could see a cold start.
 
+**Azure VM**, when the subscription has no App Service quota (new and trial accounts
+often have none, and an upgrade takes hours to lift it):
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... GEMINI_API_KEY=... scripts/deploy_azure_vm.sh
+```
+
+One B1s virtual machine (free for 750 hours a month in a free account's first year)
+runs the same image with its data on the VM's disk, and Caddy in front issues the HTTPS
+certificate for `labelverify-....<region>.cloudapp.azure.com` on its own. Always on, no
+quota beyond the VM. Re-running the script pushes a new image and restarts the app in
+place.
+
 **Docker**, anywhere:
 
 ```bash
