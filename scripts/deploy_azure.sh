@@ -33,7 +33,8 @@ IMAGE="labelverify:$(git rev-parse --short HEAD 2>/dev/null || date +%s)"
 SECRET_KEY="${SECRET_KEY:-$(openssl rand -hex 32)}"
 
 echo "resource group $RG in $LOCATION, app $APP, registry $ACR, image $IMAGE"
-az group create --name "$RG" --location "$LOCATION" --output none
+az group show --name "$RG" --output none 2>/dev/null \
+  || az group create --name "$RG" --location "$LOCATION" --output none   # the group's own region does not matter
 
 # 1. Build the image from this checkout and push it to the registry.
 az acr show --name "$ACR" --resource-group "$RG" --output none 2>/dev/null \
