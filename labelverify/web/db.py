@@ -67,6 +67,17 @@ _ADDED_COLUMNS: dict[str, dict[str, str]] = {
         "extraction_version": "INTEGER NOT NULL DEFAULT 0",
         "extraction_ms": "INTEGER NOT NULL DEFAULT 0",
         "extraction_extractor": "VARCHAR(80) NOT NULL DEFAULT ''",
+        # Label statements filed as printed (added with the editable step-2 statements).
+        "qualifying_phrase": "TEXT",
+        "health_warning": "TEXT",
+        "sulfite_declaration": "TEXT",
+        "appellation": "TEXT",
+        "vintage_year": "TEXT",
+        "estate_bottled": "TEXT",
+        "age_statement": "TEXT",
+        "bottled_in_bond": "TEXT",
+        "blend_percentage": "TEXT",
+        "strength_claim": "TEXT",
     },
 }
 

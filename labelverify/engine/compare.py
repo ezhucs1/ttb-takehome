@@ -40,8 +40,8 @@ from .normalize import (
     parse_net_contents,
     producer_candidates,
 )
-from .rules import ClassRules, Requirement, rules_for
-from .warning import check_health_warning
+from .rules import FIELD_LABELS, STATEMENT_SOURCES, ClassRules, Requirement, rules_for
+from .warning import _tokens, check_health_warning
 
 # Text fields match only when they are identical after normalization (case, punctuation,
 # spacing, known synonyms). Anything else is a real difference: above the REVIEW threshold
@@ -1246,6 +1246,146 @@ _CONDITIONAL_COMPARATORS = (
 )
 
 
+def read_statement(extraction: LabelExtraction, field: str) -> tuple[str, float]:
+    """What the read found for a filed statement, and the reader's confidence in it."""
+    source = STATEMENT_SOURCES[field]
+    if source == "health_warning":
+        warning = extraction.health_warning
+        return ((warning.text or "").strip() if warning.present else ""), warning.confidence
+    read = getattr(extraction, source)
+    return (read.value or "").strip(), read.confidence
+
+
+STATEMENT_REVIEW = 80.0
+
+
+def _merge_filed_statement(
+    row: FieldResult, application: ApplicationData, extraction: LabelExtraction
+) -> FieldResult:
+    """When the applicant filed this statement, the row also says whether what they filed
+    is what the label prints. The rule's own verdict on the label stands; the comparison
+    can only make the row worse, and the reason says which it was."""
+    if row.field not in STATEMENT_SOURCES:
+        return row
+    filed = application.filed_statement(row.field)
+    if filed is None:
+        return row
+    printed, _ = read_statement(extraction, row.field)
+    row.application_value = filed
+    if row.field == "health_warning":
+        same = [t for t, _ in _tokens(filed)] == [t for t, _ in _tokens(printed)]
+        verdict, note = (
+            (Verdict.MATCH, "The statement as filed is the statement as printed.")
+            if filed.strip() and same
+            else (Verdict.NEEDS_REVIEW, "The application left the statement blank.")
+            if not filed.strip() and printed
+            else (
+                Verdict.MISMATCH,
+                "The statement as filed differs from the statement as printed; the label is "
+                "what is checked against the statute, so file what the label prints.",
+            )
+            if filed.strip()
+            else (row.verdict, "")
+        )
+    elif not filed.strip():
+        verdict, note = (
+            (
+                Verdict.NEEDS_REVIEW,
+                f"The label prints '{printed}' but the application left this blank.",
+            )
+            if printed
+            else (row.verdict, "")
+        )
+    elif not printed:
+        verdict, note = (
+            Verdict.MISMATCH,
+            f"The application states '{filed}' but nothing of the kind was read on the label.",
+        )
+    else:
+        filed_norm, printed_norm = normalize_text(filed), normalize_text(printed)
+        score = _similarity(filed_norm, printed_norm)
+        if filed_norm == printed_norm:
+            verdict, note = Verdict.MATCH, "Filed as printed."
+        elif _numbers(filed_norm) != _numbers(printed_norm):
+            # "Aged 4 Years" against "Aged Six Years" reads as similar text; the number is
+            # the statement.
+            verdict, note = (
+                Verdict.MISMATCH,
+                f"Filed as '{filed}', but the label prints '{printed}': the numbers differ.",
+            )
+        elif score >= STATEMENT_REVIEW or _wraps(filed_norm, printed_norm):
+            verdict, note = (
+                Verdict.NEEDS_REVIEW,
+                f"Filed as '{filed}', printed as '{printed}' ({score:.0f}% similar). Confirm visually.",
+            )
+        else:
+            verdict, note = (
+                Verdict.MISMATCH,
+                f"Filed as '{filed}', but the label prints '{printed}' ({score:.0f}% similar).",
+            )
+    if _VERDICT_RANK[verdict] > _VERDICT_RANK[row.verdict]:
+        row.verdict = verdict
+        row.reason = f"{note} {row.reason}".strip()
+    elif note:
+        row.notes.insert(0, note)
+    return row
+
+
+_NUMBER_WORDS = {
+    "one": "1",
+    "two": "2",
+    "three": "3",
+    "four": "4",
+    "five": "5",
+    "six": "6",
+    "seven": "7",
+    "eight": "8",
+    "nine": "9",
+    "ten": "10",
+    "eleven": "11",
+    "twelve": "12",
+    "fifteen": "15",
+    "eighteen": "18",
+    "twenty": "20",
+    "twenty one": "21",
+}
+_NUMBER_RE = re.compile(r"\d+(?:\.\d+)?|\b(?:" + "|".join(_NUMBER_WORDS) + r")\b")
+
+
+def _numbers(normalized: str) -> list[str]:
+    """The numbers in a normalized statement, number words included, in order."""
+    return [_NUMBER_WORDS.get(m, m) for m in _NUMBER_RE.findall(normalized)]
+
+
+def _filed_but_unread(
+    application: ApplicationData, extraction: LabelExtraction, rules: ClassRules, present: set[str]
+) -> list[FieldResult]:
+    """Rows for statements the applicant filed that the read did not find and no rule row
+    reported: the application claims something the label does not show."""
+    rows = []
+    for field in STATEMENT_SOURCES:
+        filed = application.filed_statement(field)
+        if field in present or not filed or not filed.strip():
+            continue
+        if rules.requirement(field) is Requirement.NOT_APPLICABLE:
+            continue
+        printed, confidence = read_statement(extraction, field)
+        if printed:
+            continue
+        rows.append(
+            FieldResult(
+                field=field,
+                label=FIELD_LABELS[field],
+                verdict=Verdict.MISMATCH,
+                application_value=filed,
+                label_value=None,
+                confidence=confidence,
+                reason=f"The application states '{filed}' but nothing of the kind was read on the label.",
+            )
+        )
+    return rows
+
+
 def verify(application: ApplicationData, extraction: LabelExtraction) -> VerificationResult:
     """Compare every required field under the class's rules and roll the verdicts up."""
     resolved, source = resolve_beverage_type(application, extraction)
@@ -1273,6 +1413,11 @@ def _verify_with(
         if row is not None:
             fields.append(_apply_confidence_gate(row))
     fields.append(_apply_confidence_gate(check_health_warning(extraction.health_warning)))
+    fields = [_merge_filed_statement(f, application, extraction) for f in fields]
+    fields.extend(
+        _apply_confidence_gate(row)
+        for row in _filed_but_unread(application, extraction, rules, {f.field for f in fields})
+    )
     softened = _soften_absences(fields) if read_is_uncertain(extraction) else []
     for f in fields:
         rule = rules.fields.get(f.field)

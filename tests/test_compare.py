@@ -860,3 +860,64 @@ class TestUncertainRead:
         assert heading.verdict is Verdict.NEEDS_REVIEW and heading.uncertain  # unsure read
         extraction.health_warning.confidence = 0.95
         assert verify(application, extraction).field("health_warning").verdict is Verdict.MISMATCH
+
+
+class TestFiledStatements:
+    """Statements the applicant files as printed are compared with what the read found;
+    a filing that does not provide them (None) leaves the rule's own verdict alone."""
+
+    def test_not_provided_keeps_the_rule_row(self, application, extraction):
+        row = next(f for f in verify(application, extraction).fields if f.field == "age_statement")
+        assert (
+            row.verdict is Verdict.MATCH
+            and row.application_value == "Required if aged under 4 years"
+        )
+
+    def test_filed_as_printed_matches(self, application, extraction):
+        application.qualifying_phrase = "Distilled and Bottled by"
+        application.age_statement = "Aged Six Years"
+        result = verify(application, extraction)
+        rows = {f.field: f for f in result.fields}
+        assert rows["qualifying_phrase"].verdict is Verdict.MATCH
+        assert rows["qualifying_phrase"].application_value == "Distilled and Bottled by"
+        assert "Filed as printed" in rows["qualifying_phrase"].notes[0]
+        assert rows["age_statement"].verdict is Verdict.MATCH
+        assert result.recommendation is Recommendation.APPROVE
+
+    def test_filed_differently_is_a_mismatch(self, application, extraction):
+        application.age_statement = "Aged 4 Years"
+        row = next(f for f in verify(application, extraction).fields if f.field == "age_statement")
+        assert row.verdict is Verdict.MISMATCH
+        assert "Filed as 'Aged 4 Years', but the label prints 'Aged Six Years'" in row.reason
+
+    def test_filed_blank_while_printed_needs_review(self, application, extraction):
+        application.qualifying_phrase = ""
+        row = next(
+            f for f in verify(application, extraction).fields if f.field == "qualifying_phrase"
+        )
+        assert row.verdict is Verdict.NEEDS_REVIEW and "left this blank" in row.reason
+
+    def test_filed_but_not_on_the_label_is_a_mismatch(self, application, extraction):
+        application.beverage_type = BeverageType.WINE
+        application.class_type = "Cabernet Sauvignon"
+        extraction.class_type = make_field("Cabernet Sauvignon")
+        extraction.age_statement = make_field(None)
+        application.appellation = "Napa Valley"  # the label names no appellation
+        row = next(f for f in verify(application, extraction).fields if f.field == "appellation")
+        assert row.verdict is Verdict.MISMATCH and row.label_value is None
+        assert "nothing of the kind was read" in row.reason
+
+    def test_filed_warning_is_compared_with_the_printed_one(self, application, extraction):
+        from labelverify.engine.warning import STATUTORY_TEXT
+
+        application.health_warning = STATUTORY_TEXT
+        row = next(f for f in verify(application, extraction).fields if f.field == "health_warning")
+        assert row.verdict is Verdict.MATCH and row.application_value == STATUTORY_TEXT
+        application.health_warning = STATUTORY_TEXT.replace("women", "woman")
+        row = next(f for f in verify(application, extraction).fields if f.field == "health_warning")
+        assert row.verdict is Verdict.MISMATCH and "as filed differs" in row.reason
+
+    def test_a_statement_for_another_class_is_ignored(self, application, extraction):
+        application.sulfite_declaration = "Contains Sulfites"  # spirits carry no such rule
+        fields = {f.field for f in verify(application, extraction).fields}
+        assert "sulfite_declaration" not in fields

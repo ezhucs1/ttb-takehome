@@ -45,6 +45,23 @@ class ApplicationData(BaseModel):
     producer_address: str = ""
     is_import: bool = False
     country_of_origin: str = ""
+    # Statements the label carries that the applicant files as printed. None means the
+    # filing did not provide the field (a batch CSV without the column): the label is then
+    # checked against the rules alone. An empty string means it was provided blank.
+    qualifying_phrase: str | None = None
+    health_warning: str | None = None
+    sulfite_declaration: str | None = None
+    appellation: str | None = None
+    vintage_year: str | None = None
+    estate_bottled: str | None = None
+    age_statement: str | None = None
+    bottled_in_bond: str | None = None
+    blend_percentage: str | None = None
+    strength_claim: str | None = None
+
+    def filed_statement(self, field: str) -> str | None:
+        """The applicant's value for a label statement, or None when not provided."""
+        return getattr(self, field)
 
 
 class ExtractedField(BaseModel):

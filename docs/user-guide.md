@@ -53,15 +53,17 @@ again to zoom out. With more than one panel, the thumbnails under it switch pane
 - A red asterisk marks a field the class requires. "(optional)" marks one it does not,
   such as alcohol content on a malt beverage. Country of origin becomes required when
   "Imported product" is ticked.
-- "Also read from the label" lists what the label itself must carry that you never type:
-  the qualifying phrase before the producer's name, the Government Health Warning, and
-  the class's own statements (sulfites, appellation and vintage for wine; age, bottled in
-  bond and blend percentage for spirits; a strength claim for malt beverages). A green
-  check and a value mean the read found it; hover for the full text. "Not found on the
-  label" in amber means a required item was not read; "not on the label" in grey means a
-  conditional item was not read and may simply not apply. These cannot be edited here
-  because the label is the evidence: if one is wrong, the artwork changes, or the
-  specialist confirms it from the image.
+- "Also on the label" holds the statements the label carries for this class: the
+  qualifying phrase before the producer's name, the Government Health Warning text, and
+  the class's own statements (sulfites, appellation, vintage and estate bottling for wine;
+  age, bottled in bond and blend percentage for spirits; a strength claim for malt
+  beverages). The reader fills each one from the label; "not found on the label" under a
+  required one means the read did not see it, "not on the label" under a conditional one
+  means it may simply not apply. File every statement exactly as the label prints it,
+  and leave one blank only if the label does not carry it. The check compares what you
+  file with what the reader found, and a difference is reported on that row ("Filed as
+  ..., but the label prints ..."), while the label itself is still checked against the
+  rule. Switching the type shows that class's statements; what you typed is kept.
 - "Reference" opens the rulebook for all three classes in a new tab, with citations.
 
 **Check before submitting.** Runs the comparison and shows the result table (below). The

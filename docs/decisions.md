@@ -651,3 +651,35 @@ With the reader's own values from that run replayed through the engine, the nine
 hand-transcribed rows come out five approve, three review (two age statements, one
 wrapped class) and one corrections needed (the defective warning), which is what the
 labels deserve.
+
+## 27. Every statement the label carries is the applicant's to file
+
+Until now the applicant typed the seven fields and the engine read the class statements
+(qualifying phrase, sulfites, appellation, vintage, age, bond, blend, strength) and the
+warning text off the label by itself, showing them in step 2 as read-only. A reviewer
+asked, reasonably, what an applicant does when the read shows a statement that is not
+what the label says: nothing, since there was no field to correct. The brief says the
+application is the applicant's statement and the label is the evidence, and it does not
+limit which items the applicant states.
+
+**Chose:** the statements are editable fields in step 2, shown per class with the same
+required marks as the seven fields, and prefilled from the read. The applicant files
+each one exactly as printed. The engine compares what was filed with what the reader
+found, in the same row as the rule's own check: filed as printed is a match; a
+near miss is a review item; a different number ("Aged 4 Years" against "Aged Six
+Years") or a different statement is a mismatch; filed blank while the label prints one
+is a review item that names the printed text; filed when nothing was read is a
+mismatch, since the application claims what the label does not show. The rule's verdict
+on the label stands whatever was filed: a bottled-in-bond claim at 90 proof fails, a
+vintage without an appellation fails. The warning is compared word for word with the
+printed statement, and the printed statement is compared with the statute.
+
+**Not provided is not blank.** A batch CSV without the statement columns, and every
+application created before this change, carry None for the statements, and the label is
+checked against the rules alone, as before. A column that is present, or the wizard's
+form, which always sends the fields, carries what was filed, blank included. The
+database gained ten nullable columns, added on startup to an existing file.
+
+**Considered:** keeping the statements read-only and letting the specialist settle
+them. Rejected because it leaves the applicant unable to say what their label prints
+when the reader is wrong, which is the one thing the prefill note asks them to do.

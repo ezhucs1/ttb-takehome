@@ -18,6 +18,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from labelverify.engine.rules import STATEMENT_SOURCES
+
 from .db import Base
 
 
@@ -87,6 +89,17 @@ class Application(Base):
     producer_address: Mapped[str] = mapped_column(String(300), default="")
     is_import: Mapped[bool] = mapped_column(Boolean, default=False)
     country_of_origin: Mapped[str] = mapped_column(String(100), default="")
+    # Label statements filed as printed; NULL when the filing did not provide them.
+    qualifying_phrase: Mapped[str | None] = mapped_column(Text, nullable=True)
+    health_warning: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sulfite_declaration: Mapped[str | None] = mapped_column(Text, nullable=True)
+    appellation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    vintage_year: Mapped[str | None] = mapped_column(Text, nullable=True)
+    estate_bottled: Mapped[str | None] = mapped_column(Text, nullable=True)
+    age_statement: Mapped[str | None] = mapped_column(Text, nullable=True)
+    bottled_in_bond: Mapped[str | None] = mapped_column(Text, nullable=True)
+    blend_percentage: Mapped[str | None] = mapped_column(Text, nullable=True)
+    strength_claim: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # The most recent read of the current label set, kept so the pre-check and the
     # submission compare against it instead of paying for a second model call.
@@ -172,6 +185,7 @@ class Application(Base):
             "producer_address": self.producer_address,
             "is_import": self.is_import,
             "country_of_origin": self.country_of_origin,
+            **{field: getattr(self, field) for field in STATEMENT_SOURCES},
         }
 
 

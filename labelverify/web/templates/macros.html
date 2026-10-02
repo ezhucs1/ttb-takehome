@@ -91,10 +91,19 @@
   </div>
   <div class="label-read" id="label-read" hidden>
     <div class="label-read-head">
-      <span class="eyebrow">Also read from the label</span>
-      <span class="small muted">Printed on the label, not entered here</span>
+      <span class="eyebrow">Also on the label</span>
+      <span class="small muted">Statements the label carries, filed exactly as printed</span>
     </div>
-    <ul data-label-read></ul>
+    <div class="statements" data-statements>
+      {% for st in STATEMENTS %}
+      <div class="field span-2 statement" data-statement="{{ st.field }}" hidden>
+        <label for="{{ st.field }}">{{ st.label }}</label>
+        {% if st.multiline %}<textarea name="{{ st.field }}" id="{{ st.field }}" rows="3" autocomplete="off">{{ values[st.field] if values[st.field] is defined and values[st.field] is not none else '' }}</textarea>
+        {% else %}<input name="{{ st.field }}" id="{{ st.field }}" value="{{ values[st.field] if values[st.field] is defined and values[st.field] is not none else '' }}" autocomplete="off">{% endif %}
+        <span class="read-hint small" data-read-hint></span>
+      </div>
+      {% endfor %}
+    </div>
     <p class="muted small" data-label-read-note></p>
   </div>
 </div>

@@ -33,6 +33,7 @@ from ..engine.models import (
 )
 from ..engine.notices import NoticeDraft, draft_notice, flagged_fields
 from ..engine.preprocess import PreparedImage, UnreadableImageError, prepare_image
+from ..engine.rules import STATEMENT_SOURCES
 from ..engine.verify import run_verification
 from .models import (
     OPEN_STATUSES,
@@ -286,7 +287,7 @@ def prefill_fields(extraction: LabelExtraction) -> dict[str, str]:
     }
 
 
-# Checklist items the applicant never types: the engine reads them off the label itself.
+# Statements the reader fills in for step 2 (the applicant files them as printed).
 # Checklist field -> attribute of the read.
 LABEL_ONLY_ITEMS = {
     "qualifying_phrase": "qualifying_phrase",
@@ -302,14 +303,14 @@ LABEL_ONLY_ITEMS = {
 
 
 def label_carries(extraction: LabelExtraction) -> dict[str, str | None]:
-    """What the read found for every label-only checklist item, so the applicant can see
+    """What the read found for every label statement, to prefill step 2 so the applicant can see
     it in step 2 before running the check; None when nothing was printed."""
     found = {
         item: (getattr(extraction, attr).value or "").strip() or None
         for item, attr in LABEL_ONLY_ITEMS.items()
     }
     warning = extraction.health_warning
-    found["health_warning"] = (warning.text or "GOVERNMENT WARNING") if warning.present else None
+    found["health_warning"] = (warning.text or "").strip() or None if warning.present else None
     return found
 
 
@@ -1401,6 +1402,9 @@ def process_batch(
             producer_address=row.get("producer_address", ""),
             is_import=row.get("is_import", "").lower() in ("true", "yes", "1", "y"),
             country_of_origin=row.get("country_of_origin", ""),
+            # Optional columns: a statement column that is absent means "not filed", and
+            # the label is checked against the rules alone.
+            **{field: row.get(field) for field in STATEMENT_SOURCES},
         )
         return data, uploads
 

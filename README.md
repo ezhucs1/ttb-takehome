@@ -87,9 +87,15 @@ January 2025 sizes. The rulebook lives in one module, `labelverify/engine/rules.
 drives the comparisons, the applicant's step-2 checklist, the citations on every result
 row, and the reference page at `/rules` (linked as "Reference" from the form). The form
 itself follows the detected class: a red mark on every field the class requires, and an
-"also read from the label" list of the items the applicant never types (qualifying
-phrase, sulfites, appellation, vintage, age statement) with what the read found, so they
-are reviewed before the check. Changing the type re-applies the rules.
+"also on the label" group of the statements the class carries (the qualifying phrase,
+the Government Health Warning text, sulfites, appellation, vintage and estate bottling
+for wine, age, bottled in bond and blend percentage for spirits, strength claims for malt
+beverages), each an editable field the reader has filled from the label. The applicant
+files every statement exactly as the label prints it; the check then compares what was
+filed with what the reader found, as it does for the seven fields, and still checks the
+label itself against the rule (a bottled-in-bond claim at 90 proof fails whatever was
+filed). A filing that does not provide a statement, such as a batch CSV without the
+column, is checked against the rules alone. Changing the type re-applies the rules.
 
 Per-field verdicts are match, needs review, mismatch, or not applicable. The strength of
 a verdict follows the confidence of the read. A match from a low-confidence read keeps

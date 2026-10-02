@@ -384,6 +384,30 @@ def rules_for(beverage_type: BeverageType | str) -> ClassRules:
     return RULES[BeverageType(beverage_type)]
 
 
+# Label statements the applicant files as printed, beside the seven fields. Each maps to
+# the attribute of the read that carries it. The order is the step-2 form's order.
+STATEMENT_SOURCES: dict[str, str] = {
+    "qualifying_phrase": "qualifying_phrase",
+    "health_warning": "health_warning",  # the statement's text
+    "sulfite_declaration": "sulfite_declaration",
+    "appellation": "appellation",
+    "vintage_year": "vintage_year",
+    "estate_bottled": "estate_bottled_claim",
+    "age_statement": "age_statement",
+    "bottled_in_bond": "bottled_in_bond_claim",
+    "blend_percentage": "blend_percentage",
+    "strength_claim": "strength_claim",
+}
+
+
+def applicant_statements() -> list[dict]:
+    """The statement fields of the form: key, label, and whether the input is multi-line."""
+    return [
+        {"field": key, "label": FIELD_LABELS[key], "multiline": key == "health_warning"}
+        for key in STATEMENT_SOURCES
+    ]
+
+
 def all_rules() -> list[dict]:
     """Every class's rulebook as plain data, for the API, the wizard, and the docs."""
     return [RULES[bt].to_dict() for bt in BeverageType]

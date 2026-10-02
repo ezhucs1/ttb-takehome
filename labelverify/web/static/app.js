@@ -399,6 +399,10 @@
           if (el) el.value = value;
         }
         lastRead = data.label_read || {};
+        for (const [key, value] of Object.entries(lastRead)) {
+          const el = detailsForm.elements[key];
+          if (el) el.value = value || "";
+        }
         showWizardViewer(data.image_urls || []);
         renderChecklist((data.prefill || {}).beverage_type ? "label" : "none");
         if (data.prefill && data.prefill.country_of_origin) $("#is_import").checked = true;
@@ -515,27 +519,41 @@
       source.textContent = typeSource === "label" ? "detected from the label" : typeSource === "user" ? "chosen by you" : "";
     }
 
-    // Items printed on the label that are not entered here.
+    // The statements the label carries, filed as printed: one input per statement the
+    // class knows, required-marked when the class requires it. Inputs for the other
+    // classes stay in the form, hidden, so a value typed before a type change survives.
     const panel = $("#label-read");
     if (!panel) return;
-    const items = (chosen ? chosen.checklist : [])
+    const wanted = {};
+    (chosen ? chosen.checklist : [])
       .filter((i) => !FORM_ITEMS.includes(i.field) && i.checked_by === "engine")
-      .sort((a, b) => (a.requirement === "required" ? 0 : 1) - (b.requirement === "required" ? 0 : 1));
-    if (!chosen || !items.length || !Object.keys(lastRead).length) { panel.hidden = true; return; }
-    $("[data-label-read]", panel).innerHTML = items.map((i) => {
-      const value = lastRead[i.field];
-      const mark = i.requirement === "required" ? '<span class="req" title="Required">*</span>' : "";
-      const shown = value && value.length > 48 ? value.slice(0, 48).trimEnd() + "…" : value;
-      const found = value
-        ? `<span class="read-found" title="${esc(value)}">&#10003; ${esc(shown)}</span>`
-        : i.requirement === "required"
-          ? '<span class="read-missing">not found on the label</span>'
-          : '<span class="muted">not on the label</span>';
-      const tip = `${i.citation}${i.note ? " · " + i.note : ""}`;
-      return `<li title="${esc(tip)}"><span class="label-read-name">${esc(i.label)}${mark}</span>${found}</li>`;
-    }).join("");
+      .forEach((i) => { wanted[i.field] = i; });
+    let shown = 0;
+    $$("[data-statement]", panel).forEach((field) => {
+      const name = field.getAttribute("data-statement");
+      const rule = wanted[name];
+      field.hidden = !rule;
+      if (!rule) return;
+      shown += 1;
+      field.classList.toggle("required", rule.requirement === "required");
+      field.classList.toggle("optional", rule.requirement === "optional");
+      const label = $("label", field);
+      if (label) label.title = `${rule.citation}${rule.note ? " · " + rule.note : ""}`;
+      const hint = $("[data-read-hint]", field);
+      if (hint) {
+        const read = lastRead[name];
+        hint.textContent = !Object.keys(lastRead).length ? ""
+          : read ? "" : rule.requirement === "required" ? "not found on the label" : "not on the label";
+        hint.className = "read-hint small " + (read ? "" : rule.requirement === "required" ? "read-missing" : "muted");
+      }
+    });
+    // Order: the class's required statements first, as the checklist lists them.
+    const order = Object.keys(wanted);
+    const host = $("[data-statements]", panel);
+    if (host) order.forEach((name) => { const f = $(`[data-statement="${name}"]`, host); if (f) host.appendChild(f); });
+    if (!chosen || !shown) { panel.hidden = true; return; }
     $("[data-label-read-note]", panel).innerHTML =
-      `<span class="req">*</span> required for ${esc(chosen.name.toLowerCase())}. See <a href="/rules" target="_blank" rel="noopener">Reference</a> for the rule behind each item.`;
+      `The reader filled these from the label. File each one exactly as the label prints it; the check compares what you file with what the reader found. <span class="req">*</span> required for ${esc(chosen.name.toLowerCase())}. See <a href="/rules" target="_blank" rel="noopener">Reference</a> for the rule behind each item.`;
     panel.hidden = false;
   }
 

@@ -11,6 +11,8 @@ from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, URLSafeSerializer
 
 from ..engine.extractors import resolve_extractor_name
+from ..engine.rules import applicant_statements
+from ..engine.warning import STATUTORY_TEXT
 from . import services
 from .models import ApplicationStatus
 from .services import FIELD_LABELS
@@ -108,6 +110,8 @@ def build_templates() -> Jinja2Templates:
         VERDICT_LABELS=VERDICT_LABELS,
         FIELD_LABELS=FIELD_LABELS,
         BEVERAGE_LABELS=BEVERAGE_LABELS,
+        STATEMENTS=applicant_statements(),
+        STATUTORY_TEXT=STATUTORY_TEXT,
     )
     return templates
 

@@ -1129,3 +1129,44 @@ def test_cola_scenarios_are_applied_to_the_csv(applicant):
 def test_wizard_carries_the_prefill_note(applicant):
     page = applicant.get("/applicant/applications/new").text
     assert 'id="prefill-note"' in page and "your responsibility to check" in page
+
+
+class TestFiledStatementsOnTheWeb:
+    def test_the_wizard_offers_the_statement_fields(self, applicant):
+        page = applicant.get("/applicant/applications/new").text
+        assert 'data-statement="health_warning"' in page and "<textarea" in page
+        assert 'data-statement="qualifying_phrase"' in page
+        assert "Statements the label carries, filed exactly as printed" in page
+
+    def test_statements_are_stored_compared_and_shown(self, applicant):
+        from labelverify.engine.warning import STATUTORY_TEXT
+
+        created = applicant.post(
+            "/applicant/applications",
+            data={"sample_id": "old-tom-bourbon", "beverage_type": "distilled_spirits"},
+            headers={"Accept": "application/json"},
+        ).json()
+        form = {
+            **FORM,
+            "qualifying_phrase": "Distilled and Bottled by",
+            "age_statement": "Aged 4 Years",  # the label says six
+            "health_warning": STATUTORY_TEXT,
+        }
+        check = applicant.post(
+            f"/applicant/applications/{created['id']}/precheck",
+            data=form,
+            headers={"X-Partial": "1"},
+        )
+        assert check.status_code == 200
+        assert "Aged 4 Years" in check.text and "the numbers differ" in check.text
+        assert "Statutory text (27 CFR 16.21)" in check.text  # filed text equals the statute
+        page = applicant.get(f"/applicant/applications/{created['id']}").text
+        assert "Aged 4 Years" in page
+
+    def test_a_form_without_the_statements_leaves_them_unfiled(self, applicant):
+        from labelverify.web.routes.common import application_from_form
+
+        data = application_from_form(dict(FORM))
+        assert data.age_statement is None and data.health_warning is None
+        data = application_from_form({**FORM, "age_statement": ""})
+        assert data.age_statement == ""

@@ -33,6 +33,7 @@
               <tr><td><code>producer_address</code></td><td>Always. City and state</td><td><code>Bardstown, KY</code></td></tr>
               <tr><td><code>is_import</code></td><td><code>true</code> or <code>false</code></td><td><code>false</code></td></tr>
               <tr><td><code>country_of_origin</code></td><td>When <code>is_import</code> is true</td><td><code>Scotland</code></td></tr>
+              <tr><td><code>qualifying_phrase</code>, <code>health_warning</code>, <code>sulfite_declaration</code>, <code>appellation</code>, <code>vintage_year</code>, <code>estate_bottled</code>, <code>age_statement</code>, <code>bottled_in_bond</code>, <code>blend_percentage</code>, <code>strength_claim</code></td><td>Optional. The label's statements as printed; a column that is present is compared with what the reader found, a column that is absent leaves the label to be checked against the rules alone</td><td><code>Distilled and Bottled by</code>, <code>Aged Six Years</code></td></tr>
             </tbody>
           </table>
           <p class="muted small">Everything else a class requires (the qualifying phrase, sulfites, appellation and vintage, age statement, strength claims, the warning) is read from the label image and checked against the rules; no column is needed. See <a href="/rules" target="_blank" rel="noopener">Reference</a>.</p>

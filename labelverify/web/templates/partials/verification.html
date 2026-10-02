@@ -74,7 +74,7 @@
         {% endif %}
       </th>
       <td>
-        {% if f.field == 'health_warning' %}<span class="muted">Statutory text (27 CFR 16.21)</span>
+        {% if f.field == 'health_warning' %}{% if f.application_value == STATUTORY_TEXT %}<span class="muted">Statutory text (27 CFR 16.21)</span>{% elif f.application_value %}<details class="as-printed"><summary>As filed</summary><p>{{ f.application_value }}</p></details>{% else %}<span class="muted">left blank</span>{% endif %}
         {% else %}{{ f.application_value or '—' }}{% endif %}
       </td>
       <td>

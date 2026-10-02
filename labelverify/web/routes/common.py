@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from ...engine.models import ApplicationData
 from ...engine.preprocess import UnreadableImageError
+from ...engine.rules import STATEMENT_SOURCES
 from ..models import Application, ApplicationStatus, Role, User
 from ..render import Renderer
 
@@ -44,6 +45,9 @@ def application_from_form(form: dict) -> ApplicationData:
             producer_address=text("producer_address"),
             is_import=is_import,
             country_of_origin=text("country_of_origin"),
+            # A statement field absent from the form was not provided; present and empty
+            # was provided blank.
+            **{field: (text(field) if field in form else None) for field in STATEMENT_SOURCES},
         )
     except ValueError as exc:
         raise HTTPException(422, f"Application data is invalid: {exc}") from exc

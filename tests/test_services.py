@@ -622,6 +622,8 @@ def test_init_db_adds_columns_to_a_database_from_the_previous_release(tmp_path):
             "extraction_ms",
             "extraction_extractor",
             "beverage_type_inferred",
+            "health_warning",
+            "age_statement",
         ):
             con.execute(f"ALTER TABLE applications DROP COLUMN {column}")
         assert "version" not in [r[1] for r in con.execute("PRAGMA table_info(label_images)")]
@@ -633,6 +635,7 @@ def test_init_db_adds_columns_to_a_database_from_the_previous_release(tmp_path):
         assert "version" in cols and "panel" in cols
         app_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(applications)"))]
         assert "extraction_json" in app_cols and "extraction_version" in app_cols
+        assert "health_warning" in app_cols and "age_statement" in app_cols
     with make_session_factory(engine)() as db:
         app = db.query(Application).first()
         assert [(i.version, i.panel) for i in app.current_images] == [(1, 1)]
