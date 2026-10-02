@@ -372,12 +372,14 @@ interviews) and HTTPS (the session cookie is marked Secure on a public URL).
 
 ```bash
 az login
-ANTHROPIC_API_KEY=sk-ant-... scripts/deploy_azure.sh
+ANTHROPIC_API_KEY=sk-ant-... GEMINI_API_KEY=... scripts/deploy_azure.sh
 ```
 
-It builds the image in Azure Container Registry (no local Docker), creates a B1 Linux
-plan with Always On, a web app from the image, and the settings for a public URL, then
-waits for `/healthz` and prints the address. The database, the stored images and the
+Claude reads the labels; with the Gemini key present, Gemini words the specialist's
+correction notices (the findings are the engine's either way), and without it Claude
+does. The script builds the image in Azure Container Registry (no local Docker), creates
+a B1 Linux plan with Always On, a web app from the image, and the settings for a public
+URL, then waits for `/healthz` and prints the address. The database, the stored images and the
 session secret live under `/home`, which App Service persists across restarts and
 deployments. Re-running the script with the same `APP` name rebuilds and redeploys.
 `az group delete --name labelverify-rg` removes everything. On a free Azure account the

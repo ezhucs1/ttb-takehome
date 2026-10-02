@@ -6,7 +6,10 @@
 # Builds the image in Azure Container Registry (no local Docker needed), then creates a
 # B1 App Service plan, a web app from that image, and the app settings for a public URL.
 #
-#   ANTHROPIC_API_KEY=sk-ant-... scripts/deploy_azure.sh
+#   ANTHROPIC_API_KEY=sk-ant-... GEMINI_API_KEY=... scripts/deploy_azure.sh
+#
+# Claude reads the labels. With GEMINI_API_KEY set, Gemini words the specialist's
+# correction notices (its free tier covers that call); without it, Claude does.
 #
 # Re-running the script with the same APP name rebuilds the image and restarts the app.
 # Tear everything down with:  az group delete --name "$RG" --yes
@@ -61,7 +64,7 @@ az webapp config appsettings set --name "$APP" --resource-group "$RG" --output n
   LABELVERIFY_SECURE_COOKIES=true \
   LABELVERIFY_DAILY_READ_LIMIT="${LABELVERIFY_DAILY_READ_LIMIT:-150}" \
   LABELVERIFY_FALLBACK=tesseract \
-  ${GEMINI_API_KEY:+GEMINI_API_KEY="$GEMINI_API_KEY"}
+  ${GEMINI_API_KEY:+GEMINI_API_KEY="$GEMINI_API_KEY" LABELVERIFY_NOTICE_PROVIDER=gemini}
 az webapp config set --name "$APP" --resource-group "$RG" --always-on true --http20-enabled true \
   --generic-configurations '{"healthCheckPath": "/healthz"}' --output none
 az webapp update --name "$APP" --resource-group "$RG" --https-only true --output none
