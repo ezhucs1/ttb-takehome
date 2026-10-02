@@ -412,11 +412,8 @@ docker build -t labelverify .
 docker run -p 8000:8000 -v labelverify-data:/app/data -e ANTHROPIC_API_KEY=... -e SECRET_KEY=... labelverify
 ```
 
-**Fly.io** (always-on machine with 1 GB, persistent volume, HTTPS), the fastest path
-when a cloud account has no quota to give. `fly.toml` carries the configuration; the four
-commands in its header create the app and the volume, set the secrets, and deploy with
-Fly's remote builder, so no local Docker is needed. Railway or Render work the same way;
-use a paid or always-on tier so the demo does not hit a cold start.
+Any other container host (Railway, Render, Fly) runs the same image; use a paid or
+always-on tier with a persistent disk so the demo does not hit a cold start.
 
 Every public deployment sets the same guards, as environment variables any host can set:
 the sign-in dialog shows no demo credentials (reviewers take them from this README),
