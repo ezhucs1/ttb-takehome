@@ -402,7 +402,8 @@
         showWizardViewer(data.image_urls || []);
         renderChecklist((data.prefill || {}).beverage_type ? "label" : "none");
         if (data.prefill && data.prefill.country_of_origin) $("#is_import").checked = true;
-        $("#prefill-hint").textContent = data.warning ? data.warning : "Filled from the label. Check every value against your application.";
+        $("#prefill-hint").textContent = data.warning ? data.warning : "Filled from the label by the reader.";
+        $("#prefill-note").hidden = !Object.keys(data.prefill || {}).length; // nothing to double-check when the read failed
         detailsForm.action = `/applicant/applications/${applicationId}/precheck`;
         submitForm.action = `/applicant/applications/${applicationId}/submit`;
         $("#step-1").classList.add("step-done");

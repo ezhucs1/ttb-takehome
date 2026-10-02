@@ -568,3 +568,25 @@ are resized and re-encoded to keep the set at 15 MB. Two limits are stated rathe
 papered over: the registry does not publish alcohol content or net contents, so those
 rows come back for review; and its class names are codes, not the label's wording, so
 the class row is usually a review item too. The set is for the reader, on real labels.
+
+## 25. The COLA batch is a demonstration with known answers, and the reader never fills the CSV
+
+The registry rows alone show one thing: real artwork, mostly coming back for review
+because the public record has no alcohol content or net contents. A reviewer asked, fairly,
+what the batch proves. So twenty of the sixty rows now carry application values with a
+known relationship to the label: nine transcribed from the image by a person, eight of
+those copies then altered in one field (ABV, volume, class, brand) or nudged one letter,
+three blanked. A `scenario` column names the case and `expected` says what the check
+should report. The point is the time saving the brief asks about: the specialist opens
+the rows the batch flagged and skims the rest.
+
+Two rules held while building it. The values come from a person reading the label, or
+from the registry, never from the app's reader: the brief says the application is the
+applicant's statement and the label is the evidence, and a CSV filled from the reader
+would make the check compare the reader with itself. The same rule is now written on the
+wizard's step 2, where the prefill is a convenience the applicant must check. And the
+engine changed in one place the demonstration exposed: a filed class that appears whole
+inside a longer label designation ("Gin" in "Blood Orange Forward Gin", "Beer" in "100%
+Malt Premium Beer") was a mismatch by similarity score. The regulations allow descriptive
+words beside the class, so that is now a review item with a reason, while a different
+class ("Stout" for a dark strong ale) stays a mismatch.

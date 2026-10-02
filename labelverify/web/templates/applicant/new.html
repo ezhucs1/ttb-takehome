@@ -68,6 +68,12 @@
   <section class="card step step-locked" id="step-2" inert>
     <div class="step-head"><span class="step-num">2</span><h2>Application details</h2><span class="step-hint" id="prefill-hint"></span><a class="small step-ref" href="/rules" target="_blank" rel="noopener" title="What each class must carry, with citations">Reference</a></div>
     <div class="step-body">
+      <div class="banner banner-info prefill-note" id="prefill-note" hidden>
+        <div class="banner-main">
+          <strong>The reader filled this form from the label for convenience.</strong>
+          <span>It is your responsibility to check every value and correct anything the reader got wrong or missed: the application must state what you are filing, not what the reader guessed. The check in step 3 compares the values you leave here against what the reader found on the label, so a value copied unchecked would compare against itself.</span>
+        </div>
+      </div>
       <form id="details-form" method="post" action="" data-async data-target="#precheck-result" data-busy="Checking the label…">
         {{ m.form_fields({}, [('distilled_spirits','Distilled spirits'),('wine','Wine'),('malt_beverage','Malt beverage')], rules=rules) }}
         <div class="step-actions">

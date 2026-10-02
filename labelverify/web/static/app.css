@@ -528,6 +528,9 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--acce
 
 /* Rules and checklists -------------------------------------------------------- */
 .cite { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.04em; color: var(--muted); margin-top: 2px; }
+.prefill-note { margin-bottom: 18px; }
+.prefill-note .banner-main strong { font-size: 0.92rem; }
+.prefill-note .banner-main span { font-size: 0.85rem; line-height: 1.45; }
 .banner-link { color: inherit; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
 /* Class-aware application form: required marks and the label-only items */
 .field.required > label::after { content: " *"; color: var(--danger-fg); font-weight: 700; }

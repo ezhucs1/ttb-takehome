@@ -1069,3 +1069,51 @@ def test_cola_registry_batch_downloads_parse_as_a_batch(applicant):
     }
     page = applicant.get("/applicant/batches").text
     assert "public COLA registry" in page and "/applicant/batches/cola.csv" in page
+
+
+def test_cola_scenarios_are_applied_to_the_csv(applicant):
+    """The demonstration rows carry the hand-written values; the rest keep the registry's."""
+    import csv
+    import io
+    import json
+
+    from labelverify.web import services
+
+    scenarios = json.loads((services.COLA_DIR / "scenarios.json").read_text())
+    scenarios.pop("_about", None)
+    rows = {
+        r["ttbid"]: r
+        for r in csv.DictReader(io.StringIO(applicant.get("/applicant/batches/cola.csv").text))
+    }
+    assert set(scenarios) <= set(rows)
+    by_scenario: dict[str, int] = {}
+    for ttbid, row in rows.items():
+        by_scenario[row["scenario"]] = by_scenario.get(row["scenario"], 0) + 1
+        spec = scenarios.get(ttbid)
+        if spec is None:
+            assert row["scenario"] == "registry-as-filed"
+            assert row["alcohol_content"] == "" and row["net_contents"] == ""
+            continue
+        assert row["scenario"] == spec["scenario"] and row["expected"] == spec["expected"]
+        for key, value in spec["fields"].items():
+            assert row[key] == value
+        if spec["scenario"] == "blank-fields":
+            assert row["brand_name"] == "" and row["class_type"] == ""
+        else:
+            assert row["brand_name"] and row["class_type"] and row["alcohol_content"]
+    assert by_scenario["registry-as-filed"] == 40 and by_scenario["filed-correctly"] == 9
+    assert set(by_scenario) == {
+        "registry-as-filed",
+        "filed-correctly",
+        "wrong-alcohol",
+        "wrong-net-contents",
+        "wrong-class",
+        "wrong-brand",
+        "near-miss-brand",
+        "blank-fields",
+    }
+
+
+def test_wizard_carries_the_prefill_note(applicant):
+    page = applicant.get("/applicant/applications/new").text
+    assert 'id="prefill-note"' in page and "your responsibility to check" in page

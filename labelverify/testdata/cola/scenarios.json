@@ -1,0 +1,237 @@
+{
+  "_about": "Hand-written application values for the COLA batch demonstration. Every value here was transcribed by a person from the label image, or deliberately altered from that transcription; none comes from the app's reader. scripts/import_cola.py copies these over the registry values when it writes applications.csv. Rows not listed keep the registry's values (scenario 'registry-as-filed').",
+  "26176001000014": {
+    "scenario": "filed-correctly",
+    "expected": "approve",
+    "fields": {
+      "brand_name": "Tenhead",
+      "class_type": "American Gin",
+      "alcohol_content": "44% Alc. by Vol. (88 Proof)",
+      "net_contents": "1 Liter",
+      "producer_name": "Knowlton House Distillery",
+      "producer_address": "Mosinee, WI 54455 USA"
+    }
+  },
+  "26192001000073": {
+    "scenario": "filed-correctly",
+    "expected": "approve",
+    "fields": {
+      "brand_name": "Rittenhouse",
+      "class_type": "Kentucky Straight Rye Whiskey",
+      "alcohol_content": "50% Alc./Vol.",
+      "net_contents": "750 mL",
+      "producer_name": "Connoisseur Wines & Spirits California",
+      "producer_address": "Napa, CA"
+    }
+  },
+  "26183001000057": {
+    "scenario": "filed-correctly",
+    "expected": "approve",
+    "fields": {
+      "brand_name": "J. Henry & Sons",
+      "class_type": "Wisconsin Straight Bourbon Whiskey",
+      "alcohol_content": "60% Alc/Vol",
+      "net_contents": "750 mL",
+      "producer_name": "Henry Farms Prairie Spirits",
+      "producer_address": "Dane, WI 53529"
+    }
+  },
+  "26180001000702": {
+    "scenario": "filed-correctly",
+    "expected": "approve",
+    "fields": {
+      "brand_name": "Sounds Vineyard",
+      "class_type": "Chardonnay",
+      "alcohol_content": "Alc. 13.0% by Vol.",
+      "net_contents": "750 mL",
+      "producer_name": "Sounds Vineyard",
+      "producer_address": "Angwin, California"
+    }
+  },
+  "26201001000349": {
+    "scenario": "filed-correctly",
+    "expected": "approve",
+    "fields": {
+      "brand_name": "Calimist",
+      "class_type": "Sauvignon Blanc",
+      "alcohol_content": "Alc. 12.5% by Vol.",
+      "net_contents": "750 mL",
+      "producer_name": "Calimist Wine Co.",
+      "producer_address": "Ukiah, Mendocino County, California"
+    }
+  },
+  "26167001000445": {
+    "scenario": "filed-correctly",
+    "expected": "approve",
+    "fields": {
+      "brand_name": "McKelvey Vineyards",
+      "class_type": "Pinot Grigio",
+      "alcohol_content": "Alc. 13.0% By Vol",
+      "net_contents": "750 mL",
+      "producer_name": "SVP Winery",
+      "producer_address": "Shandon, CA"
+    }
+  },
+  "26188001000708": {
+    "scenario": "filed-correctly",
+    "expected": "approve; the class row may be a review item because the label's designation is '100% Malt Premium Beer'",
+    "fields": {
+      "brand_name": "Daikoku Beer",
+      "class_type": "Beer",
+      "alcohol_content": "Alc. 5.5% by Vol.",
+      "net_contents": "1 Pint / 16 FL. OZ.",
+      "producer_name": "Nova Brewing Co.",
+      "producer_address": "1580 W. San Bernardino Rd. H&I, Covina, CA 91722"
+    }
+  },
+  "26205001000228": {
+    "scenario": "filed-correctly",
+    "expected": "approve",
+    "fields": {
+      "brand_name": "Crazy Turtle",
+      "class_type": "Hazy India Pale Ale",
+      "alcohol_content": "6.5% Alc/Vol",
+      "net_contents": "16 FL OZ (473 mL)",
+      "producer_name": "Clearwater Brewing Company",
+      "producer_address": "1700 N. Fort Harrison Ave., Clearwater, FL"
+    }
+  },
+  "26197001000401": {
+    "scenario": "filed-correctly",
+    "expected": "approve",
+    "fields": {
+      "brand_name": "Mahou",
+      "class_type": "Beer",
+      "alcohol_content": "Alc. 5.5% by Vol.",
+      "net_contents": "12 FL. OZ.",
+      "producer_name": "Founders Brewing Co",
+      "producer_address": "Grand Rapids, MI"
+    }
+  },
+  "26166001000624": {
+    "scenario": "wrong-alcohol",
+    "expected": "corrections needed: alcohol content (the foot label states 56.9% alc/vol, 113.8 proof)",
+    "fields": {
+      "brand_name": "Never Say Die",
+      "class_type": "Kentucky Straight Rye Whiskey",
+      "alcohol_content": "45% Alc/Vol (90 Proof)",
+      "net_contents": "700 mL",
+      "producer_name": "NSD Spirits Inc",
+      "producer_address": "Lexington, KY"
+    }
+  },
+  "26190001000603": {
+    "scenario": "wrong-alcohol",
+    "expected": "corrections needed: alcohol content (the label states 7.2%)",
+    "fields": {
+      "brand_name": "Mount Holly Beer Co.",
+      "class_type": "DDH Hazy IPA",
+      "alcohol_content": "5.2%",
+      "net_contents": "1 Pint",
+      "producer_name": "Mount Holly Beer",
+      "producer_address": "Beacon, NY"
+    }
+  },
+  "26198001000266": {
+    "scenario": "wrong-net-contents",
+    "expected": "corrections needed: net contents (the back label states 750 mL); the class row is a review item because the label reads 'Blood Orange Forward Gin'",
+    "fields": {
+      "brand_name": "Dark Island",
+      "class_type": "Gin",
+      "alcohol_content": "45% Alc/Vol (90 Proof)",
+      "net_contents": "1 L",
+      "producer_name": "Dark Island Spirits",
+      "producer_address": "Alexandria Bay, New York"
+    }
+  },
+  "26194001000967": {
+    "scenario": "wrong-net-contents",
+    "expected": "corrections needed: net contents (the label states 750 mL)",
+    "fields": {
+      "brand_name": "Francis Coppola Diamond Collection",
+      "class_type": "Sauvignon Blanc",
+      "alcohol_content": "Alc. 8.0% by Vol.",
+      "net_contents": "1.5 L",
+      "producer_name": "Francis Ford Coppola Winery",
+      "producer_address": "Geyserville & Manteca, CA"
+    }
+  },
+  "26196001000791": {
+    "scenario": "wrong-class",
+    "expected": "corrections needed: class/type (the label reads '50% Chenin Blanc, 50% Cortese')",
+    "fields": {
+      "brand_name": "Skin Contact",
+      "class_type": "Chardonnay",
+      "alcohol_content": "13.4% Alc. By Vol",
+      "net_contents": "750 mL",
+      "producer_name": "Matt Crutchfield Wines",
+      "producer_address": "Forestville, CA"
+    }
+  },
+  "26206001000046": {
+    "scenario": "wrong-class",
+    "expected": "corrections needed: class/type (the label reads 'Belgian-Style Dark Strong Ale')",
+    "fields": {
+      "brand_name": "Groovitory",
+      "class_type": "Stout",
+      "alcohol_content": "10.5% Alc/Vol",
+      "net_contents": "1 Pint",
+      "producer_name": "Twelvenote Brew Co.",
+      "producer_address": "Bridgeport, CT 06605"
+    }
+  },
+  "26191001000549": {
+    "scenario": "wrong-brand",
+    "expected": "corrections needed: brand name (the label reads 'Nc'nean'; 'Kilchoman' is another distillery's brand)",
+    "fields": {
+      "brand_name": "Kilchoman",
+      "class_type": "Single Malt Scotch Whisky",
+      "alcohol_content": "48.5% Alc./Vol.",
+      "net_contents": "700 mL",
+      "producer_name": "Impex Beverages, Inc.",
+      "producer_address": "South San Francisco, CA"
+    }
+  },
+  "26184001000297": {
+    "scenario": "near-miss-brand",
+    "expected": "review: brand name is close to the label's 'Delta' but not identical (one letter off), so the engine asks a person to look rather than charging the label",
+    "fields": {
+      "brand_name": "Delto",
+      "class_type": "Sauvignon Blanc",
+      "alcohol_content": "12.5% Alc/Vol",
+      "net_contents": "750 mL",
+      "producer_name": "Wines for Change",
+      "producer_address": "Healdsburg, CA"
+    }
+  },
+  "26195001000186": {
+    "scenario": "blank-fields",
+    "expected": "review: brand, class, alcohol content and net contents were left blank on the application; each row says what the label shows",
+    "fields": {
+      "brand_name": "",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": ""
+    }
+  },
+  "26196001000784": {
+    "scenario": "blank-fields",
+    "expected": "review: brand, class, alcohol content and net contents were left blank on the application; each row says what the label shows",
+    "fields": {
+      "brand_name": "",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": ""
+    }
+  },
+  "26204001000524": {
+    "scenario": "blank-fields",
+    "expected": "review: brand, class, alcohol content and net contents were left blank on the application (a handwritten keg collar, so the read itself may be uncertain)",
+    "fields": {
+      "brand_name": "",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": ""
+    }
+  }
+}

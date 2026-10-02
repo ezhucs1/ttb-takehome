@@ -159,6 +159,23 @@ def compare_class_type(application: ApplicationData, extraction: LabelExtraction
         review_at=CLASS_REVIEW,
         normalizer=_normalize_class,
     )
+    # "Blood Orange Forward Gin" or "100% Malt Premium Beer" against a filed "Gin" or
+    # "Beer": the class is there, wrapped in descriptive words the regulations allow next
+    # to it. That is a look, not a charge against the label.
+    app_norm = _normalize_class(application.class_type)
+    label_norm = _normalize_class(extraction.class_type.value)
+    if (
+        result.verdict is Verdict.MISMATCH
+        and app_norm
+        and label_norm
+        and re.search(rf"\b{re.escape(app_norm)}\b", label_norm)
+    ):
+        result.verdict = Verdict.NEEDS_REVIEW
+        result.reason = (
+            f"The label's designation '{extraction.class_type.value}' contains the filed class "
+            f"'{application.class_type}' with other words around it. Confirm the designation "
+            "is the class, with permitted descriptive words, and not a different class."
+        )
     # A malt beverage must use a recognized class designation (27 CFR 7.64): beer, ale,
     # lager, stout, porter, malt liquor ... A designation with none of them goes to review.
     rules = _class_of(application, extraction)

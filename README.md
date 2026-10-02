@@ -16,6 +16,9 @@ recommends; a person decides.
   can be added one at a time, removed individually, and reordered; the application form
   fills itself from what is printed across all panels, including the type of product,
   and step 2 shows what that class of label must carry, with the regulation for each item.
+  The prefill is a convenience: a note on the form says the applicant must check and
+  correct it, because the check compares the applicant's values against the label, and a
+  value copied unchecked from the reader would only compare the reader with itself.
 - Run a pre-check before submitting and fix problems while they are cheap.
 - See correction requests as plain-language notices, reply on the exact field in
   question, and resubmit with a revised label. The application keeps its number.
@@ -130,11 +133,31 @@ same batch makes fourteen model reads, which is a fair test of the concurrency a
 per-label timing.
 
 The second set is real: sixty approved labels from TTB's public COLA registry, twenty of
-each class, many with back and neck panels, with the registry's own application values
-(`labelverify/testdata/cola/`, provenance in its README). The registry does not publish
-alcohol content or net contents, so those rows come back for review, and its class names
-are codes rather than label wording; what the set shows is the reader on real artwork and
-real photographs. It needs a live reader; demo mode cannot read it.
+each class, many with back and neck panels (`labelverify/testdata/cola/`, provenance in
+its README). It needs a live reader; demo mode cannot read it. Its CSV is a
+demonstration that one batch can tell a correct filing from a wrong one, a near miss, and
+a blank, which is where the time saving is: the specialist opens the rows the batch
+flagged and skims the rest. Twenty rows carry application values a person transcribed
+from the label image (never values the reader produced, so the check is not comparing
+the reader with itself), some then deliberately altered; the other forty keep the
+registry's own values. The `scenario` column names the case and `expected` says what the
+check should report:
+
+| Scenario | Rows | Application values | Expected result |
+| --- | --- | --- | --- |
+| `filed-correctly` | 9 (3 per class) | Transcribed from the label by hand | Approve; an address or a wrapped class designation ("100% Malt Premium Beer" for "Beer") may be a review item |
+| `wrong-alcohol` | 2 | Transcribed, then the ABV changed (45% filed, 56.9% printed; 5.2% filed, 7.2% printed) | Corrections needed on alcohol content |
+| `wrong-net-contents` | 2 | Transcribed, then the volume changed (1 L and 1.5 L filed, 750 mL printed) | Corrections needed on net contents |
+| `wrong-class` | 2 | Transcribed, then the class changed ("Chardonnay" for a Chenin Blanc blend; "Stout" for a Belgian-style dark strong ale) | Corrections needed on class/type |
+| `wrong-brand` | 1 | Another distillery's brand filed for an Nc'nean Scotch | Corrections needed on brand name |
+| `near-miss-brand` | 1 | "Delto" filed for a label that reads "Delta" | Review: close but not identical, so a person decides rather than the label being charged |
+| `blank-fields` | 3 (1 per class) | Brand, class, ABV and net contents left empty | Review: each blank row says what the label shows, so the applicant can fill it in |
+| `registry-as-filed` | 40 | The registry's record: brand, class code, permit holder; ABV and net contents are not published | Review on the blank rows; the class row is often a review item because the registry's code ("Other Gin", "Table White Wine") is not the label's wording |
+
+The values and the expected results are in `labelverify/testdata/cola/scenarios.json`;
+`scripts/import_cola.py --csv-only` rebuilds the CSV from it. The expectations describe a
+confident model read. Under the local OCR fallback every row is an uncertain read and
+differences become review items, as described above.
 
 The database is seeded on first start with fourteen sample applications in a mix of states
 so every screen has content.

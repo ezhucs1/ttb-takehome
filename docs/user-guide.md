@@ -38,8 +38,12 @@ the images and reads them once. The status line shows how long the read took and
 reader did it. If the read fails, the status offers "Read again" and the form can be
 filled by hand.
 
-**Step 2, application details.** The form is filled from the read. It is a convenience,
-not the truth: make every field say what your application says, then run the check.
+**Step 2, application details.** The form is filled from the read, and a note at the
+top says so. The prefill is a convenience, not the truth: the reader can misread a value
+or miss one, and the application must state what you are filing. Check every field,
+correct anything wrong or missing, then run the check. The check compares the values you
+leave in the form against what the reader found on the label, so a value copied unchecked
+from the reader would only compare the reader with itself.
 Your label stays beside the form and the result, in a viewer that follows the page as
 you scroll: click the image or the magnifier to zoom in, move the mouse to pan, click
 again to zoom out. With more than one panel, the thumbnails under it switch panels.
@@ -109,9 +113,14 @@ template has one example row per class. Leave the type blank to let the label de
 Each row becomes an application with its result, straight into the queue; the batch page
 shows progress and a summary. A row whose image is missing or unreadable is reported,
 not dropped. The sample CSV and zip cover every outcome. A second pair on the same page
-holds sixty real labels from TTB's public COLA registry with the registry's own values;
-it needs a live reader, and its rows mostly come back for review because the registry
-does not publish alcohol content or net contents.
+holds sixty real labels from TTB's public COLA registry; it needs a live reader. Its CSV
+mixes cases on purpose, named in a `scenario` column with the expected result beside it:
+nine rows filed correctly (values a person transcribed from the label), eight with one
+value deliberately wrong (alcohol content, net contents, class, brand) or a near miss,
+three with the main fields left blank, and forty with the registry's own record, whose
+blank alcohol content and net contents come back for review. Run it and compare the
+batch summary with the `expected` column: the flagged rows are the ones a specialist
+opens first.
 
 ## Specialist: the queue and a review
 

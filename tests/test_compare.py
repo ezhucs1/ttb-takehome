@@ -14,6 +14,33 @@ from labelverify.engine.models import BeverageType, Recommendation, Verdict
 from tests.conftest import make_field
 
 
+class TestClassTypeWrapped:
+    """The filed class appears inside a longer designation on the label."""
+
+    def test_descriptive_words_around_the_class_need_review(self, application, extraction):
+        application.class_type = "Gin"
+        extraction.class_type = make_field("Blood Orange Forward Gin")
+        result = compare_class_type(application, extraction)
+        assert result.verdict is Verdict.NEEDS_REVIEW
+        assert "contains the filed class" in result.reason
+
+    def test_malt_designation_with_qualifiers(self, application, extraction):
+        application.beverage_type = BeverageType.MALT_BEVERAGE
+        application.class_type = "Beer"
+        extraction.class_type = make_field("100% Malt Premium Beer")
+        assert compare_class_type(application, extraction).verdict is Verdict.NEEDS_REVIEW
+
+    def test_a_different_class_is_still_a_mismatch(self, application, extraction):
+        application.class_type = "Stout"
+        extraction.class_type = make_field("Belgian-Style Dark Strong Ale")
+        assert compare_class_type(application, extraction).verdict is Verdict.MISMATCH
+
+    def test_partial_word_does_not_count(self, application, extraction):
+        application.class_type = "Ale"
+        extraction.class_type = make_field("Pale Lager")  # "ale" inside "pale" is not the class
+        assert compare_class_type(application, extraction).verdict is Verdict.MISMATCH
+
+
 class TestBrandName:
     def test_exact(self, application, extraction):
         assert compare_brand_name(application, extraction).verdict is Verdict.MATCH
