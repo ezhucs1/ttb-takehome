@@ -134,14 +134,39 @@ per-label timing.
 
 The second set is real: sixty approved labels from TTB's public COLA registry, twenty of
 each class, many with back and neck panels (`labelverify/testdata/cola/`, provenance in
-its README). It needs a live reader; demo mode cannot read it. Its CSV is a
-demonstration that one batch can tell a correct filing from a wrong one, a near miss, and
-a blank, which is where the time saving is: the specialist opens the rows the batch
-flagged and skims the rest. Twenty rows carry application values a person transcribed
-from the label image (never values the reader produced, so the check is not comparing
-the reader with itself), some then deliberately altered; the other forty keep the
-registry's own values. The `scenario` column names the case and `expected` says what the
-check should report:
+its README). It needs a live reader; demo mode cannot read it. The CSV holds two
+different things, and the summary at the top of a finished batch adds them together, so
+read them apart.
+
+**Twenty demonstration rows** carry application values a person transcribed from the
+label image (never values the reader produced, so the check is not comparing the reader
+with itself), some then deliberately altered or blanked. These have known answers and
+are the test of the engine: one batch should tell a correct filing from a wrong one, a
+near miss, and a blank, which is where the time saving is. The specialist opens the rows
+the batch flagged and skims the rest.
+
+**Forty registry rows** keep the registry's own record as the application. Every one of
+these labels was approved by TTB, yet most come back "corrections needed", and that is
+the check working on data that does not match the label, not a reading error. The
+public registry does not publish what the applicant typed on the form. It publishes:
+
+- **Brand name**, usually as printed, but sometimes what the permit holder filed rather
+  than the biggest words on the label. The Spartan Select can is registered under the
+  brand "Saugatuck Brewing Co.", and TTB accepted that.
+- **Class/type as a category code**, such as "Other Gin" or "Table White Wine", not the
+  designation printed on the label. TTB approved "American Gin" on the label under the
+  code "Other Gin"; both are correct, but they are not the same text. This is the row
+  that makes most registry rows "corrections needed".
+- **The permit holder's legal name and street address**, which is often not the name on
+  the label. Delicato Vineyards holds the COLA for the Francis Ford Coppola Winery label.
+  The engine accepts a street address against the label's city and state, and a trade
+  name or legal name against whichever the label prints, so this row now mostly matches.
+- **No alcohol content and no net contents.** The registry does not publish them, so
+  those rows say the application left them blank and come back for review.
+
+What the forty rows show is the reader on real artwork and real photographs, and that
+the engine says precisely which value differs and why. The `scenario` column names each
+row's case and `expected` says what the check should report:
 
 | Scenario | Rows | Application values | Expected result |
 | --- | --- | --- | --- |

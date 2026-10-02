@@ -9,12 +9,18 @@ size, characters per inch and contrasting background.
 - `images/`: 97 label panels named `<ttbid>_<panel>.jpg` (front, back, other1, other2),
   resized to at most 1400 px on the long edge and re-encoded as JPEG.
 - `applications.csv`: one row per COLA in the batch upload's column format. Forty rows
-  carry the registry's own values (`scenario` = `registry-as-filed`): alcohol content and
-  net contents are not on the public record and are left blank, so the engine reports
-  them as "left blank on the application" (review items); the class/type column is the
-  registry's class name made readable ("Table White Wine", "Other Gin"), which is rarely
-  the label's own wording, and the producer name is the permit holder's legal name, so
-  on a confident read most of these rows come back as corrections needed. That is the
+  carry the registry's own values (`scenario` = `registry-as-filed`). Every label in the
+  set was approved by TTB, yet most of these rows come back "corrections needed", because
+  the public registry does not publish what the applicant typed on the form. It
+  publishes the brand name (usually as printed, but sometimes what the permit holder
+  filed: the Spartan Select can is registered under "Saugatuck Brewing Co."); the
+  class/type as a category code ("Other Gin", "Table White Wine"), not the designation
+  printed ("American Gin" was approved under "Other Gin"); the permit holder's legal name
+  and street address, often not the name on the label (Delicato Vineyards holds the COLA
+  for the Francis Ford Coppola Winery label); and no alcohol content or net contents at
+  all. So the class row mismatches, the blank rows ask for the value, and the producer
+  and address rows mostly match after the engine accepts a street address against a
+  city and state and a trade or legal name against whichever is printed. That is the
   check working on filed values that do not match the label, not a reading error. The
   producer name and address are split from the registry's applicant line at the street
   address.

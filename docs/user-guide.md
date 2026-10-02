@@ -117,10 +117,13 @@ holds sixty real labels from TTB's public COLA registry; it needs a live reader.
 mixes cases on purpose, named in a `scenario` column with the expected result beside it:
 nine rows filed correctly (values a person transcribed from the label), eight with one
 value deliberately wrong (alcohol content, net contents, class, brand) or a near miss,
-three with the main fields left blank, and forty with the registry's own record, which
-mostly come back as corrections needed because the registry's class code and permit
-holder name are not what the label prints, and whose blank alcohol content and net
-contents are review items. Run it, then "Download results (.csv)" on the finished batch:
+three with the main fields left blank, and forty with the registry's own record. Those
+forty are approved labels, yet they mostly come back as corrections needed, because the
+public registry publishes a class code ("Other Gin") rather than the designation
+printed ("American Gin"), sometimes a brand name other than the biggest words on the
+label, the permit holder's legal name and street address, and no alcohol content or net
+contents. The summary adds both groups together; judge the engine by the twenty rows
+with known answers. Run it, then "Download results (.csv)" on the finished batch:
 one line per row with the result, each flagged field, the application value, the label
 value and the reason. Compare it with the `expected` column; the flagged rows are the
 ones a specialist opens first.
