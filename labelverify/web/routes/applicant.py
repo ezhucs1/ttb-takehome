@@ -349,6 +349,7 @@ def batches(
         decisions={b.id: services.batch_decisions(db, b) for b in _batches_for(db, user)},
         errors=[],
         columns=services.BATCH_COLUMNS,
+        batch_max_rows=services.BATCH_MAX_ROWS,
         cola_rows=services.cola_row_count(),
     )
 
@@ -433,6 +434,7 @@ async def create_batch(
             decisions={b.id: services.batch_decisions(db, b) for b in _batches_for(db, user)},
             errors=parsed.errors,
             columns=services.BATCH_COLUMNS,
+            batch_max_rows=services.BATCH_MAX_ROWS,
         )
     batch = services.create_batch(db, user, csv_file.filename or "batch.csv", parsed)
     db.commit()

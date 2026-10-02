@@ -8,6 +8,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
+import os
 import re
 import secrets
 import time
@@ -57,7 +58,7 @@ log = logging.getLogger(__name__)
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 BATCH_CONCURRENCY = 5
-BATCH_MAX_ROWS = 300
+BATCH_MAX_ROWS = int(os.environ.get("LABELVERIFY_BATCH_MAX_ROWS", "").strip() or 300)
 
 FIELD_LABELS = {
     "brand_name": "Brand Name",
