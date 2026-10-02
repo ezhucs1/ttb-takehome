@@ -22,7 +22,7 @@ import anthropic
 from ..models import LabelExtraction
 from .base import ExtractionError, Panel
 
-# Measured on the angled-photo sample from a home connection: Opus 5.5 read it correctly in
+# Measured on the angled-photo sample from a home connection: the larger model read it correctly in
 # 6.0 s, Sonnet 5.5 in 4.1 s (median of 3). The brief's budget is 5 s, so Sonnet is the default.
 DEFAULT_MODEL = "claude-sonnet-5-5"
 DEFAULT_TIMEOUT_SECONDS = 20.0
@@ -115,7 +115,7 @@ def parse_label_json(text: str) -> LabelExtraction:
 
 
 def supports_effort(model: str) -> bool:
-    """Haiku 4.5 rejects ``output_config.effort``; the Sonnet and Opus lines accept it."""
+    """Haiku 4.5 rejects ``output_config.effort``; the larger models accept it."""
     return "haiku" not in model.lower()
 
 

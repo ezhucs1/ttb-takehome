@@ -17,7 +17,7 @@ from .models import ApplicationData, FieldResult, Verdict, VerificationResult
 log = logging.getLogger(__name__)
 
 NOTICE_MODEL_ENV = "LABELVERIFY_NOTICE_MODEL"
-DEFAULT_NOTICE_MODEL = "claude-opus-5-5"
+DEFAULT_NOTICE_MODEL = "claude-sonnet-5-5"
 
 
 @dataclass(frozen=True)
