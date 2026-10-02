@@ -21,19 +21,26 @@
     <div class="inbox-body">
       <div class="inbox-title">
         <strong>{{ i.actor.name if i.actor else 'TTB' }}</strong>
-        {% if i.kind == 'comment' %}
+        {% if i.kind == 'batch' %}
+          {% if user.role == 'specialist' %}submitted a batch{% else %}reviewed your batch{% endif %}
+        {% elif i.kind == 'comment' %}
           {{ 'replied' if user.role == 'specialist' else 'commented' }}
           {% if i.field == 'general' %}in the general discussion{% else %}on <em>{{ FIELD_LABELS.get(i.field, i.field) }}</em>{% endif %}
         {% elif i.kind == 'notice' %}
           sent a {{ 'rejection notice' if i.app.status == 'rejected' else 'correction request' }}
+        {% elif i.status == 'submitted' %}
+          submitted an application
+        {% elif i.status == 'resubmitted' or 'esubmit' in i.text %}
+          resubmitted the label
         {% else %}
-          {{ 'resubmitted the label' if i.app.status == 'resubmitted' or 'esubmit' in i.text else 'approved the label' }}
+          approved the label
         {% endif %}
         {% if i.unread %}<span class="pill pill-info pill-xs">New</span>{% endif %}
       </div>
       <p class="inbox-text">{{ i.text | truncate(160) }}</p>
       <div class="inbox-meta">
-        <span class="mono">{{ i.app.serial }}</span> · {{ i.app.brand_name }}{% if user.role == 'specialist' %} · {{ i.app.organization }}{% endif %}
+        {% if i.kind == 'batch' %}<span class="mono">{{ i.batch.filename }}</span> · {{ i.batch.total }} labels{% if user.role == 'specialist' %} · {{ i.app.organization }}{% endif %}
+        {% else %}<span class="mono">{{ i.app.serial }}</span> · {{ i.app.brand_name }}{% if user.role == 'specialist' %} · {{ i.app.organization }}{% endif %}{% endif %}
         · {{ i.created_at | ago }}
       </div>
     </div>

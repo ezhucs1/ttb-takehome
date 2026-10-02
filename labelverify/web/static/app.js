@@ -345,6 +345,16 @@
       const started = performance.now();
       try {
         const body = new FormData(uploadForm);
+        if (picker.files.length) {
+          // Phone photos are 3 to 6 MB; the reader works from 1200 px. Shrinking in the
+          // browser first cuts the upload to a fraction of a second on a home connection,
+          // which is most of the difference between a local and a hosted read.
+          body.delete("images");
+          for (const file of picker.files) {
+            const sent = await shrinkForUpload(file);
+            body.append("images", sent, sent === file ? file.name : file.name.replace(/\.[^.]+$/, "") + ".jpg");
+          }
+        }
         if (applicationId) body.append("replace_draft_id", applicationId); // the earlier read's draft is replaced
         const resp = await fetch(uploadForm.action, { method: "post", body, headers: { Accept: "application/json" } });
         let data = null;
@@ -359,10 +369,35 @@
       }
     });
 
+    // A copy of the image at most 1600 px on the long edge, as JPEG, when the original is
+    // bigger than that or heavier than 600 KB; otherwise the original. Any failure (an
+    // old browser, an odd file) sends the original, so nothing is lost.
+    async function shrinkForUpload(file) {
+      if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size < 600 * 1024) return file;
+      try {
+        const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+        const longest = Math.max(bitmap.width, bitmap.height);
+        if (longest <= 1600 && file.size < 1.5 * 1024 * 1024) { bitmap.close(); return file; }
+        const scale = Math.min(1, 1600 / longest);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(bitmap.width * scale);
+        canvas.height = Math.round(bitmap.height * scale);
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height); // transparency on white
+        ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        bitmap.close();
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.88));
+        return blob && blob.size < file.size ? blob : file;
+      } catch (e) {
+        return file;
+      }
+    }
+
     // Fill step 2 from a read; after a timeout, offer to read the stored images again
     // rather than making the applicant upload them a second time.
     function applyRead(data, started) {
-      const secs = ((performance.now() - started) / 1000).toFixed(1);
+      const total = (performance.now() - started) / 1000;
+      const secs = total.toFixed(1);
       const n = (data.image_urls || []).length;
       if (data.read_failed) {
         status.innerHTML = "";
@@ -385,8 +420,13 @@
         orHand.className = "muted"; orHand.textContent = " or fill in the form by hand.";
         status.append(note, again, orHand);
       } else {
-        const perImage = n > 1 ? ` (${(secs / n).toFixed(1)} s per image)` : "";
-        status.textContent = `Read ${n > 1 ? n + " images" : "the label"} in ${secs} s${perImage} · ${data.serial}`;
+        // The read time is the server's own clock (preprocessing and the model); the
+        // upload from this browser is shown apart, since it depends on the connection.
+        const read = data.ms ? data.ms / 1000 : total;
+        const upload = Math.max(total - read, 0);
+        const perImage = n > 1 ? ` (${(read / n).toFixed(1)} s per image)` : "";
+        const uploadNote = upload >= 0.3 ? ` · upload ${upload.toFixed(1)} s` : "";
+        status.textContent = `Read ${n > 1 ? n + " images" : "the label"} in ${read.toFixed(1)} s${perImage}${uploadNote} · ${data.serial}`;
       }
       {
         // A new label: nothing from the previous one may linger in steps 2 and 3.

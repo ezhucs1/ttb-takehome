@@ -112,9 +112,14 @@ images; the label is checked again and goes back to the same specialist.
 A CSV and a zip of images, up to 300 rows. The CSV has the same columns for every class;
 "What each column means" on the batch page says which the class requires, and the
 template has one example row per class. Leave the type blank to let the label decide.
-Each row becomes an application with its result, straight into the queue; the batch page
-shows progress and a summary. A row whose image is missing or unreadable is reported,
-not dropped. The sample CSV and zip cover every outcome. A second pair on the same page
+Each row becomes an application with its result, and the batch goes to the specialist
+as one bundle; the batch page shows progress, a summary, and, as the specialist works
+through it, each row's decision in a "Specialist" column with a count line above the
+table (approved, correction requests, rejected, waiting). A correction request on a row
+arrives as a notice on that row's application, opened from the batch page. Your inbox
+carries the batch as one line ("TTB reviewed your batch: 8 approved, 2 correction
+requests") rather than one per row. A row whose image is missing or unreadable is
+reported, not dropped. The sample CSV and zip cover every outcome. A second pair on the same page
 holds sixty real labels from TTB's public COLA registry; it needs a live reader. Its CSV
 mixes cases on purpose, named in a `scenario` column with the expected result beside it:
 nine rows filed correctly (values a person transcribed from the label), eight with one
@@ -132,9 +137,19 @@ ones a specialist opens first.
 
 ## Specialist: the queue and a review
 
-The queue has four cards: open items, those ready to approve (every row matched), those
-needing a look, and those awaiting the applicant's correction. "Approved" lists the
-decided ones. Opening an item claims it.
+The queue lists single applications newest first, under four cards: open items, those
+ready to approve (every row matched), those needing a look, and those awaiting the
+applicant's correction. "Approved" lists the decided ones. Opening an item claims it.
+Batch submissions are listed above the single applications as bundles, one line per
+batch with its standing (ready, need a look, awaiting applicant, approved). "Open batch"
+shows the batch's rows under the same tabs, plus "All rows"; each row opens the normal
+review page, and a decision returns you to the batch. The Ready tab of a batch has
+"Approve selected" for the rows where every field matched. The applicant sees your
+decisions on their batch page as you make them.
+
+The inbox lists every new submission (a batch as one line), every resubmission and every
+reply; the badge counts them, a batch once. Opening an application from the queue, or a
+batch from its line, reads its items.
 
 The review page shows the label image beside the result table. Every row has a thread
 for a question to the applicant. "Re-check label" reads the images again with the

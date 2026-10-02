@@ -17,7 +17,10 @@
 # Claude reads the labels. With GEMINI_API_KEY set, Gemini words the specialist's
 # correction notices (its free tier covers that call); without it, Claude does.
 #
-# Re-running the script with the same APP name rebuilds the image and restarts the app.
+# Re-running the script with the same APP name rebuilds the image and restarts the app in
+# place (the old container is stopped; there is never a second copy). Each deployment
+# starts with a fresh, seeded database by default (RESET_DATA=true); RESET_DATA=false
+# keeps the previous deployment's data.
 # Tear everything down with:  az group delete --name "$RG" --yes
 set -euo pipefail
 
@@ -29,8 +32,14 @@ APP="${APP:-labelverify-$(az account show --query id --output tsv | cut -c1-8)}"
 ACR="${ACR:-$(echo "$APP" | tr -d -)}"                                   # registry names: letters and digits only
 PLAN="${PLAN:-$APP-plan}"
 SKU="${SKU:-B1}"                                                         # Basic: Always On is available
-IMAGE="labelverify:$(git rev-parse --short HEAD 2>/dev/null || date +%s)"
+TAG="$(git rev-parse --short HEAD 2>/dev/null || date +%s)"
+IMAGE="labelverify:$TAG"
 SECRET_KEY="${SECRET_KEY:-$(openssl rand -hex 32)}"
+RESET_DATA="${RESET_DATA:-true}"
+# /home persists on App Service. A fresh start keys the data directory to this deployment,
+# so the app seeds itself again; a kept one reuses the shared directory.
+DATA_DIR="/home/data"
+[ "$RESET_DATA" = "true" ] && DATA_DIR="/home/data/$TAG-$(date +%s)"
 
 echo "resource group $RG in $LOCATION, app $APP, registry $ACR, image $IMAGE"
 az group show --name "$RG" --output none 2>/dev/null \
@@ -89,7 +98,7 @@ az webapp config appsettings set --name "$APP" --resource-group "$RG" --output n
   WEBSITES_PORT=8000 \
   WEBSITES_ENABLE_APP_SERVICE_STORAGE=true \
   WEBSITES_CONTAINER_START_TIME_LIMIT=240 \
-  DATABASE_URL=sqlite:////home/data/labelverify.db \
+  DATABASE_URL="sqlite:///$DATA_DIR/labelverify.db" \
   SECRET_KEY="$SECRET_KEY" \
   ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
   LABELVERIFY_DEMO_ACCOUNTS=false \

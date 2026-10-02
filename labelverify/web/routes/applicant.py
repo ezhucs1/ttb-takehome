@@ -346,6 +346,7 @@ def batches(
         request,
         "applicant/batches.html",
         batches=_batches_for(db, user),
+        decisions={b.id: services.batch_decisions(db, b) for b in _batches_for(db, user)},
         errors=[],
         columns=services.BATCH_COLUMNS,
         cola_rows=services.cola_row_count(),
@@ -429,6 +430,7 @@ async def create_batch(
             "applicant/batches.html",
             status_code=422,
             batches=_batches_for(db, user),
+            decisions={b.id: services.batch_decisions(db, b) for b in _batches_for(db, user)},
             errors=parsed.errors,
             columns=services.BATCH_COLUMNS,
         )
@@ -474,8 +476,14 @@ def batch_detail(
     user: User = Depends(require_applicant),
 ):
     batch = _load_batch(db, batch_id, user)
+    services.open_batch_items(db, user, batch.id)  # the bundle's decisions are read here
+    db.commit()
     return renderer(request).page(
-        request, "applicant/batch_detail.html", batch=batch, summary=services.batch_summary(batch)
+        request,
+        "applicant/batch_detail.html",
+        batch=batch,
+        summary=services.batch_summary(batch),
+        decisions=services.batch_decisions(db, batch),
     )
 
 
@@ -504,7 +512,11 @@ def batch_rows(
 ):
     batch = _load_batch(db, batch_id, user)
     response = renderer(request).partial(
-        request, "partials/batch_rows.html", batch=batch, summary=services.batch_summary(batch)
+        request,
+        "partials/batch_rows.html",
+        batch=batch,
+        summary=services.batch_summary(batch),
+        decisions=services.batch_decisions(db, batch),
     )
     response.headers["X-Batch-Status"] = batch.status
     return response

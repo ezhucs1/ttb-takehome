@@ -12,10 +12,19 @@
     <span class="pill pill-danger">{{ summary.request_correction }} corrections needed</span>
     {% if summary.error %}<span class="pill pill-neutral">{{ summary.error }} could not be checked</span>{% endif %}
   </div>
+  {% if decisions is defined and (decisions.approved or decisions.correction_requested or decisions.rejected) %}
+  <div class="batch-summary batch-decisions">
+    <span class="muted small">Specialist:</span>
+    {% if decisions.approved %}<span class="pill pill-success">{{ decisions.approved }} approved</span>{% endif %}
+    {% if decisions.correction_requested %}<span class="pill pill-warning">{{ decisions.correction_requested }} correction request{{ 's' if decisions.correction_requested != 1 else '' }}</span>{% endif %}
+    {% if decisions.rejected %}<span class="pill pill-danger">{{ decisions.rejected }} rejected</span>{% endif %}
+    {% if decisions.open %}<span class="pill pill-neutral">{{ decisions.open }} waiting</span>{% endif %}
+  </div>
+  {% endif %}
 </div>
 <div class="table-wrap">
 <table class="table">
-  <thead><tr><th>#</th><th>Image</th><th>Brand</th><th>Application</th><th>AI check</th><th></th></tr></thead>
+  <thead><tr><th>#</th><th>Image</th><th>Brand</th><th>Application</th><th>AI check</th><th>Specialist</th><th></th></tr></thead>
   <tbody>
   {% for item in batch.items %}
     <tr>
@@ -28,6 +37,7 @@
         {% elif item.status == 'done' %}{{ m.rec_pill(item.application.recommendation) }}{% if item.application.latest_run and 'fallback' in item.application.latest_run.extractor %} <span class="pill pill-warning pill-xs" title="{{ item.application.latest_run.extractor }}">local OCR</span>{% endif %}{% if item.application.latest_run and item.application.latest_run.error %} <span class="muted">{{ item.application.latest_run.error }}</span>{% endif %}
         {% else %}<span class="pill pill-neutral">Pending</span>{% endif %}
       </td>
+      <td>{% if item.application and item.application.status != 'submitted' %}{{ m.status_pill(item.application.status) }}{% elif item.application %}<span class="muted small">waiting</span>{% endif %}</td>
       <td class="right">{% if item.application %}<a class="btn btn-ghost btn-sm" href="/applicant/applications/{{ item.application.id }}">Open</a>{% endif %}</td>
     </tr>
   {% endfor %}

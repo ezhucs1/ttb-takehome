@@ -756,6 +756,7 @@ class TestBatch:
 
         page = applicant.get("/applicant/batches").text
         assert "/applicant/batches/sample.csv" in page and "sample-images.zip" in page
+        badge_before = specialist.get("/me/unread").json()["count"]
 
         resp = applicant.post(
             "/applicant/batches",
@@ -777,7 +778,50 @@ class TestBatch:
         assert (
             "Demo mode can only read" in rows.text
         )  # the non-label photo, explained (demo reader)
-        assert "Sunset Ridge" in specialist.get("/specialist").text
+        # The specialist sees the batch as one bundle, not sixteen rows in the queue, and
+        # the inbox carries it as one line that the badge counts once, not sixteen times.
+        batch_id = resp.headers["location"].rsplit("/", 1)[-1]
+        assert specialist.get("/me/unread").json()["count"] == badge_before + 1
+        inbox = specialist.get("/inbox").text
+        assert "submitted a batch" in inbox and "a batch of 16 labels" in inbox
+        assert "/inbox/open/batch/" in inbox
+        queue = specialist.get("/specialist").text
+        assert "Batch submissions" in queue and f"/specialist/batches/{batch_id}" in queue
+        assert "COLA-" not in queue.split("Single applications")[0].split("Batch submissions")[-1]
+        opened = specialist.get(f"/inbox/open/batch/{batch_id}", follow_redirects=False)
+        assert opened.status_code == 303 and opened.headers["location"].endswith(
+            f"/specialist/batches/{batch_id}"
+        )
+        assert specialist.get("/me/unread").json()["count"] == badge_before  # the bundle is read
+        bundle = specialist.get(f"/specialist/batches/{batch_id}?tab=all").text
+        assert "Sunset Ridge" in bundle and "Batch of 16 labels" in bundle
+        ready = specialist.get(f"/specialist/batches/{batch_id}?tab=ready").text
+        assert "Approve selected" in ready
+        # Approving the ready rows from the bundle sends the decisions back as a bundle.
+        ids = re.findall(r'name="ids" value="([0-9a-f]{32})"', ready)
+        assert ids
+        done = specialist.post(
+            f"/specialist/batches/{batch_id}/bulk-approve",
+            data={"ids": ids},
+            follow_redirects=False,
+        )
+        assert done.status_code == 303 and done.headers["location"].endswith("?tab=ready")
+        mine = applicant.get(f"/applicant/batches/{batch_id}").text
+        assert f"{len(ids)} approved" in mine and "Specialist:" in mine
+        # A decision on one row goes back to the bundle, not the queue.
+        remaining = re.findall(
+            r'data-href="/specialist/applications/([0-9a-f]{32})"',
+            specialist.get(f"/specialist/batches/{batch_id}?tab=review").text,
+        )
+        decided = specialist.post(
+            f"/specialist/applications/{remaining[0]}/decision",
+            data={"action": "reject", "note": "Not a label."},
+            follow_redirects=False,
+        )
+        assert (
+            decided.status_code == 303
+            and f"/specialist/batches/{batch_id}" in decided.headers["location"]
+        )
 
     def test_batch_validation_errors_render(self, applicant):
         resp = applicant.post(

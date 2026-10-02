@@ -70,13 +70,14 @@
     <div class="card-title card-title-pad">Previous batches</div>
     {% if batches %}
     <table class="table table-hover">
-      <thead><tr><th>File</th><th>Labels</th><th>Progress</th><th>Started</th><th></th></tr></thead>
+      <thead><tr><th>File</th><th>Labels</th><th>Checked</th><th>Specialist</th><th>Started</th><th></th></tr></thead>
       <tbody>
       {% for b in batches %}
       <tr data-href="/applicant/batches/{{ b.id }}">
         <td class="mono">{{ b.filename }}</td>
         <td>{{ b.total }}</td>
         <td>{% if b.status == 'done' %}<span class="pill pill-success">Done</span>{% else %}<span class="pill pill-info">{{ b.completed + b.failed }}/{{ b.total }}</span>{% endif %}</td>
+        <td class="small">{% set d = decisions.get(b.id, {}) %}{% if d.get('approved') or d.get('correction_requested') or d.get('rejected') %}{{ d.get('approved', 0) }} approved · {{ d.get('correction_requested', 0) }} corrections · {{ d.get('rejected', 0) }} rejected{% if d.get('open') %} · {{ d.open }} waiting{% endif %}{% else %}<span class="muted">waiting</span>{% endif %}</td>
         <td class="muted">{{ b.created_at | ago }}</td>
         <td class="right"><a class="btn btn-ghost btn-sm" href="/applicant/batches/{{ b.id }}">Open</a></td>
       </tr>

@@ -5,7 +5,7 @@
 <div class="page-header">
   <div>
     <h1>Review queue</h1>
-    <p class="subtitle">Sorted so the clean ones come first. Every recommendation is yours to confirm.</p>
+    <p class="subtitle">Newest first. The Ready tab holds the ones where every field matched; every recommendation is yours to confirm.</p>
   </div>
 </div>
 
@@ -24,7 +24,38 @@
     {% endfor %}
   </div>
 
+  {% if batches %}
+  <div class="batch-list">
+    <div class="card-title card-title-inset">Batch submissions <span class="muted">{{ batches | length }}</span></div>
+    <div class="table-wrap">
+    <table class="table table-hover">
+      <thead><tr><th>Batch</th><th>Applicant</th><th>Rows</th><th>Standing</th><th>{{ 'Decided' if tab == 'approved' else 'Submitted' }}</th><th></th></tr></thead>
+      <tbody>
+      {% for r in batches %}
+      <tr data-href="/specialist/batches/{{ r.batch.id }}?tab={{ tab }}">
+        <td><strong class="mono">{{ r.batch.filename }}</strong><div class="muted small">{{ r.matching }} in this tab</div></td>
+        <td>{{ r.batch.applicant.organization }}</td>
+        <td>{{ r.batch.total }}</td>
+        <td class="small">
+          {% if r.ready %}<span class="pill pill-success pill-xs">{{ r.ready }} ready</span> {% endif %}
+          {% if r.review %}<span class="pill pill-warning pill-xs">{{ r.review }} need a look</span> {% endif %}
+          {% if r.corrections %}<span class="pill pill-neutral pill-xs">{{ r.corrections }} awaiting applicant</span> {% endif %}
+          {% if r.approved %}<span class="pill pill-success pill-xs">{{ r.approved }} approved</span> {% endif %}
+          {% if r.rejected %}<span class="pill pill-danger pill-xs">{{ r.rejected }} rejected</span> {% endif %}
+          {% if r.failed %}<span class="pill pill-neutral pill-xs">{{ r.failed }} could not be checked</span>{% endif %}
+        </td>
+        <td class="muted">{{ r.batch.created_at | ago }}</td>
+        <td class="right"><a class="btn btn-ghost btn-sm" href="/specialist/batches/{{ r.batch.id }}?tab={{ tab }}">Open batch</a></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+
   {% if apps %}
+  {% if batches %}<div class="card-title card-title-inset">Single applications</div>{% endif %}
   <form method="post" action="/specialist/bulk-approve" id="bulk-form">
   <div class="table-wrap">
   <table class="table table-hover">
@@ -47,7 +78,7 @@
           {{ m.rec_pill(app.recommendation) }}
           {% if app.risk_score %}<span class="muted small" title="Risk score">· risk {{ app.risk_score }}</span>{% endif %}
         </td>
-        <td class="muted">{{ (app.decided_at if tab == 'approved' else app.submitted_at) | ago }}{% if app.specialist and tab != 'approved' %}<div class="small">{{ app.specialist.name }}</div>{% endif %}</td>
+        <td class="muted">{{ (app.decided_at if tab == 'approved' else app.submitted_at) | ago }}</td>
         <td class="right"><a class="btn btn-ghost btn-sm" href="/specialist/applications/{{ app.id }}">{{ 'View' if tab == 'approved' else 'Review' }}</a></td>
       </tr>
     {% endfor %}
@@ -63,7 +94,7 @@
   </div>
   {% endif %}
   </form>
-  {% else %}
+  {% elif not batches %}
   {{ m.empty('Nothing here', 'This tab is empty right now.') }}
   {% endif %}
 </div>

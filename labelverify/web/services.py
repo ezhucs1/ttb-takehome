@@ -697,7 +697,7 @@ def comments_by_field(app: Application) -> dict[str, list[Comment]]:
 # their status events would be duplicates; a plain submission is queue work, not a message.
 FEED_STATUSES = {
     Role.APPLICANT: {ApplicationStatus.APPROVED},
-    Role.SPECIALIST: {ApplicationStatus.RESUBMITTED},
+    Role.SPECIALIST: {ApplicationStatus.SUBMITTED, ApplicationStatus.RESUBMITTED},
 }
 ITEM_KINDS = ("comment", "notice", "status")
 
@@ -884,8 +884,20 @@ def unread_counts(db: Session, user: User, app_ids: Sequence[str]) -> dict[str, 
 
 
 def unread_total(db: Session, user: User) -> int:
-    """Unread items across the user's applications (the sidebar badge)."""
-    return sum(unread_counts(db, user, _scoped_app_ids(db, user)).values())
+    """Unread items across the user's applications (the sidebar badge). A batch counts
+    once, however many of its rows have something new, matching the inbox's one line."""
+    counts = unread_counts(db, user, _scoped_app_ids(db, user))
+    if not counts:
+        return 0
+    batch_of = dict(
+        db.execute(
+            select(Application.id, Application.batch_id).where(
+                Application.id.in_(list(counts)), Application.batch_id.is_not(None)
+            )
+        ).all()
+    )
+    total = sum(n for app_id, n in counts.items() if app_id not in batch_of)
+    return total + len(set(batch_of.values()))
 
 
 @dataclass
@@ -900,12 +912,79 @@ class ActivityItem:
     field: str  # comment field, "general", or "" for notices and decisions
     text: str
     unread: bool
+    status: str = ""  # the status reached, for status items
+    batch: Batch | None = None  # set on a "batch" line that stands for a whole batch's activity
+    count: int = 1  # items folded into a batch line
 
     @property
     def anchor(self) -> str:
         if self.kind == "comment":
             return "thread-host-general" if self.field == "general" else f"field-{self.field}"
         return "notice" if self.kind == "notice" else "history"
+
+
+def _fold_batches(db: Session, items: list[ActivityItem], user: User) -> list[ActivityItem]:
+    """Activity on a batch's rows is one inbox line per batch, not one per row: sixty
+    submissions are one event to the specialist, and sixty decisions one to the applicant.
+    The line links to the batch page, which opens every row's items."""
+    by_batch: dict[str, list[ActivityItem]] = {}
+    kept: list[ActivityItem] = []
+    for item in items:
+        if item.app.batch_id:
+            by_batch.setdefault(item.app.batch_id, []).append(item)
+        else:
+            kept.append(item)
+    for batch_id, members in by_batch.items():
+        batch = db.get(Batch, batch_id)
+        if batch is None:
+            kept.extend(members)
+            continue
+        latest = max(members, key=lambda i: i.created_at)
+        kept.append(
+            ActivityItem(
+                "batch",
+                batch_id,
+                latest.app,
+                latest.created_at,
+                latest.actor,
+                "",
+                _batch_activity_text(db, batch, members, user),
+                any(i.unread for i in members),
+                status=latest.status,
+                batch=batch,
+                count=len(members),
+            )
+        )
+    return kept
+
+
+def _batch_activity_text(db: Session, batch: Batch, members: list[ActivityItem], user: User) -> str:
+    """One sentence for a batch line: what happened across its rows."""
+    if user.role == Role.SPECIALIST:
+        resubmitted = sum(1 for i in members if i.status == ApplicationStatus.RESUBMITTED.value)
+        replies = sum(1 for i in members if i.kind == "comment")
+        parts = [f"a batch of {batch.total} labels, {batch.completed} checked"]
+        if resubmitted:
+            parts.append(f"{resubmitted} resubmitted")
+        if replies:
+            parts.append(f"{replies} repl{'ies' if replies != 1 else 'y'}")
+        return "; ".join(parts)
+    counts = batch_decisions(db, batch)
+    parts = []
+    if counts["approved"]:
+        parts.append(f"{counts['approved']} approved")
+    if counts["correction_requested"]:
+        parts.append(
+            f"{counts['correction_requested']} correction request{'s' if counts['correction_requested'] != 1 else ''}"
+        )
+    if counts["rejected"]:
+        parts.append(f"{counts['rejected']} rejected")
+    replies = sum(1 for i in members if i.kind == "comment")
+    if replies:
+        parts.append(f"{replies} question{'s' if replies != 1 else ''} on fields")
+    if counts["open"]:
+        parts.append(f"{counts['open']} still waiting")
+    return ", ".join(parts) or "activity on the batch"
 
 
 def activity_feed(db: Session, user: User, *, limit: int = 40) -> list[ActivityItem]:
@@ -964,6 +1043,7 @@ def activity_feed(db: Session, user: User, *, limit: int = 40) -> list[ActivityI
                 "",
                 e.note,
                 is_unread("status", e.id, e.application_id, e.created_at),
+                status=e.to_status,
             )
         )
     if user.role == Role.APPLICANT:
@@ -986,8 +1066,20 @@ def activity_feed(db: Session, user: User, *, limit: int = 40) -> list[ActivityI
                     is_unread("notice", n.id, n.application_id, n.created_at),
                 )
             )
+    items = _fold_batches(db, items, user)
     items.sort(key=lambda i: i.created_at, reverse=True)
     return items[:limit]
+
+
+def open_batch_items(db: Session, user: User, batch_id: str) -> Batch:
+    """Opening a batch line reads every row's items for this user."""
+    batch = db.get(Batch, batch_id)
+    if batch is None or (user.role == Role.APPLICANT and batch.applicant_id != user.id):
+        raise WorkflowError("That inbox item no longer exists.")
+    for item in batch.items:
+        if item.application is not None:
+            mark_seen(db, item.application, user)
+    return batch
 
 
 def open_item(db: Session, user: User, kind: str, item_id: str) -> tuple[Application, str]:
@@ -1084,7 +1176,11 @@ def queue(db: Session, tab: str = "open") -> list[Application]:
         stmt = stmt.where(Application.status == ApplicationStatus.CORRECTION_REQUESTED.value)
     elif tab == "approved":
         stmt = stmt.where(Application.status == ApplicationStatus.APPROVED.value)
-        return list(db.scalars(stmt.order_by(Application.decided_at.desc())).unique())
+        return list(
+            db.scalars(
+                stmt.where(Application.batch_id.is_(None)).order_by(Application.decided_at.desc())
+            ).unique()
+        )
     else:
         stmt = stmt.where(
             Application.status.in_(
@@ -1100,9 +1196,157 @@ def queue(db: Session, tab: str = "open") -> list[Application]:
         )
     return list(
         db.scalars(
-            stmt.order_by(Application.risk_score.asc(), Application.submitted_at.asc())
+            stmt.where(Application.batch_id.is_(None)).order_by(Application.submitted_at.desc())
         ).unique()
     )
+
+
+def _tab_filter(tab: str):
+    """The queue tab's criteria as a filter on Application, shared with the batch views."""
+    open_values = [s.value for s in OPEN_STATUSES]
+    if tab == "ready":
+        return [
+            Application.status.in_(open_values),
+            Application.recommendation == Recommendation.APPROVE.value,
+        ]
+    if tab == "review":
+        return [
+            Application.status.in_(open_values),
+            Application.recommendation != Recommendation.APPROVE.value,
+        ]
+    if tab == "corrections":
+        return [Application.status == ApplicationStatus.CORRECTION_REQUESTED.value]
+    if tab == "approved":
+        return [Application.status == ApplicationStatus.APPROVED.value]
+    return [Application.status.in_(open_values)]
+
+
+@dataclass(frozen=True)
+class BatchRollup:
+    """A batch as the specialist sees it in the queue: whose, and how its rows stand."""
+
+    batch: Batch
+    open: int
+    ready: int
+    review: int
+    corrections: int
+    approved: int
+    rejected: int
+    failed: int
+    matching: int  # rows that meet the current tab
+
+    @property
+    def decided(self) -> int:
+        return self.approved + self.rejected + self.corrections
+
+
+def batch_rollups(db: Session, tab: str = "open") -> list[BatchRollup]:
+    """Every batch with at least one row meeting the tab, newest first."""
+    batches = list(
+        db.scalars(
+            select(Batch).order_by(Batch.created_at.desc()).options(selectinload(Batch.items))
+        )
+    )
+    if not batches:
+        return []
+    rows = db.execute(
+        select(Application.batch_id, Application.status, Application.recommendation, func.count())
+        .where(Application.batch_id.in_([b.id for b in batches]))
+        .group_by(Application.batch_id, Application.status, Application.recommendation)
+    ).all()
+    matching = dict(
+        db.execute(
+            select(Application.batch_id, func.count())
+            .where(Application.batch_id.in_([b.id for b in batches]), *_tab_filter(tab))
+            .group_by(Application.batch_id)
+        ).all()
+    )
+    per: dict[str, dict[str, int]] = {}
+    open_values = {s.value for s in OPEN_STATUSES}
+    for batch_id, status, recommendation, n in rows:
+        c = per.setdefault(
+            batch_id,
+            {"open": 0, "ready": 0, "review": 0, "corrections": 0, "approved": 0, "rejected": 0},
+        )
+        if status in open_values:
+            c["open"] += n
+            c["ready" if recommendation == Recommendation.APPROVE.value else "review"] += n
+        elif status == ApplicationStatus.CORRECTION_REQUESTED.value:
+            c["corrections"] += n
+        elif status == ApplicationStatus.APPROVED.value:
+            c["approved"] += n
+        elif status == ApplicationStatus.REJECTED.value:
+            c["rejected"] += n
+    result = []
+    for batch in batches:
+        c = per.get(batch.id, {})
+        found = matching.get(batch.id, 0)
+        if not found:
+            continue
+        result.append(
+            BatchRollup(
+                batch=batch,
+                open=c.get("open", 0),
+                ready=c.get("ready", 0),
+                review=c.get("review", 0),
+                corrections=c.get("corrections", 0),
+                approved=c.get("approved", 0),
+                rejected=c.get("rejected", 0),
+                failed=batch.failed,
+                matching=found,
+            )
+        )
+    return result
+
+
+def batch_rollup(db: Session, batch: Batch, tab: str = "open") -> BatchRollup:
+    """One batch's rollup, whatever the tab's match count."""
+    for rollup in batch_rollups(db, "all"):
+        if rollup.batch.id == batch.id:
+            matching = db.scalar(
+                select(func.count()).where(Application.batch_id == batch.id, *_tab_filter(tab))
+            )
+            return BatchRollup(**{**rollup.__dict__, "matching": matching or 0})
+    return BatchRollup(batch, 0, 0, 0, 0, 0, 0, batch.failed, 0)
+
+
+def batch_items_for(batch: Batch, tab: str) -> list[BatchItem]:
+    """The batch's rows that meet the tab, in row order; "all" keeps every row."""
+    if tab == "all":
+        return list(batch.items)
+    open_values = {s.value for s in OPEN_STATUSES}
+
+    def meets(app: Application | None) -> bool:
+        if app is None:
+            return False
+        if tab == "ready":
+            return app.status in open_values and app.recommendation == Recommendation.APPROVE.value
+        if tab == "review":
+            return app.status in open_values and app.recommendation != Recommendation.APPROVE.value
+        if tab == "corrections":
+            return app.status == ApplicationStatus.CORRECTION_REQUESTED.value
+        if tab == "approved":
+            return app.status == ApplicationStatus.APPROVED.value
+        return app.status in open_values
+
+    return [item for item in batch.items if meets(item.application)]
+
+
+def batch_decisions(db: Session, batch: Batch) -> dict[str, int]:
+    """How the specialist has dealt with a batch's rows, for the applicant's page."""
+    counts = {"open": 0, "approved": 0, "correction_requested": 0, "rejected": 0, "failed": 0}
+    open_values = {s.value for s in OPEN_STATUSES}
+    for status, n in db.execute(
+        select(Application.status, func.count())
+        .where(Application.batch_id == batch.id)
+        .group_by(Application.status)
+    ).all():
+        if status in open_values:
+            counts["open"] += n
+        elif status in counts:
+            counts[status] += n
+    counts["failed"] = batch.failed
+    return counts
 
 
 def queue_stats(db: Session) -> QueueStats:

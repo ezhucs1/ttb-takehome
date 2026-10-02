@@ -94,8 +94,14 @@ def inbox_open(
     db: Session = Depends(get_db),
     user: User = Depends(current_user),
 ):
-    """Mark one item read, then go to its application without consuming the others."""
+    """Mark one item read, then go to its application without consuming the others. A
+    batch line reads every row's items and goes to the batch page."""
     try:
+        if kind == "batch":
+            batch = services.open_batch_items(db, user, item_id)
+            db.commit()
+            side = "specialist" if user.role == Role.SPECIALIST else "applicant"
+            return RedirectResponse(f"/{side}/batches/{batch.id}", status_code=303)
         app, anchor = services.open_item(db, user, kind, item_id)
     except services.WorkflowError as exc:
         raise HTTPException(404, str(exc)) from exc

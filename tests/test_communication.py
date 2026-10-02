@@ -186,13 +186,15 @@ def maria(app):
 
 
 class TestSendAndReceive:
-    def test_a_submission_is_queue_work_not_a_message(self, sarah, maria):
-        """Applicant submits. The specialist sees it in the queue, but the inbox stays quiet:
-        nobody wrote to anyone yet."""
+    def test_a_submission_reaches_the_queue_and_the_specialist_inbox(self, sarah, maria):
+        """Applicant submits. The specialist sees it in the queue and as one new inbox line;
+        the applicant's own inbox stays quiet, since nothing came back yet."""
         app_id = maria.submit_new("old-tom-bourbon")
         assert app_id in sarah.client.get("/specialist").text
-        assert sarah.unread() == 0 and maria.unread() == 0
-        assert "caught up" in sarah.inbox() and "caught up" in maria.inbox()
+        assert sarah.unread() == 1 and maria.unread() == 0
+        assert "submitted an application" in sarah.inbox() and "caught up" in maria.inbox()
+        sarah.open_app(app_id)  # opening it from the queue reads the submission
+        assert sarah.unread() == 0
 
     def test_specialist_question_reaches_the_applicant(self, sarah, maria):
         """Specialist asks on a field. The applicant's badge, inbox, and page all show it,
@@ -218,6 +220,7 @@ class TestSendAndReceive:
         """The reverse direction: the applicant answers on the same field, the specialist is
         told, and the reply shows under the question."""
         app_id = maria.submit_new("old-tom-bourbon")
+        sarah.open_app(app_id)  # reads the submission
         sarah.comment(app_id, "brand_name", "Is the apostrophe printed?")
         maria.open_app(app_id)
         maria.comment(app_id, "brand_name", "Yes, exactly as on the artwork.")
@@ -286,6 +289,7 @@ class TestNoticesAndDecisions:
         """The applicant fixes the label and resubmits with a note: the specialist gets the
         resubmission and the note as two items, and the case is back in the queue."""
         app_id = maria.submit_new("old-tom-title-case-warning")
+        sarah.open_app(app_id)
         sarah.request_correction(app_id)
         maria.open_app(app_id)
         resp = maria.resubmit(app_id, "old-tom-bourbon", message="Heading reset in capitals.")
@@ -359,11 +363,11 @@ class TestReadState:
         jenny = Party(app, JENNY)
         app_id = maria.submit_new("old-tom-bourbon")
         maria.comment(app_id, "general", "Is a neck label required?")
-        assert sarah.unread() == 1 and jenny.unread() == 1
+        assert sarah.unread() == 2 and jenny.unread() == 2  # the submission and the question
         sarah.open_app(app_id)
-        assert sarah.unread() == 0 and jenny.unread() == 1
+        assert sarah.unread() == 0 and jenny.unread() == 2
         jenny.open_item(jenny.inbox_links("comment")[0])
-        assert jenny.unread() == 0
+        assert jenny.unread() == 1  # the submission line is still new to Jenny
 
     def test_later_messages_are_new_again(self, sarah, maria):
         """Reading is a moment in time: anything after it is unread again."""
@@ -407,7 +411,7 @@ class TestResolutionAndIsolation:
         b = devin.submit_new("stones-throw-wine")
         maria.comment(a, "general", "From Old Tom")
         devin.comment(b, "general", "From Stone's Throw")
-        assert sarah.unread() == 2
+        assert sarah.unread() == 4  # two submissions, two messages
         inbox = text_of(sarah.inbox())
         assert "Alvarez Label Services" in inbox and "Stone's Throw Vineyards" in inbox
 

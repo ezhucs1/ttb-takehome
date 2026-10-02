@@ -683,3 +683,34 @@ database gained ten nullable columns, added on startup to an existing file.
 **Considered:** keeping the statements read-only and letting the specialist settle
 them. Rejected because it leaves the applicant unable to say what their label prints
 when the reader is wrong, which is the one thing the prefill note asks them to do.
+
+## 28. A batch is one bundle on both sides, submissions reach the inbox, and the queue is newest first
+
+Three things a reviewer found after the deployment. The queue sorted clean applications
+first, which read as random to someone watching new submissions arrive; it is newest
+first now, and the Ready tab is where the clean ones are. The reviewer's name under the
+waiting time said nothing the status pill did not; it is gone. And a submission was
+"queue work, not a message" (entry 1), so the specialist's inbox stayed quiet when
+applications arrived, which the reviewer read as the inbox not working. Submissions and
+resubmissions are inbox items now, read when the case is opened from the queue.
+
+That made the batch question unavoidable: sixty rows would be sixty inbox lines and
+sixty queue rows. A batch is now one bundle on both sides. The queue lists batches above
+the single applications with each batch's standing; opening one shows its rows under the
+queue's own tabs, each row the ordinary review page, with "Approve selected" for the
+clean rows and every decision returning to the batch. The applicant's batch page shows
+the specialist's decision on each row as it is made, with a count line, and both inboxes
+carry a batch as one line that links to the batch page and reads every row's items at
+once; the badge counts a batch once. Nothing about a row changed: it is still an
+application with its own result, threads, notice and history, so the correction loop on
+a row works exactly as on a single application.
+
+**Considered:** a batch-level decision ("approve the batch"). Rejected: TTB approves
+labels, not spreadsheets, and the rows differ. Bulk approval of the rows where every
+field matched, already in the queue, is the bundle-level action that is safe.
+
+Also from the deployment: reads looked slower on the hosted site than locally. The
+server's read time was the same; the difference was the upload of a multi-megabyte phone
+photo from a home connection, which the read-time line used to include. Photos are now
+shrunk in the browser to 1600 px before upload, and the line shows the server's read time
+with the upload apart.

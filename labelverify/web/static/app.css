@@ -531,6 +531,8 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--acce
 .prefill-note { margin-bottom: 18px; }
 .prefill-note .banner-main strong { font-size: 0.92rem; }
 .prefill-note .banner-main span { font-size: 0.85rem; line-height: 1.45; }
+.batch-list { border-bottom: 1px solid var(--line); }
+.batch-decisions { margin-top: 6px; }
 .banner-link { color: inherit; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
 /* Class-aware application form: required marks and the label-only items */
 .field.required > label::after { content: " *"; color: var(--danger-fg); font-weight: 700; }

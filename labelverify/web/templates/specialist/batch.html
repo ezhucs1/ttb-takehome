@@ -1,0 +1,72 @@
+{% extends "layout.html" %}
+{% import "macros.html" as m %}
+{% block title %}Batch {{ batch.filename }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="crumbs"><a href="/specialist">Review queue</a> / {{ batch.filename }}</div>
+    <h1>Batch of {{ batch.total }} labels <span class="muted h-sub">{{ batch.applicant.organization }}</span></h1>
+    <p class="subtitle">Submitted {{ batch.created_at | ago }} by {{ batch.applicant.name }}{% if batch.finished_at %} · checked in {{ '%.0f' | format((batch.finished_at - batch.created_at).total_seconds()) }} s{% endif %}. Each row is its own application: open it to review, approve, or request a correction. The applicant sees the batch as one bundle with your decision on every row.</p>
+  </div>
+</div>
+
+<div class="stat-grid stat-grid-5">
+  {{ m.stat('Open', rollup.open, 'info', '/specialist/batches/' ~ batch.id ~ '?tab=open', tab == 'open') }}
+  {{ m.stat('Ready', rollup.ready, 'success', '/specialist/batches/' ~ batch.id ~ '?tab=ready', tab == 'ready') }}
+  {{ m.stat('Needs a look', rollup.review, 'warning', '/specialist/batches/' ~ batch.id ~ '?tab=review', tab == 'review') }}
+  {{ m.stat('Awaiting applicant', rollup.corrections, 'neutral', '/specialist/batches/' ~ batch.id ~ '?tab=corrections', tab == 'corrections') }}
+  {{ m.stat('Approved', rollup.approved, 'success', '/specialist/batches/' ~ batch.id ~ '?tab=approved', tab == 'approved') }}
+</div>
+
+<div class="card card-flush">
+  <div class="tabs">
+    {% for key, label in tabs.items() %}
+    <a class="tab {% if key == tab %}active{% endif %}" href="/specialist/batches/{{ batch.id }}?tab={{ key }}" {% if key == tab %}aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  {% if items %}
+  <form method="post" action="/specialist/batches/{{ batch.id }}/bulk-approve" id="bulk-form">
+  <div class="table-wrap">
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        {% if tab == 'ready' %}<th class="check-col"><input type="checkbox" data-check-all aria-label="Select all"></th>{% endif %}
+        <th>#</th><th>Application</th><th>Brand</th><th>Type</th><th>Status</th><th>AI check</th><th>Decided</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for item in items %}
+      {% set app = item.application %}
+      <tr {% if app %}data-href="/specialist/applications/{{ app.id }}"{% endif %}>
+        {% if tab == 'ready' %}<td class="check-col">{% if app %}<input type="checkbox" name="ids" value="{{ app.id }}" aria-label="Select row {{ item.row_number }}">{% endif %}</td>{% endif %}
+        <td class="muted">{{ item.row_number }}</td>
+        <td class="mono">{% if app %}{{ app.serial }}{% else %}—{% endif %}</td>
+        <td><strong>{{ item.brand_name or (app.brand_name if app else '') }}</strong>{% if app %}<div class="muted small">{{ app.class_type }}</div>{% endif %}</td>
+        <td>{% if app %}{{ BEVERAGE_LABELS.get(app.beverage_type) }}{% endif %}</td>
+        <td>{% if app %}{{ m.status_pill(app.status) }}{% else %}<span class="pill pill-neutral">Not checked</span>{% endif %}</td>
+        <td>
+          {% if item.status == 'error' %}<span class="muted small">{{ item.error }}</span>
+          {% elif app %}{{ m.rec_pill(app.recommendation) }}{% if app.latest_run and 'fallback' in app.latest_run.extractor %} <span class="pill pill-warning pill-xs">local OCR</span>{% endif %}{% endif %}
+        </td>
+        <td class="muted">{% if app and app.decided_at %}{{ app.decided_at | ago }}{% elif app and app.status == 'correction_requested' %}correction sent{% else %}—{% endif %}</td>
+        <td class="right">{% if app %}<a class="btn btn-ghost btn-sm" href="/specialist/applications/{{ app.id }}">{{ 'View' if app.is_decided else 'Review' }}</a>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if tab == 'ready' %}
+  <div class="bulk-bar">
+    <span class="muted"><span data-check-count>0</span> selected</span>
+    <button class="btn btn-primary" type="submit" data-confirm="Approve every selected row? Each one had all fields match." disabled data-needs-selection>
+      <svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg> Approve selected
+    </button>
+  </div>
+  {% endif %}
+  </form>
+  {% else %}
+  {{ m.empty('No rows in this tab', 'Pick another tab, or "All rows" for the whole batch.') }}
+  {% endif %}
+</div>
+{% endblock %}

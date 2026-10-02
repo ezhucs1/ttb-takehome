@@ -270,14 +270,18 @@ class TestUnreadActivity:
         services.add_comment(db, app, sarah, "brand_name", "Thanks, resolved.")
         db.commit()
         assert services.unread_counts(db, applicant, [app.id]) == {app.id: 1}
-        assert services.unread_counts(db, sarah, [app.id]) == {app.id: 1}  # "The left one."
+        # "The left one." and the submission itself, which Sarah has not opened.
+        assert services.unread_counts(db, sarah, [app.id]) == {app.id: 2}
 
     def test_decisions_and_resubmissions_notify_the_other_side(self, db, users):
         app, applicant = make_app(db, users, "old-tom-title-case-warning")
         sarah = users["sarah.chen@ttb.gov"]
         services.submit(db, app, applicant)
         db.commit()
-        # A submission is queue work, not a message: nothing is unread for the specialist.
+        # A submission is news to the specialist until the case is opened.
+        assert services.unread_counts(db, sarah, [app.id]) == {app.id: 1}
+        services.mark_seen(db, app, sarah)
+        db.commit()
         assert services.unread_counts(db, sarah, [app.id]) == {}
 
         draft = services.draft_correction(app, use_ai=False)
@@ -320,7 +324,8 @@ class TestUnreadActivity:
         assert "notice" in kinds and "comment" in kinds and "status" not in kinds
         assert all(i.unread for i in feed)
         assert feed[0].anchor in ("notice", "field-health_warning")
-        assert [i.kind for i in services.activity_feed(db, sarah)] == ["comment"]
+        # The specialist sees the reply and the submission, newest first.
+        assert [i.kind for i in services.activity_feed(db, sarah)] == ["comment", "status"]
 
         assert services.mark_all_seen(db, applicant) == len(feed)
         db.commit()

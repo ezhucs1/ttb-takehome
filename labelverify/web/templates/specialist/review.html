@@ -6,7 +6,7 @@
 {% set actions_template = "specialist/_decision.html" %}
 <div class="page-header">
   <div>
-    <div class="crumbs"><a href="/specialist">Review queue</a> / {{ app.serial }}</div>
+    <div class="crumbs"><a href="/specialist">Review queue</a> / {% if batch %}<a href="/specialist/batches/{{ batch.id }}">{{ batch.filename }}</a> / {% endif %}{{ app.serial }}</div>
     <h1>{{ app.brand_name }} <span class="muted h-sub">{{ app.class_type }}</span></h1>
     <div class="header-pills">
       {{ m.status_pill(app.status) }}

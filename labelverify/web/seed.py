@@ -144,6 +144,8 @@ def seed_applications(db: Session, users: dict[str, User], samples_dir: Path = S
                 services.add_comment(db, app, applicant, reply_field, reply)
         elif state == "under_review":
             services.claim_for_review(db, app, sarah)
+        if state != "submitted":
+            services.mark_seen(db, app, sarah)  # she acted on it, so its submission is not news
         created += 1
         if n % 3 == 0:
             db.flush()

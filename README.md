@@ -33,11 +33,16 @@ recommends; a person decides.
   both roles.
 - Batch upload: a CSV of applications plus a zip of images, up to 300 at a time, checked
   in the background with live progress, and a results CSV to download when it is done.
+  The batch stays one bundle on both sides: the specialist opens it as one item and
+  decides row by row, and the batch page shows every row's decision as they come, with
+  one inbox line for the batch rather than one per row.
 
 **For labeling specialists**
 
-- A queue sorted so applications where every field matched come first, with tabs for
-  "ready", "needs a look", "awaiting applicant", and "approved".
+- A queue, newest first, with tabs for "ready" (every field matched), "needs a look",
+  "awaiting applicant", and "approved"; batch submissions listed as bundles above the
+  single applications, each with its standing. The inbox carries every new submission
+  and reply, a batch counting once.
 - A review screen with the label image, a field-by-field comparison with confidence per
   field, a word-level diff of the Government Health Warning, and a comment thread on
   every field.
@@ -224,7 +229,10 @@ to end, and uploading your own image gives a clear message instead of a made-up 
 
 **With `ANTHROPIC_API_KEY` in `.env`** (or the environment) the vision extractor reads any label you upload, and the
 correction notice is rewritten by the model before the specialist edits it. Every result
-shows the read time so you can check it against the five-second budget. A label set is
+shows the read time so you can check it against the five-second budget: the server's own
+clock for preprocessing and the model call, with the upload from the browser shown
+apart, since that depends on the connection (phone photos are shrunk in the browser
+before upload, to 1600 px, so the upload is a fraction of a second). A label set is
 read once, when it is uploaded; the pre-check and the submission compare against that
 read in milliseconds, and a new read happens only when the images change or a specialist
 asks for a re-check.
@@ -391,7 +399,8 @@ Ubuntu: `sudo apt install docker.io`; the script uses `sudo docker` when your us
 not in the docker group. The database, the stored images and the
 session secret live under `/home`, which App Service persists across restarts and
 deployments. Re-running the script with the same `APP` name rebuilds and redeploys.
-`az group delete --name labelverify-rg` removes everything. On a free Azure account the
+Each run starts the app with a fresh, seeded database (`RESET_DATA=false` keeps the
+previous deployment's data). `az group delete --name labelverify-rg` removes everything. On a free Azure account the
 B1 plan comes out of the credit, but the account starts with a quota of zero B1
 instances: request one in the portal (Quotas, App Service, B1, usually granted within
 minutes), or run `SKU=F1 scripts/deploy_azure.sh` for the free tier, which has no Always
