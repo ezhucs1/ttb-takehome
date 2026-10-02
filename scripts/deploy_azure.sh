@@ -75,9 +75,17 @@ else
     --container-registry-user "$ACR_USER" --container-registry-password "$ACR_PASS" --output none
 fi
 
+# The image and registry, stated explicitly: az has been seen to attach the registry
+# host to the image name on one code path and not the other.
+az webapp config set --name "$APP" --resource-group "$RG" \
+  --linux-fx-version "DOCKER|$REGISTRY/$IMAGE" --output none
+
 # 3. Settings for a public URL. /home persists across restarts and deployments on App
 #    Service, so the database, the stored images and the session secret live there.
 az webapp config appsettings set --name "$APP" --resource-group "$RG" --output none --settings \
+  DOCKER_REGISTRY_SERVER_URL="https://$REGISTRY" \
+  DOCKER_REGISTRY_SERVER_USERNAME="$ACR_USER" \
+  DOCKER_REGISTRY_SERVER_PASSWORD="$ACR_PASS" \
   WEBSITES_PORT=8000 \
   WEBSITES_ENABLE_APP_SERVICE_STORAGE=true \
   WEBSITES_CONTAINER_START_TIME_LIMIT=240 \
