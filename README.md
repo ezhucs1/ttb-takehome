@@ -79,7 +79,7 @@ python -m pip install -e .
 
 The dot means "this folder", the project you just cloned; `-e` installs it in place so
 edits take effect without reinstalling. This pulls in every runtime dependency, which
-is listed in `pyproject.toml` (`python -m pip install -r requirements.txt` does the same).
+is listed in `pyproject.toml`.
 
 If you already use [uv](https://docs.astral.sh/uv/), `uv venv && uv pip install -e .` does
 steps 2 and 3 in one go; everything else is the same.
@@ -239,7 +239,7 @@ Fourteen synthetic labels in four visual styles, three passed through a photo si
 With the virtual environment activated, install the test tools once, then run the suite:
 
 ```bash
-python -m pip install -r requirements-dev.txt    # the app plus pytest, ruff and the test helpers
+python -m pip install -e ".[dev]"    # the quotes are required: this adds pytest, ruff and the test helpers
 python -m pytest                     # 378 tests, all offline, about two minutes
 python -m ruff check .               # lint
 ```

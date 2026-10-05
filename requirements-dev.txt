@@ -1,2 +1,0 @@
-# Runtime dependencies plus the test and lint tools:  python -m pip install -r requirements-dev.txt
--e .[dev]
