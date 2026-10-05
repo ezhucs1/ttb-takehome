@@ -143,14 +143,15 @@ fallback: ask for a better image, with the reader's guess shown beside it.
 
 ## Command-line tools for anyone with a key
 
-These are for developers evaluating readers; the web app needs none of them.
+These are for developers evaluating readers; the web app needs none of them. Run them
+with the virtual environment activated and the key in `.env`.
 
 ```bash
-.venv/bin/python -m labelverify.cli extract labelverify/samples/old-tom-angled-photo.jpg --extractor claude
-.venv/bin/python -m labelverify.cli extract front.jpg back.jpg --extractor gemini          # a set, read as one
-.venv/bin/python -m labelverify.cli verify labelverify/samples/old-tom-bourbon.jpg --application app.json --fallback
-.venv/bin/python -m labelverify.cli bench labelverify/samples/old-tom-angled-photo.jpg --extractors claude,gemini --runs 3
-.venv/bin/python -m labelverify.cli bench front.jpg back.jpg --extractors claude --runs 3 --timeout 120
+python -m labelverify.cli extract labelverify/samples/old-tom-angled-photo.jpg --extractor claude
+python -m labelverify.cli extract front.jpg back.jpg --extractor gemini          # a set, read as one
+python -m labelverify.cli verify labelverify/samples/old-tom-bourbon.jpg --application app.json --fallback
+python -m labelverify.cli bench labelverify/samples/old-tom-angled-photo.jpg --extractors claude,gemini --runs 3
+python -m labelverify.cli bench front.jpg back.jpg --extractors claude --runs 3 --timeout 120
 ```
 
 `extract` prints the raw extraction with each panel's size after preprocessing, the token

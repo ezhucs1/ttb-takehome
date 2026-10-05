@@ -10,10 +10,13 @@ discoveries along the way.
 returns recorded extractions; the database is a throwaway SQLite file; the web layer is
 driven through FastAPI's test client.
 
+With the virtual environment activated (see the README):
+
 ```bash
-.venv/bin/python -m pytest                           # everything
-.venv/bin/python -m pytest tests/test_communication.py -v   # the two-party scenarios as a checklist
-.venv/bin/ruff check .                               # lint
+python -m pip install -e ".[dev]"                 # once: pytest, ruff and the test helpers
+python -m pytest                                  # everything
+python -m pytest tests/test_communication.py -v   # the two-party scenarios as a checklist
+python -m ruff check .                            # lint
 ```
 
 | File | Tests | What it covers |

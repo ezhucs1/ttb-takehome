@@ -32,30 +32,113 @@ and 16). The documents under `docs/` explain how.
 
 ## Run it locally
 
-Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/). No API key is needed.
+You need Python 3.11 or newer (check with `python3 --version`, or `py --version` on
+Windows) and git. No API key is needed. The steps are the same on every system; only the
+command that activates the virtual environment differs.
+
+**1. Get the code**
 
 ```bash
-git clone https://github.com/ezhucs1/ttb-takehome && cd ttb-takehome
-uv venv && uv pip install -e ".[dev]"
-.venv/bin/uvicorn labelverify.web.app:serve --factory --reload   # http://127.0.0.1:8000
+git clone https://github.com/ezhucs1/ttb-takehome
+cd ttb-takehome
 ```
+
+**2. Create a virtual environment and activate it**
+
+macOS or Linux (bash or zsh):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Windows, PowerShell:
+
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
+Windows, Command Prompt:
+
+```bat
+py -3 -m venv .venv
+.venv\Scripts\activate.bat
+```
+
+Your prompt now starts with `(.venv)`. Every command below assumes that. (If PowerShell
+refuses to run the activation script, run
+`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, then activate again.)
+
+**3. Install the app into the virtual environment**
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install -e .
+```
+
+The dot means "this folder", the project you just cloned; `-e` installs it in place so
+edits take effect without reinstalling. This pulls in every runtime dependency.
+
+If you already use [uv](https://docs.astral.sh/uv/), `uv venv && uv pip install -e .` does
+steps 2 and 3 in one go; everything else is the same.
+
+**4. Start it**
+
+```bash
+python -m uvicorn labelverify.web.app:serve --factory --reload
+```
+
+Open <http://127.0.0.1:8000>. Stop it with Ctrl+C. If port 8000 is taken, add
+`--port 8001` and open that port instead.
 
 Without a key the app starts in **demo mode**: the fourteen bundled sample labels work
 end to end for both roles, the sample batch runs in a second or two, and every screen is
-seeded with content. To read **your own label images** locally, install Tesseract and
-start the app with local OCR as the reader:
+seeded with content. The sidebar, bottom left, says "Demo mode".
 
-```bash
-sudo apt install tesseract-ocr        # macOS: brew install tesseract
-LABELVERIFY_EXTRACTOR=tesseract .venv/bin/uvicorn labelverify.web.app:serve --factory
+### Reading your own label images (local OCR)
+
+Demo mode reads only the bundled samples. To read your own images on your machine,
+install Tesseract OCR and tell the app to use it:
+
+| System | Install Tesseract |
+| --- | --- |
+| macOS | `brew install tesseract` |
+| Ubuntu or Debian | `sudo apt install tesseract-ocr` |
+| Fedora | `sudo dnf install tesseract` |
+| Windows | The installer from <https://github.com/UB-Mannheim/tesseract/wiki>; keep the default folder, which the app looks in |
+
+Then copy `.env.example` to `.env` in the project folder (`cp .env.example .env`, or
+`copy .env.example .env` on Windows), open `.env` in any editor, and change the line
+`LABELVERIFY_EXTRACTOR=` to:
+
+```
+LABELVERIFY_EXTRACTOR=tesseract
 ```
 
-The sidebar then says "Local OCR (Tesseract)". OCR reads clean artwork well and misses
-small print on photographs; every OCR value is reported as an uncertain read, so matching
-rows say "match · uncertain read" and the application goes to review rather than
-approval. If the app cannot find the binary, put the path that `which tesseract` prints
-in `LABELVERIFY_TESSERACT_CMD`. The live demo uses a vision model instead; how that is
-configured, what it costs and how it was measured is in [docs/AI-MODEL.md](docs/AI-MODEL.md).
+Start the app again as in step 4. The sidebar now says "Local OCR (Tesseract)", and the
+upload box in a new application accepts your own photos or artwork. OCR reads clean
+artwork well and misses small print on photographs; every OCR value is reported as an
+uncertain read, so matching rows say "match · uncertain read" and the application goes to
+review rather than approval. If the app reports that it cannot find the binary, put its
+full path in `.env` as `LABELVERIFY_TESSERACT_CMD=` (what `which tesseract` prints, or
+`where tesseract` on Windows).
+
+The live demo uses a vision model instead; how that is configured, what it costs and how
+it was measured is in [docs/AI-MODEL.md](docs/AI-MODEL.md).
+
+### Docker instead
+
+With Docker Desktop installed, this runs the same app with Tesseract already inside the
+image, on any system, without Python on the machine:
+
+```bash
+docker build -t labelverify .
+docker run --rm -p 8000:8000 labelverify
+```
+
+Open <http://127.0.0.1:8000>. Add `-e LABELVERIFY_EXTRACTOR=tesseract` before the image
+name to read your own images.
 
 ### Demo accounts
 
@@ -152,9 +235,12 @@ Fourteen synthetic labels in four visual styles, three passed through a photo si
 
 ## Tests
 
+With the virtual environment activated, install the test tools once, then run the suite:
+
 ```bash
-.venv/bin/python -m pytest     # 378 tests, all offline
-.venv/bin/ruff check .         # lint
+python -m pip install -e ".[dev]"    # the quotes are required: this adds pytest, ruff and the test helpers
+python -m pytest                     # 378 tests, all offline, about two minutes
+python -m ruff check .               # lint
 ```
 
 ## Documentation
